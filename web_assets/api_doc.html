@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WQMS - API Documentation</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app">
+        <header id="header">
+            <div class="header-left">
+                <h1>🌊 WQMS</h1>
+                <span id="system-name">WQMS-System</span>
+            </div>
+            <div class="header-center">
+                <span id="ip-address">0.0.0.0</span>
+                <span id="wifi-ssid">N/A</span>
+                <span id="datetime">--:--:--</span>
+            </div>
+            <div class="header-right">
+                <span id="free-heap">0 bytes</span>
+                <span id="uptime">0m</span>
+                <span id="cpu-temp">0°C</span>
+                <button id="reboot-btn" class="btn btn-danger" style="padding:4px 14px; font-size:0.7rem;">🔁 Reboot</button>
+            </div>
+        </header>
+
+        <nav id="nav">
+            <a href="/">Dashboard</a>
+            <a href="/automation.html">Automation</a>
+            <a href="/config.html">Configuration</a>
+            <a href="/calibration.html">Calibration</a>
+            <a href="/api_doc.html" class="active">API Docs</a>
+        </nav>
+
+        <main id="api-docs">
+            <h2>API Documentation</h2>
+            <p>All endpoints return JSON unless otherwise noted. Base URL: <code id="api-base-url">http://192.168.1.100</code></p>
+
+            <!-- ============================================================ -->
+            <!-- System Endpoints -->
+            <!-- ============================================================ -->
+            <h3>System</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/status</h4>
+                <p>Get system status including name, version, IP, MAC, WiFi, uptime, memory, NTP and MODBUS status.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "system_name": "WQMS-PlantLab",
+    "version": "v1.0.0",
+    "ip": "192.168.1.100",
+    "mac": "A1:B2:C3:D4:E5:F6",
+    "wifi_ssid": "PlantLab",
+    "wifi_mode": "STA",
+    "uptime": "2d 3h 45m",
+    "uptime_seconds": 186300,
+    "free_heap_bytes": 234567,
+    "free_heap_kb": 229,
+    "cpu_temp_c": 45.2,
+    "ntp_synced": true,
+    "timezone": "EET-3",
+    "modbus_packets": 1234,
+    "modbus_errors": 0
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/status</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/echo</h4>
+                <p>Simple health check endpoint. Returns a JSON object with status and response.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "status": "OK",
+    "code": 200,
+    "response": "WQMS"
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/echo</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/system/reboot</h4>
+                <p>Reboot the system.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "System rebooting..."}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/system/reboot</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- Sensor Endpoints -->
+            <!-- ============================================================ -->
+            <h3>Sensors</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/sensors</h4>
+                <p>Get all current sensor readings.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "sensors": [
+        {"id": 0, "name": "pH", "value": 7.23, "raw_adc": 2345, "status": 0, "quality": 0, "timestamp": 1718622225},
+        {"id": 1, "name": "EC", "value": 1.45, "raw_adc": 1567, "status": 0, "quality": 0, "timestamp": 1718622225}
+    ]
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/sensors</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/sensors/config</h4>
+                <p>Get sensor configuration including names, GPIO pins, MODBUS registers, min/max values, and calibration factors.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "sensors": [
+        {"id": 0, "name": "pH", "enabled": true, "gpio_pin": 32, "modbus_register": 0, "min_value": 0, "max_value": 14, "calibration_factor": 1000}
+    ]
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/sensors/config</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/sensors/config</h4>
+                <p>Update sensor configuration (names, enabled status, calibration factors).</p>
+                <div class="api-example">
+                    <h5>Request Body:</h5>
+                    <pre>{
+    "sensors": [
+        {"id": 0, "name": "pH Sensor", "enabled": true, "calibration_factor": 1234}
+    ]
+}</pre>
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Sensor configuration saved"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/sensors/config -d '{"sensors":[{"id":0,"name":"pH Sensor","enabled":true}]}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- Relay Endpoints -->
+            <!-- ============================================================ -->
+            <h3>Relays</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/relays</h4>
+                <p>Get all relay status.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "relays": [
+        {"id": 0, "name": "Pump 1", "state": 0, "active": false, "remaining": 0, "enabled": true, "duration": 100, "off_delay": 50, "gpio_pin": 25}
+    ]
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/relays</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/relays/{id}/trigger</h4>
+                <p>Trigger a relay (ON for configured duration). Optionally specify custom duration in milliseconds.</p>
+                <div class="api-example">
+                    <h5>Request Body:</h5>
+                    <pre>{"duration": 500}</pre>
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Relay triggered"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/relays/0/trigger -d '{"duration":500}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/relays/{id}/off</h4>
+                <p>Manually turn off a relay.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Relay turned off"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/relays/0/off</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/relays/config</h4>
+                <p>Get relay configuration including names, GPIO pins, MODBUS registers, durations, and off-delays.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "relays": [
+        {"id": 0, "name": "Pump 1", "enabled": true, "gpio_pin": 25, "modbus_register": 256, "duration_ms": 100, "off_delay_ms": 50}
+    ]
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/relays/config</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/relays/config</h4>
+                <p>Update relay configuration (names, enabled status, durations, off-delays).</p>
+                <div class="api-example">
+                    <h5>Request Body:</h5>
+                    <pre>{
+    "relays": [
+        {"id": 0, "name": "Pump 1", "enabled": true, "duration_ms": 200, "off_delay_ms": 100}
+    ]
+}</pre>
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Relay configuration saved"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/relays/config -d '{"relays":[{"id":0,"name":"Pump 1","duration_ms":200}]}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- Configuration Endpoints -->
+            <!-- ============================================================ -->
+            <h3>System Configuration</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/config</h4>
+                <p>Get current system configuration.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "system_name": "WQMS-PlantLab",
+    "timezone": "EET-3",
+    "sample_interval_ms": 1000,
+    "modbus_interval_ms": 1000,
+    "integration_url": "https://api.example.com/water",
+    "integration_interval_sec": 60
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/config</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/config</h4>
+                <p>Update system configuration.</p>
+                <div class="api-example">
+                    <h5>Request Body:</h5>
+                    <pre>{
+    "system_name": "WQMS-Greenhouse",
+    "timezone": "EET-3",
+    "sample_interval_ms": 2000,
+    "modbus_interval_ms": 500,
+    "ntp_servers": "pool.ntp.org,time.google.com,time.cloudflare.com"
+}</pre>
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Configuration saved"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/config -d '{"system_name":"WQMS-Greenhouse"}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- WiFi Endpoints -->
+            <!-- ============================================================ -->
+            <h3>WiFi</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/wifi/status</h4>
+                <p>Get current WiFi status including mode, SSID, IP, MAC, connection state, and RSSI.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "mode": "STA",
+    "mode_id": 1,
+    "ssid": "PlantLab",
+    "ip": "192.168.1.100",
+    "mac": "A1:B2:C3:D4:E5:F6",
+    "connected": true,
+    "rssi": -45
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/wifi/status</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/wifi/scan</h4>
+                <p>Scan for available WiFi networks.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "networks": [
+        {"ssid": "PlantLab", "rssi": -45, "secured": true},
+        {"ssid": "Office", "rssi": -68, "secured": true}
+    ]
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/wifi/scan</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/wifi/connect</h4>
+                <p>Connect to a WiFi network. Credentials are only saved on success. Also supports setting mode.</p>
+                <div class="api-example">
+                    <h5>Request Body (Connect to STA):</h5>
+                    <pre>{"ssid": "PlantLab", "password": "mysecret"}</pre>
+                    <h5>Request Body (Set Mode):</h5>
+                    <pre>{"mode": 1}</pre>
+                    <h5>Example Response (Success):</h5>
+                    <pre>{"success": true, "message": "Connected to network! Reconnect to new IP.", "ssid": "PlantLab", "ip": "192.168.1.100"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/wifi/connect -d '{"ssid":"PlantLab","password":"mysecret"}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/wifi/forget</h4>
+                <p>Forget the current WiFi network. System will reboot into AP mode.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Network forgotten, system will restart"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/wifi/forget</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- NTP Endpoints -->
+            <!-- ============================================================ -->
+            <h3>NTP</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/ntp/sync</h4>
+                <p>Force an immediate NTP synchronization.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "NTP sync initiated"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/ntp/sync</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/ntp/manual</h4>
+                <p>Set system time manually.</p>
+                <div class="api-example">
+                    <h5>Request Body:</h5>
+                    <pre>{"timestamp": 1718622225}</pre>
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Manual time set"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/ntp/manual -d '{"timestamp":1718622225}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- MODBUS Endpoints -->
+            <!-- ============================================================ -->
+            <h3>MODBUS</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/modbus/map</h4>
+                <p>Get the MODBUS register map.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "entries": [
+        {"index": 0, "address": 0, "type": "Sensor", "description": "pH", "access": "RO"}
+    ]
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/modbus/map</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/modbus/map</h4>
+                <p>Update the MODBUS register map.</p>
+                <div class="api-example">
+                    <h5>Request Body:</h5>
+                    <pre>{
+    "entries": [
+        {"index": 0, "address": 0x0000}
+    ]
+}</pre>
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "MODBUS map saved"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/modbus/map -d '{"entries":[{"index":0,"address":0}]}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- Calibration Endpoints -->
+            <!-- ============================================================ -->
+            <h3>Calibration</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/calibrate/start</h4>
+                <p>Start a calibration session for a sensor.</p>
+                <div class="api-example">
+                    <h5>Request Body:</h5>
+                    <pre>{"sensor_id": 0}</pre>
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Calibration started", "session_id": "cal_20260617_102345"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/calibrate/start -d '{"sensor_id":0}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/calibrate/sample</h4>
+                <p>Add a reference sample to the current calibration session.</p>
+                <div class="api-example">
+                    <h5>Request Body:</h5>
+                    <pre>{"known_value": 4.01}</pre>
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "sample_number": 1, "raw_adc": 2345, "voltage": 1.89, "known_value": 4.01}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/calibrate/sample -d '{"known_value":4.01}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/calibrate/apply</h4>
+                <p>Apply the calibration factor from the current session.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "factor": 1.234, "method": "linear_regression", "confidence": 0.952}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/calibrate/apply</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/calibrate/cancel</h4>
+                <p>Cancel the current calibration session.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Calibration cancelled"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/calibrate/cancel</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/calibrate/factor</h4>
+                <p>Get the current calibration factor preview.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "factor": 1.234}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/calibrate/factor</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- Logging Endpoints -->
+            <!-- ============================================================ -->
+            <h3>Logging</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/logs</h4>
+                <p>List all log files.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "logs": [
+        {"name": "system_0.log", "size": 234567, "modified": 1718622225}
+    ]
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/logs</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/logs?name={filename}</h4>
+                <p>Download a specific log file.</p>
+                <div class="api-example">
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/logs?name=system_0.log --output system_0.log</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method delete">DELETE</span> /api/logs?name={filename}</h4>
+                <p>Delete a specific log file.</p>
+                <div class="api-example">
+                    <h5>cURL:</h5>
+                    <pre>curl -X DELETE http://192.168.1.100/api/logs?name=system_0.log</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method delete">DELETE</span> /api/logs/all</h4>
+                <p>Delete all log files.</p>
+                <div class="api-example">
+                    <h5>cURL:</h5>
+                    <pre>curl -X DELETE http://192.168.1.100/api/logs/all</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- Webhook / Notification Endpoints -->
+            <!-- ============================================================ -->
+            <h3>Notifications</h3>
+
+            <div class="api-endpoint">
+                <h4><span class="method get">GET</span> /api/webhook/config</h4>
+                <p>Get webhook notification configuration.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{
+    "url": "https://maker.ifttt.com/trigger/...",
+    "recipients": "admin@example.com",
+    "subject": "WQMS Alert",
+    "enabled": true,
+    "default_url": "https://maker.ifttt.com/trigger/..."
+}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X GET http://192.168.1.100/api/webhook/config</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/webhook/config</h4>
+                <p>Update webhook notification configuration.</p>
+                <div class="api-example">
+                    <h5>Request Body:</h5>
+                    <pre>{
+    "url": "https://maker.ifttt.com/trigger/...",
+    "recipients": "admin@example.com",
+    "subject": "WQMS Alert",
+    "enabled": true
+}</pre>
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Notification settings saved"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/webhook/config -d '{"url":"https://maker.ifttt.com/trigger/...","recipients":"admin@example.com","enabled":true}' -H "Content-Type: application/json"</pre>
+                </div>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method post">POST</span> /api/webhook/test</h4>
+                <p>Send a test webhook notification.</p>
+                <div class="api-example">
+                    <h5>Example Response:</h5>
+                    <pre>{"success": true, "message": "Test notification sent"}</pre>
+                    <h5>cURL:</h5>
+                    <pre>curl -X POST http://192.168.1.100/api/webhook/test</pre>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- Endpoint Summary -->
+            <!-- ============================================================ -->
+            <h3>Endpoint Summary</h3>
+            <div style="overflow-x:auto; margin-top:16px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Endpoint</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/status</code></td><td>System status</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/echo</code></td><td>Health check</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/system/reboot</code></td><td>Reboot system</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/sensors</code></td><td>Sensor readings</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/sensors/config</code></td><td>Sensor configuration</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/sensors/config</code></td><td>Update sensor config</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/relays</code></td><td>Relay status</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/relays/{id}/trigger</code></td><td>Trigger relay</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/relays/{id}/off</code></td><td>Turn off relay</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/relays/config</code></td><td>Relay configuration</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/relays/config</code></td><td>Update relay config</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/config</code></td><td>System configuration</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/config</code></td><td>Update system config</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/wifi/status</code></td><td>WiFi status</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/wifi/scan</code></td><td>Scan WiFi</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/wifi/connect</code></td><td>Connect to WiFi</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/wifi/forget</code></td><td>Forget WiFi</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/ntp/sync</code></td><td>NTP sync</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/ntp/manual</code></td><td>Manual time</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/modbus/map</code></td><td>MODBUS map</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/modbus/map</code></td><td>Update MODBUS map</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/calibrate/start</code></td><td>Start calibration</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/calibrate/sample</code></td><td>Add calibration sample</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/calibrate/apply</code></td><td>Apply calibration</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/calibrate/cancel</code></td><td>Cancel calibration</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/calibrate/factor</code></td><td>Get calibration factor</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/logs</code></td><td>List logs</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/logs?name=</code></td><td>Download log</td></tr>
+                        <tr><td><span class="method delete">DELETE</span></td><td><code>/api/logs?name=</code></td><td>Delete log</td></tr>
+                        <tr><td><span class="method delete">DELETE</span></td><td><code>/api/logs/all</code></td><td>Delete all logs</td></tr>
+                        <tr><td><span class="method get">GET</span></td><td><code>/api/webhook/config</code></td><td>Get webhook config</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/webhook/config</code></td><td>Update webhook config</td></tr>
+                        <tr><td><span class="method post">POST</span></td><td><code>/api/webhook/test</code></td><td>Test webhook</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- Download Buttons -->
+            <!-- ============================================================ -->
+            <div style="margin-top:24px; padding:16px; background:#f8fafd; border-radius:12px; border-left:4px solid #2b7be4;">
+                <p><strong>📥 Download</strong></p>
+                <button id="download-postman" class="btn btn-primary">Download Postman Collection</button>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Core JS (loaded on all pages) -->
+    <script src="js/core.js"></script>
+    <script id="router-script" src="js/router.js"></script>
+</body>
+</html>

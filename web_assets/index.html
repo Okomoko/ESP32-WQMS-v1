@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WQMS - Water Quality Monitoring System</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app">
+        <header id="header">
+            <div class="header-left">
+                <h1>🌊 WQMS</h1>
+                <span id="system-name">WQMS-System</span>
+            </div>
+            <div class="header-center">
+                <span id="ip-address">0.0.0.0</span>
+                <span id="wifi-ssid">N/A</span>
+                <span id="datetime">--:--:--</span>
+            </div>
+            <div class="header-right">
+                <span id="free-heap">0 bytes</span>
+                <span id="uptime">0m</span>
+                <span id="cpu-temp">0°C</span>
+                <button id="reboot-btn" class="btn btn-danger" style="padding:4px 14px; font-size:0.7rem;">🔁 Reboot</button>
+            </div>
+        </header>
+
+        <nav id="nav">
+            <a href="/" class="active">Dashboard</a>
+            <a href="/automation.html">Automation</a>
+            <a href="/config.html">Configuration</a>
+            <a href="/calibration.html">Calibration</a>
+            <a href="/api_doc.html">API Docs</a>
+        </nav>
+
+        <main id="dashboard">
+            <section id="sensors">
+                <h2>Sensors</h2>
+                <div id="sensor-grid" class="card-grid"></div>
+            </section>
+
+            <section id="relays">
+                <h2>Relays</h2>
+                <div id="relay-grid" class="card-grid"></div>
+            </section>
+
+            <section id="graphs">
+                <h2>Sensor History (Last 3 Days)</h2>
+                <div id="graph-container">
+                    <select id="graph-sensor-select"></select>
+                    <canvas id="history-chart"></canvas>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Core JS (loaded on all pages) -->
+    <script src="/js/core.js"></script>
+    <script id="router-script" src="/js/router.js"></script>
+</body>
+</html>

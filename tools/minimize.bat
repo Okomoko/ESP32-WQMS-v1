@@ -1,0 +1,1 @@
+@Powershell -File "minimize_html_css_js.ps1"

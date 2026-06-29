@@ -1,0 +1,117 @@
+// js/core.js
+// Core functionality - loaded on every page
+
+// following ones need to be exactly the same in project_defs.h . Currently HW-316 boards are active low, therefore RELAY_STATE_ACTIVE is 0 not 1
+const RELAY_STATE_ACTIVE = 0
+const RELAY_STATE_IDLE = 1
+const RELAY_STATE_COOLDOWN = 2
+
+const REFRESH_INTERVAL = 1000
+
+// ============================================================
+// API Client
+// ============================================================
+const api = {
+    async get(endpoint) {
+        const r = await fetch(endpoint);
+        return r.json();
+    },
+    async post(endpoint, data) {
+        const r = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return r.json();
+    },
+    async put(endpoint, data) {
+        const r = await fetch(endpoint, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return r.json();
+    },
+    async del(endpoint) {
+        const r = await fetch(endpoint, { method: 'DELETE' });
+        return r.json();
+    }
+};
+
+// ============================================================
+// DOM Helpers
+// ============================================================
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+
+// ============================================================
+// Header Update
+// ============================================================
+async function updateHeader() {
+    try {
+        const data = await api.get('/api/status');
+        const el = (id) => document.getElementById(id);
+        if (el('system-name')) el('system-name').textContent = data.system_name || 'WQMS-System';
+        if (el('ip-address')) el('ip-address').textContent = data.ip || '0.0.0.0';
+        if (el('wifi-ssid')) el('wifi-ssid').textContent = data.wifi_ssid || 'N/A';
+        if (el('datetime')) el('datetime').textContent = new Date().toLocaleString();
+        if (el('free-heap')) el('free-heap').textContent = (data.free_heap_kb || 0) + ' KB';
+        if (el('uptime')) el('uptime').textContent = data.uptime || '0m';
+        if (el('cpu-temp')) el('cpu-temp').textContent = (data.cpu_temp_c || 0).toFixed(1) + '°C';
+    } catch (e) {
+        console.warn('Header update failed:', e);
+    }
+}
+
+// ============================================================
+// Reboot System
+// ============================================================
+async function rebootSystem() {
+    if (!confirm('⚠️ Are you sure you want to reboot the system?')) return;
+    const btn = document.getElementById('reboot-btn') || document.getElementById('reboot-btn-config');
+    if (btn) { btn.textContent = '⏳ Rebooting...'; btn.disabled = true; }
+    try {
+        await fetch('/api/system/reboot', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        alert('✅ System rebooting... Wait 15 seconds and refresh.');
+    } catch (e) {
+        alert('⚠️ System is rebooting... Wait 15 seconds and refresh.');
+    }
+    if (btn) { btn.textContent = '🔁 Reboot'; btn.disabled = false; }
+}
+
+// ============================================================
+// Tab Management
+// ============================================================
+function initTabs() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.tab-panel');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            panels.forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            const target = document.getElementById('tab-' + btn.dataset.tab);
+            if (target) target.classList.add('active');
+        });
+    });
+}
+
+// ============================================================
+// Navigation
+// ============================================================
+function initNavigation() {
+    document.querySelectorAll('#nav a').forEach(link => {
+        link.addEventListener('click', () => {
+            document.querySelectorAll('#nav a').forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+        });
+    });
+}
+
+document.getElementById('reboot-btn')?.addEventListener('click', rebootSystem);
+document.getElementById('reboot-btn-config')?.addEventListener('click', rebootSystem);
+
+// ============================================================
+// Expose core functions to global scope
+// ============================================================
+window.rebootSystem = rebootSystem;

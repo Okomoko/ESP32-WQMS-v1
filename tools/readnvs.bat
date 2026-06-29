@@ -1,0 +1,2 @@
+@python -m esptool --port COM6 read-flash 0x9000 0x20000 nvs-content\nvs_raw.bin
+@python C:\esp\v6.0.1\esp-idf\components\nvs_flash\nvs_partition_tool\nvs_tool.py -d minimal nvs-content\nvs_raw.bin > nvs-content\nvs.txt

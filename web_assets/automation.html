@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WQMS - Automation Designer</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app">
+        <header id="header">
+            <div class="header-left">
+                <h1>🌊 WQMS</h1>
+                <span id="system-name">WQMS-System</span>
+            </div>
+            <div class="header-center">
+                <span id="ip-address">0.0.0.0</span>
+                <span id="wifi-ssid">N/A</span>
+                <span id="datetime">--:--:--</span>
+            </div>
+            <div class="header-right">
+                <span id="free-heap">0 bytes</span>
+                <span id="uptime">0m</span>
+                <span id="cpu-temp">0°C</span>
+                <button id="reboot-btn" class="btn btn-danger" style="padding:4px 14px; font-size:0.7rem;">🔁 Reboot</button>
+            </div>
+        </header>
+
+        <nav id="nav">
+            <a href="/">Dashboard</a>
+            <a href="/automation.html" class="active">Automation</a>
+            <a href="/config.html">Configuration</a>
+            <a href="/calibration.html">Calibration</a>
+            <a href="/api_doc.html">API Docs</a>
+        </nav>
+
+        <main id="automation">
+            <div id="automation-layout">
+            
+                <!-- Left Panel: Elements -->
+                <aside id="element-panel">
+                    <h3>🧩 Elements</h3>
+                    
+                    <!-- ============================================================ -->
+                    <!-- Sensors (4 columns) -->
+                    <!-- ============================================================ -->
+                    <div class="element-group">
+                        <h4>📊 Sensors</h4>
+                        <div id="sensor-list" class="element-grid"></div>
+                    </div>
+                    
+                    <!-- ============================================================ -->
+                    <!-- Logical Operators (row layout) -->
+                    <!-- ============================================================ -->
+                    <div class="element-group">
+                        <h4>🧠 Operators</h4>
+                        <div class="operator-row">
+                            <div class="element-item operator" data-type="operator" data-id="0" data-name="AND" draggable="true">AND</div>
+                            <div class="element-item operator" data-type="operator" data-id="0" data-name="OR" draggable="true">OR</div>
+                        </div>
+                    </div>
+                    
+                    <!-- ============================================================ -->
+                    <!-- Outputs (Relays + Email) -->
+                    <!-- ============================================================ -->
+                    <div class="element-group">
+                        <h4>⚡ Outputs</h4>
+                        <div id="relay-list" class="element-grid"></div>
+                        <div class="element-item email" data-type="EMAIL" draggable="true">📧 e-Mail</div>
+                    </div>
+                </aside>
+
+                <div id="canvas-container">
+                    <div id="canvas-toolbar">
+                        <input type="text" id="rule-name-input" placeholder="Rule Name..." value="New Rule">
+                        <button id="save-rule" class="btn btn-success">💾 Save Rule</button>
+                        <button id="delete-rule" class="btn btn-danger">🗑️ Delete</button>
+                        <button id="clear-canvas" class="btn">🧹 Clear</button>
+                        <button id="test-rule" class="btn btn-primary">▶️ Test</button>
+                    </div>
+                    <div id="automation-canvas">
+                        <div id="canvas-drop-zone"></div>
+                    </div>
+                </div>
+
+                <aside id="rules-panel">
+                    <h3>📋 Rules</h3>
+                    <div id="rules-toolbar">
+                        <button id="add-rule" class="btn btn-primary" style="width:100%;">➕ Add Rule</button>
+                    </div>
+                    <div id="rules-list"></div>
+                    <div id="rules-actions">
+                        <button id="import-rules" class="btn">📥 Import</button>
+                        <button id="export-rules" class="btn">📤 Export</button>
+                    </div>
+                </aside>
+            </div>
+        </main>
+    </div>
+
+    <!-- Core JS (loaded on all pages) -->
+    <script src="/js/core.js"></script>
+    <script id="router-script" src="/js/router.js"></script>
+</body>
+</html>

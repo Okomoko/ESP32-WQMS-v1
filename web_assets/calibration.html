@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WQMS - Calibration Wizard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app">
+        <header id="header">
+            <div class="header-left">
+                <h1>🌊 WQMS</h1>
+                <span id="system-name">WQMS-System</span>
+            </div>
+            <div class="header-center">
+                <span id="ip-address">0.0.0.0</span>
+                <span id="wifi-ssid">N/A</span>
+                <span id="datetime">--:--:--</span>
+            </div>
+            <div class="header-right">
+                <span id="free-heap">0 bytes</span>
+                <span id="uptime">0m</span>
+                <span id="cpu-temp">0°C</span>
+                <button id="reboot-btn" class="btn btn-danger" style="padding:4px 14px; font-size:0.7rem;">🔁 Reboot</button>
+            </div>
+        </header>
+
+        <nav id="nav">
+            <a href="/">Dashboard</a>
+            <a href="/automation.html">Automation</a>
+            <a href="/config.html">Configuration</a>
+            <a href="/calibration.html" class="active">Calibration</a>
+            <a href="/api_doc.html">API Docs</a>
+        </nav>
+
+        <main id="calibration">
+            <h2>Calibration Wizard</h2>
+            <div id="calibration-container">
+                <!-- Step 1: Select Sensor -->
+                <div id="cal-step-1" class="cal-step active">
+                    <h3>Step 1: Select Sensor</h3>
+                    <div class="config-group">
+                        <label>Sensor</label>
+                        <select id="cal-sensor-select"></select>
+                    </div>
+                    <div id="cal-sensor-info">
+                        <span>PIN: <span id="cal-pin">--</span></span>
+                        <span>MODBUS: <span id="cal-modbus">--</span></span>
+                        <span>Current Value: <span id="cal-current">--</span></span>
+                    </div>
+                    <button id="cal-start" class="btn btn-primary">Start Calibration</button>
+                </div>
+
+                <!-- Step 2: Add Samples -->
+                <div id="cal-step-2" class="cal-step">
+                    <h3>Step 2: Add Reference Samples</h3>
+                    <div class="config-group">
+                        <label>Known Value</label>
+                        <input type="number" id="cal-known-value" step="0.01" placeholder="Enter reference value">
+                    </div>
+                    <button id="cal-add-sample" class="btn btn-primary">Add Sample</button>
+                    <div id="cal-sample-list">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Known Value</th>
+                                    <th>ADC Reading</th>
+                                    <th>Voltage</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cal-sample-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="cal-actions">
+                        <button id="cal-apply" class="btn btn-success">Apply Calibration</button>
+                        <button id="cal-cancel" class="btn btn-danger">Cancel</button>
+                    </div>
+                    <div id="cal-result">
+                        <h4>Calibration Factor: <span id="cal-factor">--</span></h4>
+                        <p id="cal-confidence">Confidence: --</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Core JS (loaded on all pages) -->
+    <script src="/js/core.js"></script>
+    <script id="router-script" src="/js/router.js"></script>
+</body>
+</html>
