@@ -38,14 +38,14 @@ const CONNECTION_RULES = {
     'sensor': { 
         output: true, 
         input: false, 
-        maxOutputs: 1,
+        maxOutputs: 2,
         maxInputs: 0,
         label: 'Sensor'
     },
     'operator': { 
         output: true, 
         input: true, 
-        maxOutputs: 1,
+        maxOutputs: 2,
         maxInputs: 4,
         label: 'Operator (AND/OR)'
     },
@@ -100,7 +100,7 @@ function canConnect(fromNode, toNode) {
 
 function isValidConnection(fromType, toType) {
     const validMap = {
-        'sensor': ['operator', 'relay'],
+        'sensor': ['operator', 'relay', 'email'],
         'operator': ['operator', 'relay', 'email'],
         'relay': [],
         'email': []
@@ -192,7 +192,7 @@ function getRuleDescription(rule) {
     const out = rule.outputs[0];
     if (!cond || !out) return 'Incomplete rule';
     
-    const compMap = ['>', '<', '==', '!='];
+    const compMap = ['<', '>', '==', '!='];
     const sensorName = `Sensor ${cond.sensor_id}`;
     const relayName = `Relay ${out.id}`;
     
@@ -439,7 +439,7 @@ function renderWorkflow() {
                 break;
             case NODE_TYPES.EMAIL:
                 title = '📧 Email';
-                body = 'Send notification';
+                body = `${node.params.recipient == '' ? 'Send notification' : node.params.recipient }`;
                 borderColor = '#e91e63';
                 bgColor = '#fce4ec';
                 break;
@@ -608,13 +608,13 @@ function startConnectionDrag(clientX, clientY, nodeId) {
         showNotification(`${sourceNode.type} cannot have outputs`, 'error');
         return;
     }
-    
-    const existingOutputs = workflowConnections.filter(c => c.from === nodeId).length;
-    const maxOutputs = CONNECTION_RULES[sourceNode.type]?.maxOutputs || 1;
-    if (existingOutputs >= maxOutputs) {
-        showNotification(`Max outputs reached (${maxOutputs})`, 'warning');
-        return;
-    }
+
+//    const existingOutputs = workflowConnections.filter(c => c.from === nodeId).length;
+//    const maxOutputs = CONNECTION_RULES[sourceNode.type]?.maxOutputs || 1;
+//    if (existingOutputs >= maxOutputs) {
+//        showNotification(`Max outputs reached (${maxOutputs})`, 'warning');
+//        return;
+//    }
     
     // Initialize drag state
     dragState.isDragging = true;
@@ -921,7 +921,7 @@ function editNode(nodeId) {
             }
             break;
         case NODE_TYPES.OPERATOR:
-            const newOp = prompt('Enter operator (AND, OR, NOT):', node.params.operator);
+            const newOp = prompt('Enter operator (AND, OR):', node.params.operator);
             if (newOp !== null) {
                 newParams.operator = newOp.toUpperCase();
                 changed = true;
@@ -980,9 +980,9 @@ async function deleteRule(ruleId) {
     try {
         showNotification('Deleting rule...', 'info');
         
-        const response = await delete(`/api/rules/delete?id=${ruleId}`);
+        const response = await api.del(`/api/rules/delete?id=${ruleId}`);
         
-        if (!response.ok) {
+        if (result.status !== 'success') {
             throw new Error('Delete failed: ' + response.status);
         }
         
@@ -1007,36 +1007,17 @@ async function deleteRule(ruleId) {
     }
 }
 
-function clearCanvas() {
+function clearCanvas(confirmation = true) {
     if (workflowNodes.length === 0 && workflowConnections.length === 0) return;
-    if (!confirm('Clear all nodes and connections?')) return;
+    if (confirmation) {
+        if (!confirm('Clear all nodes and connections?')) return;
+    }
     workflowNodes = [];
     workflowConnections = [];
     selectedRuleId = null;
     document.getElementById('rule-name-input').value = '';
     renderWorkflow();
     showNotification('Canvas cleared', 'info');
-}
-
-function testRule() {
-    if (workflowNodes.length === 0) {
-        showNotification('No workflow to test', 'warning');
-        return;
-    }
-    
-    let desc = [];
-    workflowConnections.forEach(conn => {
-        const fromNode = workflowNodes.find(n => n.id === conn.from);
-        const toNode = workflowNodes.find(n => n.id === conn.to);
-        if (fromNode && toNode) {
-            const fromLabel = fromNode.params.name || fromNode.type;
-            const toLabel = toNode.params.name || toNode.type;
-            desc.push(`${fromLabel} ${conn.condition || '→'} ${toLabel}`);
-        }
-    });
-    
-    const message = `🧪 Testing Rule\n\nNodes: ${workflowNodes.length}\nConnections: ${workflowConnections.length}\n\n${desc.join('\n') || 'No connections defined'}`;
-    alert(message);
 }
 
 // ============================================================
@@ -1066,22 +1047,22 @@ function validateWorkflow() {
     if (relays.length === 0 && emails.length === 0) {
         errors.push('• No output found - add at least one relay or email');
     }
-    
+
     // ============================================================
     // 3. Check operator rules
     // ============================================================
-    const andOrOperators = operators.filter(op => {
+    const logicOperators = operators.filter(op => {
         const opType = op.params.operator || 'AND';
         return opType === 'AND' || opType === 'OR';
     });
     
     // 3a. Only one operator allowed
-    if (andOrOperators.length > 1) {
-        errors.push(`• Only one AND/OR operator allowed (found ${andOrOperators.length})`);
+    if (logicOperators.length > 1) {
+        errors.push(`• Only one logical operator allowed (found ${logicOperators.length})`);
     }
     
     // 3b. If operator exists, validate it
-    andOrOperators.forEach(op => {
+    logicOperators.forEach(op => {
         const opType = op.params.operator || 'AND';
         const inputs = workflowConnections.filter(c => c.to === op.id);
         const outputs = workflowConnections.filter(c => c.from === op.id);
@@ -1095,20 +1076,11 @@ function validateWorkflow() {
         if (sensorInputs.length < 2) {
             errors.push(`• ${opType} operator needs at least 2 sensor inputs (has ${sensorInputs.length})`);
         }
-        
-        // Check if any input is from another operator
-        const operatorInputs = inputs.filter(c => {
-            const from = workflowNodes.find(n => n.id === c.from);
-            return from && from.type === NODE_TYPES.OPERATOR;
-        });
-        if (operatorInputs.length > 0) {
-            errors.push(`• ${opType} operator cannot have another operator as input`);
-        }
-        
+
         // Check outputs
-        if (outputs.length > 1) {
-            errors.push(`• ${opType} operator can only have 1 output (has ${outputs.length})`);
-        }
+//        if (outputs.length > 1) {
+//            errors.push(`• ${opType} operator can only have 1 output (has ${outputs.length})`);
+//        }
         
         // Validate output destination
         outputs.forEach(out => {
@@ -1123,7 +1095,7 @@ function validateWorkflow() {
             }
         });
     });
-    
+
     // ============================================================
     // 4. Check direct sensor→relay connections
     // ============================================================
@@ -1135,12 +1107,12 @@ function validateWorkflow() {
     });
     
     // 4a. If there's an operator, no direct sensor→relay connections allowed
-    if (andOrOperators.length > 0 && directSensorRelayConnections.length > 0) {
-        errors.push('• When using AND/OR operator, all sensors must connect to the operator (no direct sensor→relay connections)');
+    if (logicOperators.length > 0 && directSensorRelayConnections.length > 0) {
+        errors.push('• When using logical operator, all sensors must connect to the operator (no direct sensor→relay connections)');
     }
     
-    // 4b. If no operator, only ONE sensor→relay connection allowed
-    if (andOrOperators.length === 0 && directSensorRelayConnections.length > 1) {
+    // 4b. If no operator, only ONE sensor allowed
+    if (logicOperators.length === 0 && sensorInputs.length > 1) {
         errors.push('• Multiple direct sensor→relay connections without operator - use separate rules or add an operator');
     }
     
@@ -1184,10 +1156,10 @@ function validateWorkflow() {
     // ============================================================
     // 8. Check output count (single output rule)
     // ============================================================
-    const totalOutputs = relays.length + emails.length;
-    if (totalOutputs > 1) {
-        errors.push(`• Only 1 output allowed (relay or email) - found ${totalOutputs} outputs`);
-    }
+//    const totalOutputs = relays.length + emails.length;
+//    if (totalOutputs > 1) {
+//        errors.push(`• Only 1 output allowed (relay or email) - found ${totalOutputs} outputs`);
+//    }
     
     // ============================================================
     // 9. Check for unused sensors (no outgoing connection)
@@ -1229,8 +1201,8 @@ function validateWorkflow() {
     
     let description = '';
     if (!hasErrors) {
-        if (andOrOperators.length === 1) {
-            const opType = andOrOperators[0].params.operator || 'AND';
+        if (logicOperators.length === 1) {
+            const opType = logicOperators[0].params.operator || 'AND';
             description = `${sensors.length} sensors → ${opType} → ${relays.length > 0 ? 'relay' : 'email'}`;
         } else {
             description = `${sensors.length} sensor(s) → ${relays.length > 0 ? 'relay' : 'email'}`;
@@ -1248,7 +1220,7 @@ function validateWorkflow() {
             operators: operators.length,
             emails: emails.length,
             connections: workflowConnections.length,
-            hasAndOrOperator: andOrOperators.length > 0
+            hasAndOrOperator: logicOperators.length > 0
         }
     };
 }
@@ -1263,7 +1235,7 @@ async function saveRule() {
     const validation = validateWorkflow();
     
     if (!validation.valid) {
-        const errorMsg = `❌ Cannot save rule - please fix the following:\n\n${validation.errors.join('\n')}\n\nSupported patterns:\n• 1 Sensor → Relay/Email\n• Multiple Sensors → AND → Relay/Email\n• Multiple Sensors → OR → Relay/Email\n\nAll sensors must connect to the operator when using AND/OR.\nOnly 1 output (relay or email) allowed per rule.`;
+        const errorMsg = `❌ Cannot save rule - please fix the following:\n\n${validation.errors.join('\n')}\n\nSupported patterns:\n• 1 Sensor → Relay/Email\n• Multiple Sensors → AND → Relay/Email\n• Multiple Sensors → OR → Relay/Email\n\nAll sensors must connect to the operator when using logical operator.\n`;
         alert(errorMsg);
         showNotification('Workflow has errors - please fix them', 'error');
         return;
@@ -1279,20 +1251,20 @@ async function saveRule() {
     
     const conditions = [];
     const outputs = [];
-    const compMap = {'>': 0, '<': 1, '==': 2, '!=': 3};
+    const compMap = {'>': 0, '<': 1, '==': 2, '!=': 3, '=': 2, '<>': 3};
     let logicType = 0; // AND by default
-    
+
     // Determine logic type from operator
-    const andOrOperators = operators.filter(op => {
+    const logicOperators = operators.filter(op => {
         const opType = op.params.operator || 'AND';
         return opType === 'AND' || opType === 'OR';
     });
-    
-    if (andOrOperators.length === 1) {
-        const opType = andOrOperators[0].params.operator || 'AND';
+
+    if (logicOperators.length === 1) {
+        const opType = logicOperators[0].params.operator || 'AND';
         logicType = opType === 'OR' ? 1 : 0;
     }
-    
+
     // Build conditions from sensors
     sensors.forEach(sensor => {
         conditions.push({
@@ -1301,7 +1273,7 @@ async function saveRule() {
             threshold: parseFloat(sensor.params.threshold) || 0
         });
     });
-    
+
     // Build outputs
     if (relays.length > 0) {
         const relay = relays[0];
@@ -1311,7 +1283,7 @@ async function saveRule() {
             duration: parseInt(relay.params.duration) || 5000
         });
     }
-    
+
     if (emails.length > 0) {
         const email = emails[0];
         outputs.push({
@@ -1320,17 +1292,17 @@ async function saveRule() {
             duration: 0
         });
     }
-    
+
     // Build the rule
     const rule = {
         name: ruleName,
-        enabled: 1,
+        enabled: 0,
         logic_type: logicType,
         cooldown_seconds: 10,
         conditions: conditions,
         outputs: outputs
     };
-    
+
     if (emails.length > 0) {
         const email = emails[0];
         rule.email_recipient = email.params.recipient || 'admin@example.com';
@@ -1350,15 +1322,16 @@ async function saveRule() {
     } else {
         console.log('🆕 CREATING new rule');
     }
-    
+
     // Save
     try {
         const result = await api.post('/api/rules', rule);
         console.log('📨 Save result:', result);
-        
+
         if (result.status === 'success' || result.rule_id !== undefined) {
             const action = isUpdate ? 'updated' : 'created';
             showNotification(`✅ Rule "${ruleName}" ${action} successfully! (${validation.description})`, 'success');
+            clearCanvas(false);
             await loadRules();
             selectedRuleId = null;
         } else {
@@ -1422,7 +1395,7 @@ async function loadRuleToCanvas(ruleId) {
         const nodeSpacing = 100;
         
         const sensorCount = conditions.length;
-        const relayCount = outputs.length;
+        const relayCount = outputs.filter(output => outputs.type === 1).length;
         const rowCount = Math.max(sensorCount, relayCount);
         
         // Create sensor nodes (stacked vertically)
@@ -1453,7 +1426,7 @@ async function loadRuleToCanvas(ruleId) {
         });
         
         // Create relay nodes (stacked vertically)
-        outputs.forEach((out, index) => {
+        outputs.filter(out => out.type === 0).forEach((out, index) => {
             const relayId = out.id || 0;
             const relay = relays.find(r => r.id === relayId);
             const relayName = relay ? relay.name : `Relay ${relayId}`;
@@ -1822,7 +1795,6 @@ async function initAutomation() {
 
     document.getElementById('save-rule')?.addEventListener('click', saveRule);
     document.getElementById('clear-canvas')?.addEventListener('click', clearCanvas);
-    document.getElementById('test-rule')?.addEventListener('click', testRule);
     document.getElementById('add-rule')?.addEventListener('click', function() {
         if (typeof clearCanvas === 'function') clearCanvas();
         document.getElementById('rule-name-input').value = 'New Rule ' + (Date.now() % 1000);
@@ -1830,6 +1802,7 @@ async function initAutomation() {
     });
     document.getElementById('delete-rule')?.addEventListener('click', function() {
         if (selectedRuleId !== null) {
+            event.stopPropagation(); 
             deleteRule(selectedRuleId);
         }
     });
@@ -1856,7 +1829,6 @@ window.toggleRule = toggleRule;
 window.deleteRule = deleteRule;
 window.saveRule = saveRule;
 window.clearCanvas = clearCanvas;
-window.testRule = testRule;
 window.loadRules = loadRules;
 window.showNotification = showNotification;
 window.selectedRuleId = selectedRuleId;

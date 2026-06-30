@@ -27,9 +27,9 @@
 #>
 
 param(
-    [string]$InputDir = "c:\water_quality_monitor\web_assets",
-    [string]$OutputDir = "c:\water_quality_monitor\web_assets.min",
-    [string]$BackupDir = "c:\water_quality_monitor\backup",
+    [string]$InputDir = "C:\water_quality_monitor\web_assets",
+    [string]$OutputDir = "C:\water_quality_monitor\web_assets.min",
+    [string]$BackupDir = "C:\water_quality_monitor\backup",
     [switch]$CreateBackup,
     [switch]$IncludeSubfolders = $true,
     [string[]]$ExcludeFolders = @("node_modules", ".git", "vendor", "bower_components", "dist", "build", $OutputDir, $BackupDir),
@@ -80,6 +80,25 @@ Write-Header "============================================="
 Write-Header "    Advanced HTML/CSS/JS Minifier v3.1"
 Write-Header "         with UTF-8 Support"
 Write-Header "============================================="
+Write-Host ""
+
+# Copy non-attacked files to the destination first.
+Get-ChildItem -Path $InputDir -Recurse -File | 
+    Where-Object { $_.Extension -NotIn $FileExtensions } | 
+    ForEach-Object {
+        # Calculate the new path by swapping the source root for the destination root
+        $NewPath = $_.FullName.Replace($InputDir, $OutputDir)
+        $NewFolder = Split-Path -Path $NewPath -Parent
+
+        # Ensure the destination subfolder exists before copying
+        if (-not (Test-Path -Path $NewFolder)) {
+            New-Item -Path $NewFolder -ItemType Directory | Out-Null
+        }
+
+        Copy-Item -Path $_.FullName -Destination $NewPath -Force
+    }
+
+Write-host "Copying non-compressible files to destination folder..."
 Write-Host ""
 
 # Validate input directory
