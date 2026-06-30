@@ -1,0 +1,39 @@
+Pin NamePin #	GPIO	Type	Primary Capabilities & Notes
+3V3 	 1  	   -	Power	3.3V Power Supply Output
+EN  	 2  	   -	Input	CHIP_PU / Reset. Pull LOW to reset.
+SVP 	 3  	GPIO36	Input	ADC1_CH0 (Analog/Sensor VP)
+SVN 	 4  	GPIO39	Input	ADC1_CH3 (Analog/Sensor VN)
+IO34	 5  	GPIO34	Input	ADC1_CH6 (Input-only pin)
+IO35	 6  	GPIO35	Input	ADC1_CH7 (Input-only pin)
+IO32	 7  	GPIO32	I/O 	ADC1_CH4, TOUCH_9, RTC_32K_P
+IO33	 8  	GPIO33	I/O 	ADC1_CH5, TOUCH_8, RTC_32K_N
+IO25	 9  	GPIO25	I/O 	ADC2_CH8, DAC1
+IO26	10  	GPIO26	I/O 	ADC2_CH9, DAC2
+IO27	11  	GPIO27	I/O 	ADC2_CH7, TOUCH_7
+IO14	12  	GPIO14	I/O 	ADC2_CH6, TOUCH_6, HSPI_CLK
+IO12	13  	GPIO12	I/O 	ADC2_CH5, TOUCH_5, HSPI_MISO
+GND 	14  	   -	Power	Ground
+IO13	15  	GPIO13	I/O 	ADC2_CH4, TOUCH_4, HSPI_MOSI
+IO9 	16  	GPIO9	I/O 	Connected to Flash (Avoid using)
+IO10	17  	GPIO10	I/O 	Connected to Flash (Avoid using)
+IO11	18  	GPIO11	I/O 	Connected to Flash (Avoid using)
+VIN 	19  	   -	Power	5V Power Supply Input (via USB)
+GND 	20  	   -	Power	Ground
+IO6 	21  	GPIO6	I/O 	Connected to Flash (Avoid using)
+IO7 	22  	GPIO7	I/O 	Connected to Flash (Avoid using)
+IO8 	23  	GPIO8	I/O 	Connected to Flash (Avoid using)
+IO15	24  	GPIO15	I/O 	ADC2_CH3, TOUCH_3. Boot Strapping (Needs HIGH)
+IO2 	25  	GPIO2	I/O 	ADC2_CH2, TOUCH_2. Boot Strapping Pin
+IO0 	26  	GPIO0	I/O 	ADC2_CH1, TOUCH_1. Pull LOW for Boot Mode
+IO4 	27  	GPIO4	I/O 	ADC2_CH0, TOUCH_0
+IO16	28  	GPIO16	I/O 	UART2 RX
+IO17	29  	GPIO17	I/O 	UART2 TX
+IO5 	30  	GPIO5	I/O 	VSPI_CS0 / Boot Strapping (Needs HIGH)
+IO18	31  	GPIO18	I/O 	VSPI_CLK
+IO19	32  	GPIO19	I/O 	VSPI_MISO
+IO21	33  	GPIO21	I/O 	I2C SDA
+IO3 	34  	GPIO3	I/O 	U0RXD (Default Serial Input/RX)
+IO1 	35  	GPIO1	I/O 	U0TXD (Default Serial Output/TX)
+IO22	36  	GPIO22	I/O 	I2C SCL
+IO23	37  	GPIO23	I/O 	VSPI_MOSI
+GND 	38  	   -	Power	Ground

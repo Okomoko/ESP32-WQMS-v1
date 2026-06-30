@@ -152,7 +152,7 @@ async function loadRules() {
     try {
         const response = await api.get('/api/rules');
         const rules = response.rules || [];
-        
+
         const list = document.getElementById('rules-list');
         if (!list) return;
         
@@ -192,9 +192,9 @@ function getRuleDescription(rule) {
     const out = rule.outputs[0];
     if (!cond || !out) return 'Incomplete rule';
     
-    const compMap = ['<', '>', '==', '!='];
-    const sensorName = `Sensor ${cond.sensor_id}`;
-    const relayName = `Relay ${out.id}`;
+    const compMap = ['>', '<', '==', '!='];
+    const sensorName = document.querySelector('div[data-type="sensor"][data-id="'+cond.sensor_id+'"]').getAttribute("data-name");
+    const relayName = document.querySelector('div[data-type="relay"][data-id="'+out.id+'"]').getAttribute("data-name");
     
     return `${sensorName} ${compMap[cond.comparator] || '>'} ${cond.threshold} → ${relayName} (${out.duration || 5000} ms)`;
 }
@@ -427,7 +427,7 @@ function renderWorkflow() {
                 break;
             case NODE_TYPES.OPERATOR:
                 title = node.params.operator || 'AND';
-                body = 'Logical operator';
+                body = `${node.params.operator == 'AND' ? 'All must be ✔' : 'One ✔ is fine' }`;
                 borderColor = '#f9a825';
                 bgColor = '#fff8e1';
                 break;
@@ -991,13 +991,9 @@ async function deleteRule(ruleId) {
         
         if (result.status === 'success') {
             showNotification('Rule deleted successfully', 'success');
-            await loadRules();
-            
-            if (selectedRuleId === ruleId) {
-                selectedRuleId = null;
-                clearCanvas();
-                loadRules();
-            }
+            selectedRuleId = null;
+            clearCanvas();
+            loadRules();
         } else {
             showNotification('Failed to delete rule: ' + (result.message || 'Unknown error'), 'error');
         }
@@ -1021,7 +1017,7 @@ function clearCanvas(confirmation = true) {
 }
 
 // ============================================================
-// Validate Workflow - Simplified (NO NOT)
+// Validate Workflow - Simplified
 // Supports:
 //   - 1 Sensor → Relay/Email
 //   - Multiple Sensors → AND/OR → Relay/Email
@@ -1035,7 +1031,7 @@ function validateWorkflow() {
     // ============================================================
     const sensors = workflowNodes.filter(n => n.type === NODE_TYPES.SENSOR);
     const relays = workflowNodes.filter(n => n.type === NODE_TYPES.RELAY);
-    const operators = workflowNodes.filter(n => n.type === NODE_TYPES.OPERATOR);
+    const logicOperators = workflowNodes.filter(n => n.type === NODE_TYPES.OPERATOR);
     const emails = workflowNodes.filter(n => n.type === NODE_TYPES.EMAIL);
     
     // ============================================================
@@ -1047,15 +1043,14 @@ function validateWorkflow() {
     if (relays.length === 0 && emails.length === 0) {
         errors.push('• No output found - add at least one relay or email');
     }
+    if (emails.length > 1) {
+        errors.push('• Only one email output can be specify, use comma to separate multiple emails.');
+    }
 
     // ============================================================
     // 3. Check operator rules
     // ============================================================
-    const logicOperators = operators.filter(op => {
-        const opType = op.params.operator || 'AND';
-        return opType === 'AND' || opType === 'OR';
-    });
-    
+
     // 3a. Only one operator allowed
     if (logicOperators.length > 1) {
         errors.push(`• Only one logical operator allowed (found ${logicOperators.length})`);
@@ -1067,21 +1062,10 @@ function validateWorkflow() {
         const inputs = workflowConnections.filter(c => c.to === op.id);
         const outputs = workflowConnections.filter(c => c.from === op.id);
         
-        // Count sensor inputs
-        const sensorInputs = inputs.filter(c => {
-            const from = workflowNodes.find(n => n.id === c.from);
-            return from && from.type === NODE_TYPES.SENSOR;
-        });
-        
-        if (sensorInputs.length < 2) {
-            errors.push(`• ${opType} operator needs at least 2 sensor inputs (has ${sensorInputs.length})`);
+        if (sensors.length < 2) {
+            errors.push(`• ${opType} operator needs at least 2 sensor inputs (has ${sensors.length})`);
         }
 
-        // Check outputs
-//        if (outputs.length > 1) {
-//            errors.push(`• ${opType} operator can only have 1 output (has ${outputs.length})`);
-//        }
-        
         // Validate output destination
         outputs.forEach(out => {
             const to = workflowNodes.find(n => n.id === out.to);
@@ -1112,7 +1096,7 @@ function validateWorkflow() {
     }
     
     // 4b. If no operator, only ONE sensor allowed
-    if (logicOperators.length === 0 && sensorInputs.length > 1) {
+    if (logicOperators.length === 0 && sensors.length > 1) {
         errors.push('• Multiple direct sensor→relay connections without operator - use separate rules or add an operator');
     }
     
@@ -1217,7 +1201,7 @@ function validateWorkflow() {
         stats: {
             sensors: sensors.length,
             relays: relays.length,
-            operators: operators.length,
+            operators: logicOperators.length,
             emails: emails.length,
             connections: workflowConnections.length,
             hasAndOrOperator: logicOperators.length > 0
@@ -1276,11 +1260,12 @@ async function saveRule() {
 
     // Build outputs
     if (relays.length > 0) {
-        const relay = relays[0];
-        outputs.push({
-            type: 0,
-            id: relay.source_id || 0,
-            duration: parseInt(relay.params.duration) || 5000
+        relays.forEach(relay => {
+            outputs.push({
+                type: 0,
+                id: relay.source_id || 0,
+                duration: parseInt(relay.params.duration) || 5000
+            });
         });
     }
 
@@ -1389,14 +1374,15 @@ async function loadRuleToCanvas(ruleId) {
         // Layout parameters
         const canvasWidth = 600;
         const leftX = 20;
-        const rightX = canvasWidth - 240;
+        const rightX = canvasWidth - 160;
         const centerX = (leftX + rightX) / 2;
         const startY = 20;
         const nodeSpacing = 100;
         
         const sensorCount = conditions.length;
-        const relayCount = outputs.filter(output => outputs.type === 1).length;
-        const rowCount = Math.max(sensorCount, relayCount);
+        const relayCount = outputs.filter(out => out.type === 0).length;
+        const outputCount = outputs.length
+        const rowCount = Math.max(sensorCount, outputCount);
         
         // Create sensor nodes (stacked vertically)
         const sensorNodes = [];
@@ -1431,7 +1417,7 @@ async function loadRuleToCanvas(ruleId) {
             const relay = relays.find(r => r.id === relayId);
             const relayName = relay ? relay.name : `Relay ${relayId}`;
             
-            const yOffset = (rowCount - relayCount) * nodeSpacing / 2;
+            const yOffset = (rowCount - outputCount) * nodeSpacing / 2;
             
             const node = {
                 id: nextNodeId++,
@@ -1466,6 +1452,37 @@ async function loadRuleToCanvas(ruleId) {
             workflowNodes.push(operatorNode);
         }
         
+        // Handle email outputs
+        const emailOutputs = outputs.filter(out => out.type === 1);
+        if (emailOutputs.length > 0) {
+            const yOffset = (rowCount - outputCount) * nodeSpacing / 2;
+            const emailNode = {
+                id: nextNodeId++,
+                type: NODE_TYPES.EMAIL,
+                source_id: 0,
+                x: rightX,
+                y: startY + yOffset + (relayCount * nodeSpacing),
+                params: {
+                    recipient: rule.email_recipient || 'admin@example.com'
+                }
+            };
+            workflowNodes.push(emailNode);
+
+            if (operatorNode) {
+                workflowConnections.push({
+                    from: operatorNode.id,
+                    to: emailNode.id,
+                    condition: `→`
+                });
+            } else if (relayNodes.length > 0) {
+                workflowConnections.push({
+                    from: relayNodes[relayNodes.length - 1].id,
+                    to: emailNode.id,
+                    condition: `→`
+                });
+            }
+        }
+        
         // Create connections
         if (operatorNode) {
             // All sensors → operator
@@ -1488,53 +1505,17 @@ async function loadRuleToCanvas(ruleId) {
             });
         } else {
             // Direct connections (paired)
-            const pairCount = Math.min(sensorNodes.length, relayNodes.length);
-            for (let i = 0; i < pairCount; i++) {
-                const sensorNode = sensorNodes[i];
-                const relayNode = relayNodes[i];
-                const cond = conditions[i] || conditions[0];
-                
-                if (sensorNode && relayNode) {
-                    workflowConnections.push({
-                        from: sensorNode.id,
-                        to: relayNode.id,
-                        condition: `${compMap[cond.comparator] || '>'} ${cond.threshold || 0}`
-                    });
-                }
-            }
-        }
-        
-        // Handle email outputs
-        const emailOutputs = outputs.filter(out => out.type === 1);
-        if (emailOutputs.length > 0) {
-            const emailY = startY + (rowCount) * nodeSpacing + 40;
-            const emailNode = {
-                id: nextNodeId++,
-                type: NODE_TYPES.EMAIL,
-                source_id: 0,
-                x: rightX,
-                y: emailY,
-                params: {
-                    recipient: rule.email_recipient || 'admin@example.com'
-                }
-            };
-            workflowNodes.push(emailNode);
-            
-            if (operatorNode) {
+			const sensorNode = sensorNodes[0];
+			const cond = conditions[0];
+            relayNodes.forEach(relay => {
                 workflowConnections.push({
-                    from: operatorNode.id,
-                    to: emailNode.id,
-                    condition: `→`
+                    from: sensorNode.id,
+                    to: relay.id,
+                    condition: `${compMap[cond.comparator] || '>'} ${cond.threshold || 0}`
                 });
-            } else if (relayNodes.length > 0) {
-                workflowConnections.push({
-                    from: relayNodes[relayNodes.length - 1].id,
-                    to: emailNode.id,
-                    condition: `→`
-                });
-            }
+            });
         }
-        
+
         renderWorkflow();
         showNotification(`✅ Rule "${rule.name}" loaded`, 'success');
         
