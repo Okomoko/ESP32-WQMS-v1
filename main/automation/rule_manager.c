@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
-#include "nvs_flash.h"
 #include "nvs.h"
 
 #include "rule_manager.h"

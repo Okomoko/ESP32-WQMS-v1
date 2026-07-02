@@ -58,6 +58,7 @@ idf_component_register(SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/api_doc.html
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/style.css
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/core.js
+    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/chart.js
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/dashboard.js
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/automation.js
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/config.js

@@ -9,7 +9,6 @@
 #include "esp_timer.h"
 #include "esp_sntp.h"
 #include "nvs_flash.h"
-#include "nvs.h"
 
 #include "ntp_client.h"
 #include "log_levels.h"

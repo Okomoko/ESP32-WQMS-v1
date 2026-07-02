@@ -35,6 +35,10 @@ extern const unsigned char _binary_style_css_end[]   asm("_binary_style_css_end"
 extern const unsigned char _binary_core_js_start[] asm("_binary_core_js_start");
 extern const unsigned char _binary_core_js_end[]   asm("_binary_core_js_end");
 
+// Chart
+extern const unsigned char _binary_chart_js_start[] asm("_binary_chart_js_start");
+extern const unsigned char _binary_chart_js_end[]   asm("_binary_chart_js_end");
+
 // Dashboard
 extern const unsigned char _binary_dashboard_js_start[] asm("_binary_dashboard_js_start");
 extern const unsigned char _binary_dashboard_js_end[]   asm("_binary_dashboard_js_end");
@@ -179,6 +183,13 @@ static esp_err_t router_js_handler(httpd_req_t *req) {
                                "application/javascript");
 }
 
+static esp_err_t chart_js_handler(httpd_req_t *req) {
+    return serve_embedded_file(req, 
+                               _binary_chart_js_start, 
+                               _binary_chart_js_end, 
+                               "application/javascript");
+}
+
 static esp_err_t favicon_handler(httpd_req_t *req) {
     return serve_embedded_file(req, 
                                _binary_favicon_ico_start, 
@@ -319,6 +330,14 @@ void webserver_init(void) {
             .user_ctx = NULL
         };
         httpd_register_uri_handler(server, &router_js_uri);
+
+        httpd_uri_t chart_js_uri = {
+            .uri = "/js/chart.js",
+            .method = HTTP_GET,
+            .handler = chart_js_handler,
+            .user_ctx = NULL
+        };
+        httpd_register_uri_handler(server, &chart_js_uri);
 
         httpd_uri_t favicon_uri = {
             .uri = "/favicon.ico",

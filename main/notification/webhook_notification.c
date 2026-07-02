@@ -7,14 +7,14 @@
 #include <time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_system.h"
 #include "esp_http_client.h"
 #include "esp_timer.h"
 #include "esp_log.h"
 #include "esp_http_client.h"
 #include "esp_err.h"
-#include "cJSON.h"
-#include "nvs_flash.h"
 #include "nvs.h"
+#include "cJSON.h"
 
 #include "webhook_notification.h"
 #include "wifi_manager.h"
@@ -26,6 +26,8 @@
 
 static webhook_config_t webhook_config = {0};
 static int webhook_initialized = 0;
+
+#define TAG "NOTIFICATION"
 
 static const char base64_chars[] = 
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -134,7 +136,7 @@ static char* url_encode(const char* str) {
 // ============================================================
 
 static char* base64_encode(const char* data) {
-	size_t input_length = strlen(data);
+    size_t input_length = strlen(data);
     size_t output_length = 4 * ((input_length + 2) / 3);
     char* encoded_data = malloc(output_length + 1);
     if (encoded_data == NULL) {
@@ -224,7 +226,7 @@ static void webhook_send_task(void *pvParameters) {
     
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (client == NULL) {
-        WQMS_LOG_E("Failed to initialize HTTP client");
+        NOTIFICATION_LOG_E("Failed to initialize HTTP client");
         vTaskDelete(NULL);
         return;
     }
@@ -251,7 +253,7 @@ static void webhook_send_task(void *pvParameters) {
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK) {
         int status = esp_http_client_get_status_code(client);
-        WQMS_LOG_I("HTTP Status = %d", status);
+        NOTIFICATION_LOG_I("HTTP Status = %d", status);
         
         if (status >= 200 && status < 300) {
             // Read and parse response
@@ -269,26 +271,26 @@ static void webhook_send_task(void *pvParameters) {
                 cJSON* json = cJSON_Parse(response);
                 if (json) {
                     char* json_str = cJSON_Print(json);
-                    WQMS_LOG_I("Response JSON: %s", json_str);
+                    NOTIFICATION_LOG_I("Response JSON: %s", json_str);
                     free(json_str);
                     cJSON_Delete(json);
                 } else {
-                    WQMS_LOG_I("Response: %s", response);
+                    NOTIFICATION_LOG_I("Response: %s", response);
                 }
                 free(response);
             }
-            WQMS_LOG_I("Email sent successfully!");
+            NOTIFICATION_LOG_I("Email sent successfully!");
         } else {
-            WQMS_LOG_E("Email sending failed with status: %d", status);
+            NOTIFICATION_LOG_E("Email sending failed with status: %d", status);
             char buffer[512];
             int data_read = esp_http_client_read(client, buffer, sizeof(buffer) - 1);
             if (data_read > 0) {
                 buffer[data_read] = '\0';
-                WQMS_LOG_E("Error response: %s", buffer);
+                NOTIFICATION_LOG_E("Error response: %s", buffer);
             }
         }
     } else {
-        WQMS_LOG_E("HTTP request failed: %s", esp_err_to_name(err));
+        NOTIFICATION_LOG_E("HTTP request failed: %s", esp_err_to_name(err));
     }
 
     esp_http_client_cleanup(client);
@@ -312,12 +314,12 @@ void webhook_notification_init(void) {
     if (strlen(config.emails) == 0) {
         strncpy(config.emails, DEFAULT_RECIPIENTS, sizeof(config.emails) - 1);
         config.emails[sizeof(config.emails) - 1] = '\0';
-        WQMS_LOG_I("Recipients was empty, set to default: '%s'", config.emails);
+        NOTIFICATION_LOG_I("Recipients was empty, set to default: '%s'", config.emails);
     }
     if (strlen(config.subject) == 0) {
         strncpy(config.subject, DEFAULT_SUBJECT, sizeof(config.subject) - 1);
         config.subject[sizeof(config.subject) - 1] = '\0';
-        WQMS_LOG_I("Subject was empty, set to default: '%s'", config.subject);
+        NOTIFICATION_LOG_I("Subject was empty, set to default: '%s'", config.subject);
     }
     config.enabled = 1;
     
@@ -328,7 +330,7 @@ void webhook_notification_init(void) {
 
 void webhook_load_config(webhook_config_t *config) {
     if (!config) {
-        WQMS_LOG_W("Webhook config is not loaded: ", config);
+        NOTIFICATION_LOG_W("Webhook config is not loaded: ", config);
         return;
     }
 
@@ -340,14 +342,14 @@ void webhook_load_config(webhook_config_t *config) {
     size_t len = sizeof(config->emails);
     esp_err_t err = nvs_get_str(handle, "webhook_emails", config->emails, &len);
     if (err != ESP_OK) {
-        WQMS_LOG_W("Webhook recepients error : ", err);
+        NOTIFICATION_LOG_W("Webhook recepients error : ", err);
         config->emails[0] = '\0';
     }
     
     len = sizeof(config->subject);
     err = nvs_get_str(handle, "webhook_subject", config->subject, &len);
     if (err != ESP_OK) {
-        WQMS_LOG_W("Webhook subject error : ", err);
+        NOTIFICATION_LOG_W("Webhook subject error : ", err);
         config->subject[0] = '\0';
     }
     
@@ -360,7 +362,7 @@ void webhook_load_config(webhook_config_t *config) {
     
     nvs_close(handle);
     
-    WQMS_LOG_W("Webhook config loaded: recipients=%s, subject=%s, enabled=%d", config->emails, config->subject, config->enabled);
+    NOTIFICATION_LOG_W("Webhook config loaded: recipients=%s, subject=%s, enabled=%d", config->emails, config->subject, config->enabled);
 }
 
 void webhook_save_config(webhook_config_t *config) {
@@ -373,7 +375,7 @@ void webhook_save_config(webhook_config_t *config) {
 
     nvs_handle_t handle;
     if (nvs_open("wqms", NVS_READWRITE, &handle) != ESP_OK) {
-        WQMS_LOG_E("Failed to open NVS for webhook config");
+        NOTIFICATION_LOG_E("Failed to open NVS for webhook config");
         return;
     }
 
@@ -385,25 +387,25 @@ void webhook_save_config(webhook_config_t *config) {
     
     memcpy(&webhook_config, config, sizeof(webhook_config_t));
 
-    WQMS_LOG_I("Webhook config saved to NVS");
+    NOTIFICATION_LOG_I("Webhook config saved to NVS");
 }
 
 int webhook_send_notification(wh_notif_type_t type, const char *event, const char *message) {
     if (!webhook_initialized || !webhook_config.enabled) {
-        WQMS_LOG_W("Webhook notifications disabled");
+        NOTIFICATION_LOG_W("Webhook notifications disabled");
         return -1;
     }
 
     char *json_payload = build_webhook_payload(type, event, message);
     if (!json_payload) {
-        WQMS_LOG_E("Failed to build webhook payload");
+        NOTIFICATION_LOG_E("Failed to build webhook payload");
         return -3;
     }
 
     webhook_task_data_t *data = malloc(sizeof(webhook_task_data_t));
     if (!data) {
         free(json_payload);
-        WQMS_LOG_E("Failed to allocate webhook task data");
+        NOTIFICATION_LOG_E("Failed to allocate webhook task data");
         return -4;
     }
     
@@ -416,12 +418,12 @@ int webhook_send_notification(wh_notif_type_t type, const char *event, const cha
     data->emails[sizeof(data->emails) - 1] = '\0';
     
     if (xTaskCreate(webhook_send_task, "webhook_send", WEBHOOK_TASK_STACK_SIZE, data, WEBHOOK_TASK_PRIORITY, NULL) != pdPASS) {
-        WQMS_LOG_E("Failed to create webhook task");
+        NOTIFICATION_LOG_E("Failed to create webhook task");
         free(data);
         return -5;
     }
     
-    APP_LOG_I("Webhook notification queued: %s - %s", event ? event : "Unknown", message ? message : "");
+    NOTIFICATION_LOG_I("Webhook notification queued: %s - %s", event ? event : "Unknown", message ? message : "");
     return 0;
 }
 

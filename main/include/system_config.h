@@ -18,6 +18,7 @@
 #define DHT11_SENSOR_TEMP      6
 #define DHT11_SENSOR_HUMID     7
 
+extern const char* default_sensor_names[];
 /*
 
 Pin NamePin #	GPIO	Type	Primary Capabilities & Notes
@@ -69,6 +70,9 @@ GND 	38  	   -	Power	Ground
 
 //check pin configuration in nvs_config.c
 
+// Digital temperature and humidity sensor connection
+#define GPIO_DHT11             13 //Digital sensor I/O pin
+
 // ============================================================
 // Relay Configuration
 // ============================================================
@@ -80,13 +84,14 @@ GND 	38  	   -	Power	Ground
 // ============================================================
 // Sensor History Configuration (32 days fixed)
 // ============================================================
-#define HISTORY_DAYS            32
-#define HISTORY_SAMPLES_PER_DAY 1440
-#define HISTORY_MAX_RECORDS     (HISTORY_DAYS * HISTORY_SAMPLES_PER_DAY)
-#define SENSOR_RECORD_SIZE      26
-#define HISTORY_FILE_SIZE       (HISTORY_MAX_RECORDS * SENSOR_RECORD_SIZE)
-
-#define GPIO_DHT11             13 //Digital sensor I/O pin
+#define HISTORY_DAYS                  32
+#define HISTORY_SAMPLES_PER_DAY       1440
+#define HISTORY_MAX_RECORDS           (HISTORY_DAYS * HISTORY_SAMPLES_PER_DAY)
+#define HISTORY_MAX_RECORDS_PER_PAGE  (3* HISTORY_SAMPLES_PER_DAY)
+#define SENSOR_RECORD_SIZE            26
+#define HISTORY_FILE_SIZE             (HISTORY_MAX_RECORDS * SENSOR_RECORD_SIZE)
+#define HISTORY_FILE                  "/spiffs/sensors/history.dat"
+#define INDEX_FILE                    "/spiffs/sensors/index.dat"
 
 // ============================================================
 // Logging Configuration

@@ -15,12 +15,6 @@
 #include "nvs_config.h"
 
 // ============================================================
-// Constants
-// ============================================================
-#define HISTORY_FILE "/spiffs/sensors/history.dat"
-#define INDEX_FILE "/spiffs/sensors/index.dat"
-
-// ============================================================
 // Data Structures
 // ============================================================
 typedef struct __attribute__((packed)) {

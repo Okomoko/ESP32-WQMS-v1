@@ -28,6 +28,7 @@ typedef enum {
     WQMS_LOG_TYPE_SYSTEM = 0,
     WQMS_LOG_TYPE_APPLICATION = 1,
     WQMS_LOG_TYPE_AUTOMATION = 2,
+    WQMS_LOG_TYPE_NOTIFICATION = 3,
     WQMS_LOG_TYPE_MAX
 } wqms_log_type_t;
 
@@ -89,6 +90,15 @@ typedef enum {
 #define AUTO_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
 #define AUTO_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
 #define AUTO_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
+
+// ============================================================
+// Conditional Logging Macros - Notification Log
+// ============================================================
+#define NOTIFICATION_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
+#define NOTIFICATION_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
+#define NOTIFICATION_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
+#define NOTIFICATION_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
+#define NOTIFICATION_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
 
 // ============================================================
 // RS232 Console Output

@@ -22,6 +22,7 @@
 #include "system_config.h"
 #include "sensor_read.h"
 #include "sensor_calib.h"
+#include "sensor_history.h"
 #include "relay_control.h"
 #include "nvs_config.h"
 #include "wifi_manager.h"
@@ -1898,7 +1899,7 @@ esp_err_t api_rules_import_handler(httpd_req_t *req) {
                 cJSON *out = cJSON_GetArrayItem(outputs, j);
                 if (out) {
                     cJSON *type = cJSON_GetObjectItem(out, "type");
-                    cJSON *id = cJSON_GetObjectItem(out, "id");
+                   cJSON *id = cJSON_GetObjectItem(out, "id");
                     cJSON *duration = cJSON_GetObjectItem(out, "duration");
                     
                     if (type) rule.outputs[j].type = type->valueint;
@@ -1926,6 +1927,430 @@ esp_err_t api_rules_import_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+// ============================================================
+// GET /api/history - Get historical sensor data
+// ============================================================
+esp_err_t api_get_history_handler(httpd_req_t *req)
+{
+    // CORS headers
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type");
+
+    // Handle preflight OPTIONS
+    if (req->method == HTTP_OPTIONS) {
+        httpd_resp_send(req, NULL, 0);
+        return ESP_OK;
+    }
+    
+    // Get parameters
+    char limit_str[8];
+    char start_str[16] = "0";
+    char end_str[16] = "0";
+    
+    snprintf(limit_str, sizeof(limit_str), "%d", HISTORY_MAX_RECORDS_PER_PAGE);
+    // Get query string
+    char query[128] = {0};
+    size_t query_len = httpd_req_get_url_query_len(req);
+    ESP_LOGI(TAG, "Query length: %d", query_len);
+    
+    if (query_len > 0) {
+        if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+            ESP_LOGI(TAG, "Full query string: %s", query);
+            
+            // Parse parameters with better error checking
+            if (httpd_query_key_value(query, "limit", limit_str, sizeof(limit_str)) == ESP_OK) {
+                ESP_LOGI(TAG, "Parsed limit: %s", limit_str);
+            } else {
+                ESP_LOGI(TAG, "No limit parameter found, using default: 60");
+            }
+            
+            httpd_query_key_value(query, "start", start_str, sizeof(start_str));
+            httpd_query_key_value(query, "end", end_str, sizeof(end_str));
+        }
+    } else {
+        ESP_LOGI(TAG, "No query string, using defaults");
+    }
+    
+    int limit = atoi(limit_str);
+    if (limit < 1) limit = 1;
+    if (limit > 4320) limit = 4320;
+    
+    ESP_LOGI(TAG, "Final limit: %d", limit);  // Debug
+    
+    uint32_t start_ts = atoi(start_str);
+    uint32_t end_ts = atoi(end_str);
+    
+    // If no time range specified, get latest records
+    if (start_ts == 0 && end_ts == 0) {
+
+        // Get the newest records by reading backwards from end
+        uint32_t total_records = sensor_history_get_record_count();
+        if (total_records == 0) {
+            httpd_resp_set_type(req, "application/json");
+            httpd_resp_send(req, "{\"entries\":[]}", -1);
+            return ESP_OK;
+        }
+
+        // We need to get the most recent 'limit' records
+        // Since we can only get by timestamp range, we need to get the newest timestamp
+        uint32_t newest_ts = sensor_history_get_newest_ts();
+        uint32_t oldest_ts = sensor_history_get_oldest_ts();
+
+        if (newest_ts == 0) {
+            httpd_resp_set_type(req, "application/json");
+            httpd_resp_send(req, "{\"entries\":[]}", -1);
+            return ESP_OK;
+        }
+
+        // Estimate time range to get enough records
+        // If we have enough records, go back estimated time
+        uint32_t time_range = HISTORY_MAX_RECORDS_PER_PAGE;
+        if (total_records > 1 && newest_ts > oldest_ts) {
+            uint32_t avg_interval = (newest_ts - oldest_ts) / (total_records - 1);
+            time_range = avg_interval * limit * 2;
+            if (time_range < HISTORY_MAX_RECORDS_PER_PAGE) time_range = HISTORY_MAX_RECORDS_PER_PAGE;
+        }
+
+        start_ts = newest_ts - time_range;
+        end_ts = newest_ts + 1;
+    }
+
+    #define CHUNK_SIZE 50  // Read 50 records at a time
+    
+    // Start JSON response
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send_chunk(req, "{\"entries\":[", -1);
+    
+    // Variables for chunked reading
+    sensor_record_t records[CHUNK_SIZE];
+    int total_sent = 0;
+    int first_chunk = 1;
+    uint32_t current_start_ts = start_ts;
+    uint32_t current_end_ts = end_ts;
+    int records_remaining = limit;
+    
+    // Load sensor configs once (for name mapping)
+    sensor_config_t sensor_config[SENSOR_COUNT];
+    nvs_load_sensor_config(sensor_config, SENSOR_COUNT);
+    
+    // Keep reading in chunks until we have enough records
+    while (records_remaining > 0) {
+        int batch_size = (records_remaining < CHUNK_SIZE) ? records_remaining : CHUNK_SIZE;
+        
+        // Read a batch of records
+        int count = sensor_history_get_range(current_start_ts, current_end_ts, records, batch_size);
+        
+        if (count == 0) {
+            // No more records available
+            break;
+        }
+        
+        // Send each record in the batch
+        for (int i = 0; i < count && total_sent < limit; i++) {
+            char record_str[512];
+            int pos = 0;
+            
+            // Add comma between records (except first)
+            if (!first_chunk) {
+                pos += snprintf(record_str + pos, sizeof(record_str) - pos, ",");
+            }
+            first_chunk = 0;
+            
+            // Build the record JSON
+            pos += snprintf(record_str + pos, sizeof(record_str) - pos,
+                "{\"timestamp\":%lu,\"sensor_mask\":%u",
+                records[i].timestamp,
+                records[i].sensor_mask);
+            
+            // Add each sensor value using configured names
+            for (int j = 0; j < SENSOR_COUNT; j++) {
+                // Use configured name if available, otherwise default
+                const char *name = sensor_config[j].name;
+                if (!name || name[0] == '\0' || name[0] == 0xFF) {
+                    name = default_sensor_names[j];
+                }
+                
+                // Sanitize name for JSON
+                char key[32];
+                strncpy(key, name, sizeof(key) - 1);
+                key[sizeof(key) - 1] = '\0';
+                for (char *p = key; *p; p++) {
+                    if (*p == ' ') *p = '_';
+                }
+                
+                pos += snprintf(record_str + pos, sizeof(record_str) - pos,
+                    ",\"%s\":%u",
+                    key,
+                    records[i].values[j]);
+            }
+            
+            pos += snprintf(record_str + pos, sizeof(record_str) - pos, "}");
+            
+            // Send this chunk
+            esp_err_t err = httpd_resp_send_chunk(req, record_str, pos);
+            if (err != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to send record chunk: %d", err);
+                return err;
+            }
+            
+            total_sent++;
+            records_remaining--;
+        }
+        
+        // Update time range for next batch
+        if (count > 0) {
+            // Move start_ts forward to the last timestamp we read
+            current_start_ts = records[count - 1].timestamp + 1;
+        } else {
+            break;
+        }
+        
+        // Small delay to allow other tasks to run
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+    
+    // Send closing bracket
+    esp_err_t err = httpd_resp_send_chunk(req, "]}", -1);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to send closing chunk: %d", err);
+        return err;
+    }
+    
+    // Send final empty chunk to signal end of response
+    err = httpd_resp_send_chunk(req, NULL, 0);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to send final chunk: %d", err);
+    }
+    
+    ESP_LOGI(TAG, "Returned %d history records in chunks", total_sent);
+    return ESP_OK;
+}
+
+// ============================================================
+// GET /api/history/config - Get sensor configuration
+// ============================================================
+esp_err_t api_get_sensor_config_handler(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type");
+
+    const char* chart_colors[16] = {
+        "#00FFFF",  // Cyan / Aqua
+        "#FF00FF",  // Magenta / Fuchsia
+        "#FFFF00",  // Neon Yellow
+        "#39FF14",  // Neon Green
+        "#FF3366",  // Hot Pink
+        "#FF6600",  // Vivid Orange
+        "#3399FF",  // Sky Blue
+        "#B8860B",  // Dark Goldenrod
+        "#9932CC",  // Dark Orchid
+        "#00FF7F",  // Spring Green
+        "#FFD700",  // Gold
+        "#FF4500",  // Orange Red
+        "#8A2BE2",  // Blue Violet
+        "#ADFF2F",  // Green Yellow
+        "#F08080",  // Light Coral
+        "#E6E6FA"   // Lavender / Off-White
+    };
+
+    if (req->method == HTTP_OPTIONS) {
+        httpd_resp_send(req, NULL, 0);
+        return ESP_OK;
+    }
+    
+    cJSON *root = cJSON_CreateObject();
+    if (!root) {
+        httpd_resp_send(req, "{\"error\":\"Memory error\"}", -1);
+        return ESP_OK;
+    }
+    
+    cJSON *sensors_array = cJSON_CreateArray();
+    if (!sensors_array) {
+        cJSON_Delete(root);
+        httpd_resp_send(req, "{\"error\":\"Memory error\"}", -1);
+        return ESP_OK;
+    }
+
+    sensor_config_t configs[SENSOR_COUNT];
+    nvs_load_sensor_config(configs, SENSOR_COUNT);
+
+    for (int i = 0; i < SENSOR_COUNT; i++) {
+        cJSON *sensor_obj = cJSON_CreateObject();
+        if (!sensor_obj) continue;
+        
+        const char *name = configs[i].name;
+        
+        cJSON_AddNumberToObject(sensor_obj, "id", i);
+        cJSON_AddStringToObject(sensor_obj, "name", name);
+        cJSON_AddStringToObject(sensor_obj, "color", chart_colors[i]);
+        
+        cJSON_AddItemToArray(sensors_array, sensor_obj);
+    }
+    
+    cJSON_AddItemToObject(root, "sensors", sensors_array);
+    
+    char *json_str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    
+    if (json_str) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, json_str, -1);
+        free(json_str);
+    } else {
+        httpd_resp_send(req, "{\"error\":\"JSON error\"}", -1);
+    }
+    
+    return ESP_OK;
+}
+
+// ============================================================
+// GET /api/history/export - Export CSV
+// ============================================================
+esp_err_t api_export_csv_handler(httpd_req_t *req)
+{
+    // CORS headers
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type");
+    
+    if (req->method == HTTP_OPTIONS) {
+        httpd_resp_send(req, NULL, 0);
+        return ESP_OK;
+    }
+    
+    // Get parameters
+    char limit_str[8];
+    snprintf(limit_str, sizeof(limit_str), "%d", HISTORY_MAX_RECORDS_PER_PAGE);
+    size_t query_len = httpd_req_get_url_query_len(req);
+    if (query_len > 0) {
+        char query[64];
+        if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+            httpd_query_key_value(query, "limit", limit_str, sizeof(limit_str));
+        }
+    }
+    
+    int limit = atoi(limit_str);
+    if (limit < 1) limit = 1;
+    if (limit > HISTORY_MAX_RECORDS_PER_PAGE) limit = HISTORY_MAX_RECORDS_PER_PAGE;
+    
+    // Set CSV content type and download header
+    httpd_resp_set_type(req, "text/csv");
+    httpd_resp_set_hdr(req, "Content-Disposition", "attachment; filename=sensor_history.csv");
+    
+    // Get records
+    uint32_t newest_ts = sensor_history_get_newest_ts();
+    if (newest_ts == 0) {
+        httpd_resp_send(req, "No data available", -1);
+        return ESP_OK;
+    }
+    
+    // Go back enough to get 'limit' records
+    uint32_t total = sensor_history_get_record_count();
+    uint32_t oldest_ts = sensor_history_get_oldest_ts();
+    uint32_t time_range = 0;
+    if (total > 1 && newest_ts > oldest_ts) {
+        uint32_t avg_interval = (newest_ts - oldest_ts) / (total - 1);
+        time_range = avg_interval * limit * 2;
+    }
+    if (time_range < HISTORY_MAX_RECORDS_PER_PAGE) time_range = HISTORY_MAX_RECORDS_PER_PAGE;
+    
+    uint32_t start_ts = newest_ts - time_range;
+    uint32_t end_ts = newest_ts + 1;
+    
+    sensor_record_t *records = malloc(limit * sizeof(sensor_record_t));
+    if (!records) {
+        httpd_resp_send(req, "Memory allocation failed", -1);
+        return ESP_OK;
+    }
+    
+    int count = sensor_history_get_range(start_ts, end_ts, records, limit);
+    
+    sensor_config_t sensor_config[SENSOR_COUNT];
+    nvs_load_sensor_config(sensor_config, SENSOR_COUNT);
+
+    char *result = malloc((sizeof(sensor_config[0].name)+2)*SENSOR_COUNT); //+2 for comma&space for each entry and null terminator at the end.
+    if (!result) return 1;
+    
+    // Build the string
+    char *ptr = result;
+    for (int i = 0; i < SENSOR_COUNT; i++) {
+        ptr += sprintf(ptr, "%s", sensor_config[i].name);
+        // Add separator
+        if (i < (SENSOR_COUNT - 1)) ptr += sprintf(ptr, ", ");
+    }
+    ptr += sprintf(ptr, "\n");
+    // Write CSV header
+    httpd_resp_send_chunk(req, ptr, -1);
+    
+    // Write each record
+    char line[512];
+    int pos = 0;
+    
+    for (int i = 0; i < count; i++) {
+        sensor_record_t *r = &records[i];
+        
+        // Format timestamp
+        char ts_str[32];
+        time_t ts = r->timestamp;
+        struct tm *tm_info = localtime(&ts);
+        strftime(ts_str, sizeof(ts_str), "%Y-%m-%d %H:%M:%S", tm_info);
+        
+        pos += sprintf(line + pos, "%s ", ts_str);
+        // Build CSV line
+        for (int i = 0; i < SENSOR_COUNT; i++) {
+            pos += sprintf(line + pos, "%d", r->values[i]);
+            if (i < (SENSOR_COUNT - 1)) pos += sprintf(line + pos, ", ");
+        }
+    }
+    
+    free(records);
+    httpd_resp_send_chunk(req, NULL, 0);  // End chunked response
+    
+    ESP_LOGI(TAG, "Exported %d records as CSV", count);
+    return ESP_OK;
+}
+
+// ============================================================
+// GET /api/history/stats - Get history statistics
+// ============================================================
+esp_err_t api_get_history_stats_handler(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type");
+    
+    if (req->method == HTTP_OPTIONS) {
+        httpd_resp_send(req, NULL, 0);
+        return ESP_OK;
+    }
+    
+    cJSON *root = cJSON_CreateObject();
+    if (!root) {
+        httpd_resp_send(req, "{\"error\":\"Memory error\"}", -1);
+        return ESP_OK;
+    }
+    
+    cJSON_AddNumberToObject(root, "record_count", sensor_history_get_record_count());
+    cJSON_AddNumberToObject(root, "max_records", HISTORY_MAX_RECORDS_PER_PAGE);
+    cJSON_AddNumberToObject(root, "oldest_timestamp", sensor_history_get_oldest_ts());
+    cJSON_AddNumberToObject(root, "newest_timestamp", sensor_history_get_newest_ts());
+    cJSON_AddNumberToObject(root, "sample_interval", 60);
+    
+    char *json_str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    
+    if (json_str) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, json_str, -1);
+        free(json_str);
+    } else {
+        httpd_resp_send(req, "{\"error\":\"JSON error\"}", -1);
+    }
+    
+    return ESP_OK;
+}
 
 // ============================================================
 // Register all API endpoints
@@ -2235,6 +2660,41 @@ void register_api_endpoints(httpd_handle_t server) {
     };
     httpd_register_uri_handler(server, &rules_import);
 
+    // GET /api/history
+    httpd_uri_t get_history = {
+        .uri       = "/api/history",
+        .method    = HTTP_GET,
+        .handler   = api_get_history_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &get_history);
+
+    // GET /api/history/config - returns sensor configuration
+    httpd_uri_t history_config = {
+        .uri       = "/api/history/config",
+        .method    = HTTP_GET,
+        .handler   = api_get_sensor_config_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &history_config);
+
+    // GET /api/history/stats - returns statistics
+    httpd_uri_t history_stats = {
+        .uri       = "/api/history/stats",
+        .method    = HTTP_GET,
+        .handler   = api_get_history_stats_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &history_stats);
+
+    // GET /api/history/export - exports sensor data
+    httpd_uri_t history_export = {
+        .uri       = "/api/history/export",
+        .method    = HTTP_GET,
+        .handler   = api_export_csv_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &history_export);
 
     // DELETE /api/rules/* 
     httpd_uri_t rules_delete = {

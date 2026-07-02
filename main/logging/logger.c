@@ -22,8 +22,9 @@
 // ============================================================
 static const char *log_type_names[] = {
     [WQMS_LOG_TYPE_SYSTEM] = "SYS",
-    [WQMS_LOG_TYPE_APPLICATION] = "APP",
-    [WQMS_LOG_TYPE_AUTOMATION] = "AUTO"
+    [WQMS_LOG_TYPE_APPLICATION] = "APPL",
+    [WQMS_LOG_TYPE_AUTOMATION] = "AUTO",
+    [WQMS_LOG_TYPE_NOTIFICATION] = "NOTI",
 };
 
 static const char *log_level_names[] = {
@@ -86,7 +87,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
     // 2. Format message with timestamp and level
     char timestamp[32];
     get_timestamp_str(timestamp, sizeof(timestamp));
-    
+
     char msg_buffer[256];
     va_list args;
     va_start(args, format);
@@ -121,7 +122,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
     #endif
     
     // 6. Also output to ESP_LOG for IDF console
-    if (level <= WQMS_LOG_LEVEL_ENUM_INFO) {
+    if (level >= WQMS_LOG_LEVEL_ENUM_INFO) {
         ESP_LOGI("WQMS", "%s", full_line);
     } else if (level == WQMS_LOG_LEVEL_ENUM_WARN) {
         ESP_LOGW("WQMS", "%s", full_line);

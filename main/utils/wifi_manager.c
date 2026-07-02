@@ -11,7 +11,6 @@
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "esp_mac.h"
-#include "nvs_flash.h"
 #include "nvs.h"
 
 #include "wifi_manager.h"

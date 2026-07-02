@@ -47,9 +47,10 @@
 
             <section id="graphs">
                 <h2>Sensor History (Last 3 Days)</h2>
-                <div id="graph-container">
-                    <select id="graph-sensor-select"></select>
-                    <canvas id="history-chart"></canvas>
+				<div class="sensor-selector" id="sensor-selector">
+				</div>
+                <div class="chart-container">
+                    <canvas id="sensor-history-chart" width="100%" height="100%"></canvas>
                 </div>
             </section>
         </main>
@@ -58,5 +59,6 @@
     <!-- Core JS (loaded on all pages) -->
     <script src="/js/core.js"></script>
     <script id="router-script" src="/js/router.js"></script>
+    <script src="js/chart.js"></script>
 </body>
 </html>

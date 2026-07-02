@@ -21,9 +21,19 @@ esp_err_t system_reboot_handler(httpd_req_t *req);
 
 // Sensor endpoints
 esp_err_t sensors_get_handler(httpd_req_t *req);
+esp_err_t sensors_config_get_handler(httpd_req_t *req);
+esp_err_t sensors_config_post_handler(httpd_req_t *req);
+
+// Sensor data history endpoints
+esp_err_t api_get_history_handler(httpd_req_t *req);
+esp_err_t api_get_sensor_config_handler(httpd_req_t *req);
+esp_err_t api_get_history_stats_handler(httpd_req_t *req);
+esp_err_t api_export_csv_handler(httpd_req_t *req);
 
 // Relay endpoints
 esp_err_t relays_get_handler(httpd_req_t *req);
+esp_err_t relays_config_get_handler(httpd_req_t *req);
+esp_err_t relays_config_post_handler(httpd_req_t *req);
 esp_err_t relay_trigger_post_handler(httpd_req_t *req);
 esp_err_t relay_off_post_handler(httpd_req_t *req);
 
@@ -48,11 +58,13 @@ esp_err_t calibrate_apply_handler(httpd_req_t *req);
 esp_err_t calibrate_cancel_handler(httpd_req_t *req);
 esp_err_t calibrate_factor_handler(httpd_req_t *req);
 
+//MODBUS endpoints
+esp_err_t modbus_map_get_handler(httpd_req_t *req);
+esp_err_t modbus_map_post_handler(httpd_req_t *req);
+
 //Log management endpoints
-esp_err_t logs_list_handler(httpd_req_t *req);
-esp_err_t logs_download_handler(httpd_req_t *req);
+esp_err_t logs_get_handler(httpd_req_t *req);
 esp_err_t logs_delete_handler(httpd_req_t *req);
-esp_err_t logs_delete_all_handler(httpd_req_t *req);
 
 // Webhook Notification Endpoints
 esp_err_t webhook_config_get_handler(httpd_req_t *req);
@@ -63,5 +75,7 @@ esp_err_t webhook_test_handler(httpd_req_t *req);
 esp_err_t api_rules_get_handler(httpd_req_t *req);
 esp_err_t api_rules_post_handler(httpd_req_t *req);
 esp_err_t api_rules_delete_handler(httpd_req_t *req);
+esp_err_t api_rules_import_handler(httpd_req_t *req);
+esp_err_t api_rules_export_handler(httpd_req_t *req);
 
 #endif // API_HANDLER_H
