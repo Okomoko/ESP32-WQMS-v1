@@ -60,8 +60,7 @@ static void poll_analog_sensors(void) {
                 value > sensor_config[sensor_id].max_value) {
                 readings[sensor_id].status = SENSOR_STATUS_OUT_OF_RANGE;
                 readings[sensor_id].quality = 2;
-                APP_LOG_W("Sensor %d (%s) out of range: %.2f",
-                          sensor_id, sensor_config[sensor_id].name, value);
+                SENSOR_LOG_W("Sensor %d (%s) out of range: %.2f", sensor_id, sensor_config[sensor_id].name, value);
             }
             xSemaphoreGive(sensor_mutex);
         }
@@ -106,7 +105,7 @@ static void poll_dht11(void) {
     } else {
         // DHT11 read failed - only log if enabled
         if (sensor_config[DHT11_SENSOR_TEMP].enabled) {
-            APP_LOG_W("DHT11 read failed (temp)");
+            SENSOR_LOG_W("DHT11 read failed (temp)");
             if (sensor_mutex && xSemaphoreTake(sensor_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
                 readings[DHT11_SENSOR_TEMP].status = SENSOR_STATUS_ERROR;
                 xSemaphoreGive(sensor_mutex);
@@ -125,7 +124,7 @@ static void poll_dht11(void) {
 // Sensor Polling Task
 // ============================================================
 static void sensor_poll_task(void *pvParameters) {
-    WQMS_LOG_I("Sensor polling task started");
+    SENSOR_LOG_I("Sensor polling task started");
     
     while (1) {
         uint32_t start_time = esp_timer_get_time() / 1000;
@@ -157,14 +156,14 @@ static void sensor_poll_task(void *pvParameters) {
 
 void sensor_init(void) {
     if (sensor_init_called) {
-        WQMS_LOG_W("sensor_init() called twice - ignoring second call");
+        SENSOR_LOG_W("sensor_init() called twice - ignoring second call");
         return;
     }
     sensor_init_called = 1;
     
     sensor_mutex = xSemaphoreCreateMutex();
     if (!sensor_mutex) {
-        WQMS_LOG_E("Failed to create sensor mutex");
+        SENSOR_LOG_E("Failed to create sensor mutex");
         return;
     }
     
@@ -172,7 +171,7 @@ void sensor_init(void) {
     nvs_load_sensor_config(sensor_config, SENSOR_COUNT);
     
     if (wqms_adc_dma_init() != 0) {
-        WQMS_LOG_E("ADC DMA init failed - sensors will not work");
+        SENSOR_LOG_E("ADC DMA init failed - sensors will not work");
     } else {
         wqms_adc_dma_start();
     }
@@ -183,7 +182,7 @@ void sensor_init(void) {
     xTaskCreate(sensor_poll_task, "sensor", STACK_SIZE_SENSOR, NULL, PRIORITY_SENSOR, NULL);
     
     sensor_initialized = 1;
-    WQMS_LOG_I("Sensor subsystem initialized");
+    SENSOR_LOG_I("Sensor subsystem initialized");
 }
 
 sensor_reading_t* sensor_get_reading(uint8_t sensor_id) {
@@ -221,12 +220,12 @@ float sensor_convert_value(uint8_t sensor_id, uint16_t raw_adc) {
 
 void sensor_reload_config(void) {
     nvs_load_sensor_config(sensor_config, SENSOR_COUNT);
-    WQMS_LOG_I("Sensor config reloaded");
+    SENSOR_LOG_I("Sensor config reloaded");
 }
 
 int sensor_poll_now(uint8_t sensor_id) {
     if (sensor_id >= SENSOR_COUNT) return -1;
-    WQMS_LOG_D("sensor_poll_now: %d", sensor_id);
+    SENSOR_LOG_D("sensor_poll_now: %d", sensor_id);
     return 0;
 }
 
@@ -250,7 +249,7 @@ void sensor_set_enabled(uint8_t sensor_id, uint8_t enabled) {
         xSemaphoreGive(sensor_mutex);
     }
     
-    WQMS_LOG_I("Sensor %d %s", sensor_id, enabled ? "enabled" : "disabled");
+    SENSOR_LOG_I("Sensor %d %s", sensor_id, enabled ? "enabled" : "disabled");
 }
 
 const char* sensor_get_name(uint8_t sensor_id) {

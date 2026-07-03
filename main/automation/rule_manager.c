@@ -28,7 +28,7 @@ static const char *nvs_namespace = "wqms";
 static void save_rule_to_nvs(automation_rule_t *rule) {
     nvs_handle_t handle;
     if (nvs_open(nvs_namespace, NVS_READWRITE, &handle) != ESP_OK) {
-        LOG_E("Failed to open NVS for rule save");
+        AUTO_LOG_E("Failed to open NVS for rule save");
         return;
     }
     
@@ -76,7 +76,7 @@ void rule_manager_init(void) {
         }
     }
     
-    LOG_I("Rule manager initialized: %d rules loaded", rule_count);
+    AUTO_LOG_I("Rule manager initialized: %d rules loaded", rule_count);
 }
 
 automation_rule_t* rule_get_all(void) {
@@ -99,10 +99,10 @@ int rule_create(automation_rule_t *rule) {
     // Find first free slot
     int slot = -1;
     for (int i = 0; i < MAX_RULES; i++) {
-//        LOG_I("Rule #%d, %s, %d", rules[i].rule_id, rules[i].name,  rules[i].name[0] == '\0');
+//        AUTO_LOG_I("Rule #%d, %s, %d", rules[i].rule_id, rules[i].name,  rules[i].name[0] == '\0');
         if (rules[i].rule_id == -1 && rules[i].name[0] == '\0') {
             slot = i;
-//            LOG_I("Empty Rule Slot : #%d", slot);
+//            AUTO_LOG_I("Empty Rule Slot : #%d", slot);
             break;
         }
     }
@@ -249,8 +249,7 @@ void rule_get_description(automation_rule_t *rule, char *buffer, size_t size) {
                         sensor_name, comp_str, cond->threshold);
         if (i < rule->condition_count - 1) {
             pos += snprintf(temp + pos, sizeof(temp) - pos, " %s ",
-                            rule->logic_type == LOGIC_AND ? "AND" :
-                            rule->logic_type == LOGIC_OR ? "OR" : "NOT");
+                            rule->logic_type == LOGIC_AND ? "AND" : "OR");
         }
     }
     

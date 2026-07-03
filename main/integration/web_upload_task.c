@@ -14,12 +14,12 @@
 // Upload Task
 // ============================================================
 static void web_upload_task(void *pvParameters) {
-    LOG_I("Web upload task started");
+    INTEGRATION_LOG_I("Web upload task started");
     
     while (1) {
         // 1. Check if we have pending uploads to retry
         if (buffer_recovery_get_pending_count() > 0) {
-            LOG_I("Retrying %d pending uploads", buffer_recovery_get_pending_count());
+            INTEGRATION_LOG_I("Retrying %d pending uploads", buffer_recovery_get_pending_count());
             buffer_recovery_retry_all();
         }
         

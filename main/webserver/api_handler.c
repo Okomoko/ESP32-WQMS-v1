@@ -12,7 +12,7 @@
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "esp_netif.h"
-#include "esp_log.h"
+//#include "esp_log.h"
 #include "cJSON.h"
 
 #include "api_handler.h"
@@ -517,48 +517,48 @@ esp_err_t config_post_handler(httpd_req_t *req) {
     item = cJSON_GetObjectItem(json, "system_name");
     if (item && cJSON_IsString(item)) {
         nvs_set_system_name(item->valuestring);
-        WQMS_LOG_I("System name updated to: %s", item->valuestring);
+        API_LOG_I("System name updated to: %s", item->valuestring);
     }
     
     item = cJSON_GetObjectItem(json, "system_location");
     if (item && cJSON_IsString(item)) {
         nvs_set_system_location(item->valuestring);
-        WQMS_LOG_I("System location updated to: %s", item->valuestring);
+        API_LOG_I("System location updated to: %s", item->valuestring);
     }
     
     item = cJSON_GetObjectItem(json, "timezone");
     if (item && cJSON_IsString(item)) {
         ntp_set_timezone(item->valuestring);
-        WQMS_LOG_I("Timezone updated to: %s", item->valuestring);
+        API_LOG_I("Timezone updated to: %s", item->valuestring);
     }
     
     item = cJSON_GetObjectItem(json, "sample_interval_ms");
     if (item && cJSON_IsNumber(item)) {
         nvs_set_sample_interval(item->valueint);
-        WQMS_LOG_I("Sample interval updated to: %d ms", item->valueint);
+        API_LOG_I("Sample interval updated to: %d ms", item->valueint);
     }
     
     item = cJSON_GetObjectItem(json, "modbus_interval_ms");
     if (item && cJSON_IsNumber(item)) {
         nvs_set_modbus_interval(item->valueint);
-        WQMS_LOG_I("MODBUS interval updated to: %d ms", item->valueint);
+        API_LOG_I("MODBUS interval updated to: %d ms", item->valueint);
     }
     
     item = cJSON_GetObjectItem(json, "integration_url");
     if (item && cJSON_IsString(item)) {
         nvs_set_integration_url(item->valuestring);
-        WQMS_LOG_I("Integration URL updated to: %s", item->valuestring);
+        API_LOG_I("Integration URL updated to: %s", item->valuestring);
     }
     
     item = cJSON_GetObjectItem(json, "integration_interval_sec");
     if (item && cJSON_IsNumber(item)) {
         nvs_set_integration_interval(item->valueint);
-        WQMS_LOG_I("Integration interval updated to: %d sec", item->valueint);
+        API_LOG_I("Integration interval updated to: %d sec", item->valueint);
     }
     
     item = cJSON_GetObjectItem(json, "ntp_servers");
     if (item && cJSON_IsString(item)) {
-        WQMS_LOG_I("Updating NTP servers: %s", item->valuestring);
+        API_LOG_I("Updating NTP servers: %s", item->valuestring);
         ntp_set_servers(item->valuestring);
     }
     
@@ -575,7 +575,7 @@ esp_err_t config_post_handler(httpd_req_t *req) {
 // GET /api/wifi/scan
 // ============================================================
 esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
-    WQMS_LOG_I("WiFi scan request received");
+    API_LOG_I("WiFi scan request received");
     
     cJSON *root = cJSON_CreateObject();
     cJSON *networks = cJSON_CreateArray();
@@ -583,7 +583,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
     wifi_mode_t current_mode;
     esp_err_t err = esp_wifi_get_mode(&current_mode);
     if (err != ESP_OK) {
-        WQMS_LOG_E("Failed to get WiFi mode: %s", esp_err_to_name(err));
+        API_LOG_E("Failed to get WiFi mode: %s", esp_err_to_name(err));
         cJSON_AddItemToObject(root, "networks", networks);
         cJSON_AddStringToObject(root, "error", "WiFi not initialized");
         send_json_response(req, root);
@@ -591,10 +591,10 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
     }
     
     if (current_mode == WIFI_MODE_AP || current_mode == WIFI_MODE_NULL) {
-        WQMS_LOG_I("WiFi in AP mode, enabling STA for scan");
+        API_LOG_I("WiFi in AP mode, enabling STA for scan");
         err = esp_wifi_set_mode(WIFI_MODE_STA);
         if (err != ESP_OK) {
-            WQMS_LOG_E("Failed to set STA mode for scan: %s", esp_err_to_name(err));
+            API_LOG_E("Failed to set STA mode for scan: %s", esp_err_to_name(err));
             cJSON_AddItemToObject(root, "networks", networks);
             cJSON_AddStringToObject(root, "error", "Failed to set STA mode");
             send_json_response(req, root);
@@ -619,7 +619,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
     
     err = esp_wifi_scan_start(&scan_config, true);
     if (err != ESP_OK) {
-        WQMS_LOG_E("WiFi scan start failed: %s", esp_err_to_name(err));
+        API_LOG_E("WiFi scan start failed: %s", esp_err_to_name(err));
         cJSON_AddItemToObject(root, "networks", networks);
         cJSON_AddStringToObject(root, "error", "Scan start failed");
         send_json_response(req, root);
@@ -632,7 +632,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
     uint16_t ap_count = 0;
     err = esp_wifi_scan_get_ap_num(&ap_count);
     if (err != ESP_OK) {
-        WQMS_LOG_E("Failed to get AP count: %s", esp_err_to_name(err));
+        API_LOG_E("Failed to get AP count: %s", esp_err_to_name(err));
         cJSON_AddItemToObject(root, "networks", networks);
         cJSON_AddStringToObject(root, "error", "Failed to get scan results");
         send_json_response(req, root);
@@ -642,7 +642,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
         return ESP_OK;
     }
     
-    WQMS_LOG_I("WiFi scan found %d networks", ap_count);
+    API_LOG_I("WiFi scan found %d networks", ap_count);
     
     if (ap_count == 0) {
         cJSON_AddItemToObject(root, "networks", networks);
@@ -658,7 +658,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
     
     wifi_ap_record_t *ap_records = malloc(ap_count * sizeof(wifi_ap_record_t));
     if (!ap_records) {
-        WQMS_LOG_E("Failed to allocate memory for AP records");
+        API_LOG_E("Failed to allocate memory for AP records");
         cJSON_AddItemToObject(root, "networks", networks);
         cJSON_AddStringToObject(root, "error", "Out of memory");
         send_json_response(req, root);
@@ -670,7 +670,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
     
     err = esp_wifi_scan_get_ap_records(&ap_count, ap_records);
     if (err != ESP_OK) {
-        WQMS_LOG_E("Failed to get AP records: %s", esp_err_to_name(err));
+        API_LOG_E("Failed to get AP records: %s", esp_err_to_name(err));
         free(ap_records);
         cJSON_AddItemToObject(root, "networks", networks);
         cJSON_AddStringToObject(root, "error", "Failed to get AP records");
@@ -715,7 +715,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
     cJSON_AddNumberToObject(root, "total", ap_count);
     send_json_response(req, root);
     
-    WQMS_LOG_I("WiFi scan completed: %d networks returned", ap_count);
+    API_LOG_I("WiFi scan completed: %d networks returned", ap_count);
     
     if (current_mode == WIFI_MODE_AP) {
         esp_wifi_set_mode(WIFI_MODE_AP);
@@ -724,7 +724,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
             esp_wifi_set_config(WIFI_IF_AP, &ap_config);
         }
         esp_wifi_start();
-        WQMS_LOG_I("Restored AP mode after scan");
+        API_LOG_I("Restored AP mode after scan");
     }
     
     return ESP_OK;
@@ -1140,14 +1140,14 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
     
     // Case 1: Download specific log file
     if (has_name && strlen(name) > 0) {
-        WQMS_LOG_I("Downloading log: %s", name);
+        API_LOG_I("Downloading log: %s", name);
         
         char path[128];
         snprintf(path, sizeof(path), "/spiffs/logs/%.100s", name);
         
         FILE *f = fopen(path, "r");
         if (!f) {
-            WQMS_LOG_E("File not found: %s", path);
+            API_LOG_E("File not found: %s", path);
             httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File not found");
             return ESP_FAIL;
         }
@@ -1172,7 +1172,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         httpd_resp_send(req, buffer, size);
         free(buffer);
         
-        WQMS_LOG_I("Log downloaded: %s (%ld bytes)", name, size);
+        API_LOG_I("Log downloaded: %s (%ld bytes)", name, size);
         return ESP_OK;
     }
     
@@ -1199,7 +1199,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         }
         closedir(dir);
     } else {
-        WQMS_LOG_W("Logs directory not found: /spiffs/logs");
+        API_LOG_W("Logs directory not found: /spiffs/logs");
     }
     
     cJSON_AddItemToObject(root, "logs", logs_array);
@@ -1271,13 +1271,13 @@ esp_err_t webhook_config_get_handler(httpd_req_t *req) {
     webhook_config_t config = {0};
     webhook_load_config(&config);
     
-//    WQMS_LOG_I("webhook_config_get_handler: recipients='%s'", config.emails);
+//    API_LOG_I("webhook_config_get_handler: recipients='%s'", config.emails);
     
     // ✅ If empty, use defaults
 //    if (strlen(config.emails) == 0) {
 //        strncpy(config.emails, DEFAULT_RECIPIENTS, sizeof(config.emails) - 1);
 //        config.emails[sizeof(config.emails) - 1] = '\0';
-//        WQMS_LOG_I("Recipients was empty, set to default: '%s'", config.emails);
+//        API_LOG_I("Recipients was empty, set to default: '%s'", config.emails);
 //    }
     
     cJSON *root = cJSON_CreateObject();
@@ -1529,7 +1529,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
     }
     buffer[ret] = '\0';
     
-    ESP_LOGI(TAG, "POST /api/rules - Received: %s", buffer);
+    API_LOG_I("POST /api/rules - Received: %s", buffer);
     
     cJSON *json = cJSON_Parse(buffer);
     if (!json) {
@@ -1548,26 +1548,26 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
     if (item && cJSON_IsString(item)) {
         strncpy(rule.name, item->valuestring, sizeof(rule.name) - 1);
         rule.name[sizeof(rule.name) - 1] = '\0';
-        ESP_LOGI(TAG, "  Name: %s", rule.name);
+        API_LOG_I("  Name: %s", rule.name);
     }
     
     item = cJSON_GetObjectItem(json, "enabled");
     if (item) {
         rule.enabled = item->valueint;
-        ESP_LOGI(TAG, "  Enabled: %d", rule.enabled);
+        API_LOG_I("  Enabled: %d", rule.enabled);
     }
     
     item = cJSON_GetObjectItem(json, "logic_type");
     if (item) {
         rule.logic_type = item->valueint;
-        ESP_LOGI(TAG, "  Logic type: %d", rule.logic_type);
+        API_LOG_I("  Logic type: %d", rule.logic_type);
     }
     
     item = cJSON_GetObjectItem(json, "cooldown_seconds");
     if (item) {
         rule.cooldown_seconds = item->valueint;
         rule.cooldown_enabled = (rule.cooldown_seconds > 0);
-        ESP_LOGI(TAG, "  Cooldown: %d", rule.cooldown_seconds);
+        API_LOG_I("  Cooldown: %d", rule.cooldown_seconds);
     }
     
     item = cJSON_GetObjectItem(json, "email_recipient");
@@ -1596,7 +1596,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
             max_cond = MAX_CONDITIONS;
         #endif
         rule.condition_count = (cond_count > max_cond) ? max_cond : cond_count;
-        ESP_LOGI(TAG, "  Conditions: %d", rule.condition_count);
+        API_LOG_I("  Conditions: %d", rule.condition_count);
         
         for (int i = 0; i < rule.condition_count; i++) {
             cJSON *cond = cJSON_GetArrayItem(conditions, i);
@@ -1607,7 +1607,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
                 
                 if (sensor_id) {
                     rule.conditions[i].sensor_id = sensor_id->valueint;
-                    ESP_LOGI(TAG, "    Cond %d: sensor_id=%d", i, rule.conditions[i].sensor_id);
+                    API_LOG_I("    Cond %d: sensor_id=%d", i, rule.conditions[i].sensor_id);
                 }
                 if (comparator) {
                     rule.conditions[i].comparator = comparator->valueint;
@@ -1618,7 +1618,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
             }
         }
     } else {
-        ESP_LOGI(TAG, "  No conditions found");
+        API_LOG_I("  No conditions found");
     }
 
     cJSON *outputs = cJSON_GetObjectItem(json, "outputs");
@@ -1632,7 +1632,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
             max_out = MAX_OUTPUTS;
         #endif
         rule.output_count = (out_count > max_out) ? max_out : out_count;
-        ESP_LOGI(TAG, "  Outputs: %d", rule.output_count);
+        API_LOG_I("  Outputs: %d", rule.output_count);
         
         for (int i = 0; i < rule.output_count; i++) {
             cJSON *out = cJSON_GetArrayItem(outputs, i);
@@ -1643,11 +1643,11 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
                 
                 if (type) {
                     rule.outputs[i].type = type->valueint;
-                    ESP_LOGI(TAG, "    Out %d: type=%d", i, rule.outputs[i].type);
+                    API_LOG_I("    Out %d: type=%d", i, rule.outputs[i].type);
                 }
                 if (id) {
                     rule.outputs[i].id = id->valueint;
-                    ESP_LOGI(TAG, "    Out %d: id=%d", i, rule.outputs[i].id);
+                    API_LOG_I("    Out %d: id=%d", i, rule.outputs[i].id);
                 }
                 if (duration) {
                     rule.outputs[i].custom_duration = duration->valueint;
@@ -1655,7 +1655,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
             }
         }
     } else {
-        ESP_LOGI(TAG, "  No outputs found");
+        API_LOG_I("  No outputs found");
     }
     
     // ============================================================
@@ -1668,12 +1668,12 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
         // Update existing rule
         result = rule_update(rule_id, &rule);
         new_rule_id = rule_id;
-        ESP_LOGI(TAG, "  Updating rule %d", rule_id);
+        API_LOG_I("  Updating rule %d", rule_id);
     } else {
         // Create new rule
         result = rule_create(&rule);
         new_rule_id = result;
-        ESP_LOGI(TAG, "  Creating new rule, result: %d", result);
+        API_LOG_I("  Creating new rule, result: %d", result);
     }
     
     cJSON_Delete(json);
@@ -1685,10 +1685,10 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
                  new_rule_id, (rule_id >= 0) ? "updated" : "created");
         httpd_resp_set_type(req, "application/json");
         httpd_resp_send(req, response, strlen(response));
-        ESP_LOGI(TAG, "  Rule saved successfully: %d", new_rule_id);
+        API_LOG_I("  Rule saved successfully: %d", new_rule_id);
         return ESP_OK;
     } else {
-        ESP_LOGE(TAG, "  Failed to save rule, result: %d", result);
+        API_LOG_E("  Failed to save rule, result: %d", result);
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save rule");
         return ESP_FAIL;
     }
@@ -1709,7 +1709,7 @@ esp_err_t api_rules_delete_handler(httpd_req_t *req) {
         }
     }
     
-    ESP_LOGI(TAG, "DELETE /api/rules/delete - ID: %d", rule_id);
+    API_LOG_I("DELETE /api/rules/delete - ID: %d", rule_id);
     
     if (rule_id < 0 || rule_id >= MAX_RULES) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing or invalid rule ID");
@@ -1952,31 +1952,31 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
     // Get query string
     char query[128] = {0};
     size_t query_len = httpd_req_get_url_query_len(req);
-    ESP_LOGI(TAG, "Query length: %d", query_len);
+    API_LOG_I("Query length: %d", query_len);
     
     if (query_len > 0) {
         if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
-            ESP_LOGI(TAG, "Full query string: %s", query);
+            API_LOG_I("Full query string: %s", query);
             
             // Parse parameters with better error checking
             if (httpd_query_key_value(query, "limit", limit_str, sizeof(limit_str)) == ESP_OK) {
-                ESP_LOGI(TAG, "Parsed limit: %s", limit_str);
+                API_LOG_I("Parsed limit: %s", limit_str);
             } else {
-                ESP_LOGI(TAG, "No limit parameter found, using default: 60");
+                API_LOG_I("No limit parameter found, using default: 60");
             }
             
             httpd_query_key_value(query, "start", start_str, sizeof(start_str));
             httpd_query_key_value(query, "end", end_str, sizeof(end_str));
         }
     } else {
-        ESP_LOGI(TAG, "No query string, using defaults");
+        API_LOG_I("No query string, using defaults");
     }
     
     int limit = atoi(limit_str);
     if (limit < 1) limit = 1;
     if (limit > 4320) limit = 4320;
     
-    ESP_LOGI(TAG, "Final limit: %d", limit);  // Debug
+    API_LOG_I("Final limit: %d", limit);  // Debug
     
     uint32_t start_ts = atoi(start_str);
     uint32_t end_ts = atoi(end_str);
@@ -2090,7 +2090,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
             // Send this chunk
             esp_err_t err = httpd_resp_send_chunk(req, record_str, pos);
             if (err != ESP_OK) {
-                ESP_LOGE(TAG, "Failed to send record chunk: %d", err);
+                API_LOG_E("Failed to send record chunk: %d", err);
                 return err;
             }
             
@@ -2113,17 +2113,17 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
     // Send closing bracket
     esp_err_t err = httpd_resp_send_chunk(req, "]}", -1);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to send closing chunk: %d", err);
+        API_LOG_E("Failed to send closing chunk: %d", err);
         return err;
     }
     
     // Send final empty chunk to signal end of response
     err = httpd_resp_send_chunk(req, NULL, 0);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to send final chunk: %d", err);
+        API_LOG_E("Failed to send final chunk: %d", err);
     }
     
-    ESP_LOGI(TAG, "Returned %d history records in chunks", total_sent);
+    API_LOG_I("Returned %d history records in chunks", total_sent);
     return ESP_OK;
 }
 
@@ -2308,7 +2308,7 @@ esp_err_t api_export_csv_handler(httpd_req_t *req)
     free(records);
     httpd_resp_send_chunk(req, NULL, 0);  // End chunked response
     
-    ESP_LOGI(TAG, "Exported %d records as CSV", count);
+    API_LOG_I("Exported %d records as CSV", count);
     return ESP_OK;
 }
 
@@ -2705,5 +2705,5 @@ void register_api_endpoints(httpd_handle_t server) {
     };
     httpd_register_uri_handler(server, &rules_delete);
 
-   WQMS_LOG_I("All API endpoints registered");
+   API_LOG_I("All API endpoints registered");
 }

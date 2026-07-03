@@ -180,8 +180,7 @@ static void ntp_sync_task(void *pvParameters) {
                     backoff_sec = NTP_BACKOFF_BASE_SEC;
                     WQMS_LOG_W("NTP fast sync failed after %d attempts, entering backoff", sync_attempts);
                 } else {
-                    WQMS_LOG_W("NTP sync attempt %d/%d failed", 
-                              sync_attempts, NTP_FAST_SYNC_MAX_ATTEMPTS);
+                    WQMS_LOG_W("NTP sync attempt %d/%d failed", sync_attempts, NTP_FAST_SYNC_MAX_ATTEMPTS);
                 }
             } else if (sync_mode == NTP_MODE_BACKOFF) {
                 backoff_sec *= 2;

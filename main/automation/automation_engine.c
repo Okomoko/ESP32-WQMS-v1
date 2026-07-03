@@ -82,7 +82,7 @@ static void fire_rule_outputs(automation_rule_t *rule) {
 // Automation Evaluation Task
 // ============================================================
 static void automation_task(void *pvParameters) {
-    LOG_I("Automation engine task started");
+    AUTO_LOG_I("Automation engine task started");
     
     while (1) {
         automation_evaluate();
@@ -104,7 +104,7 @@ void automation_init(void) {
     // Create mutex
     eval_mutex = xSemaphoreCreateMutex();
     if (!eval_mutex) {
-        LOG_E("Failed to create automation mutex");
+        AUTO_LOG_E("Failed to create automation mutex");
         return;
     }
     
@@ -114,7 +114,7 @@ void automation_init(void) {
     // Register with watchdog
     watchdog_register_module(WDT_MODULE_AUTOMATION, 3);
     
-    LOG_I("Automation engine initialized");
+    AUTO_LOG_I("Automation engine initialized");
 }
 
 void automation_evaluate(void) {
@@ -149,8 +149,6 @@ void automation_evaluate(void) {
                 all_true = all_true && result;
             } else if (rules[i].logic_type == LOGIC_OR) {
                 all_true = all_true || result;
-            } else if (rules[i].logic_type == LOGIC_NOT) {
-                all_true = all_true && !result;
             }
             
             if (!all_true && rules[i].logic_type == LOGIC_AND) {
@@ -197,7 +195,7 @@ int automation_test_rule(uint8_t rule_id) {
     // Restore state
     rule->enabled = was_enabled;
     
-    LOG_I("Rule #%d tested", rule_id);
+    AUTO_LOG_I("Rule #%d tested", rule_id);
     return 0;
 }
 

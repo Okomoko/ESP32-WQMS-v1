@@ -27,25 +27,25 @@ static char last_result[128] = {0};
 static esp_err_t http_event_handler(esp_http_client_event_t *evt) {
     switch (evt->event_id) {
         case HTTP_EVENT_ERROR:
-            LOG_D("HTTP event error");
+            INTEGRATION_LOG_D("HTTP event error");
             break;
         case HTTP_EVENT_ON_CONNECTED:
-            LOG_D("HTTP connected");
+            INTEGRATION_LOG_D("HTTP connected");
             break;
         case HTTP_EVENT_HEADER_SENT:
-            LOG_D("HTTP header sent");
+            INTEGRATION_LOG_D("HTTP header sent");
             break;
         case HTTP_EVENT_ON_HEADER:
-            LOG_D("HTTP header: %.*s", evt->header_len, (char*)evt->header);
+            INTEGRATION_LOG_D("HTTP header: %.*s", evt->header_len, (char*)evt->header);
             break;
         case HTTP_EVENT_ON_DATA:
-            LOG_D("HTTP data: %.*s", evt->data_len, (char*)evt->data);
+            INTEGRATION_LOG_D("HTTP data: %.*s", evt->data_len, (char*)evt->data);
             break;
         case HTTP_EVENT_ON_FINISH:
-            LOG_D("HTTP finished");
+            INTEGRATION_LOG_D("HTTP finished");
             break;
         case HTTP_EVENT_DISCONNECTED:
-            LOG_D("HTTP disconnected");
+            INTEGRATION_LOG_D("HTTP disconnected");
             break;
         default:
             break;
@@ -60,12 +60,12 @@ static esp_err_t http_event_handler(esp_http_client_event_t *evt) {
 void web_upload_init(void) {
     upload_status = 0;
     snprintf(last_result, sizeof(last_result), "Ready");
-    LOG_I("Web upload initialized");
+    INTEGRATION_LOG_I("Web upload initialized");
 }
 
 int web_upload_sensors(void) {
     if (upload_status == 1) {
-        WQMS_LOG_W("Upload already in progress");
+        INTEGRATION_LOG_W("Upload already in progress");
         return -1;
     }
     
@@ -127,14 +127,14 @@ int web_upload_sensors(void) {
     if (err == ESP_OK && status_code == 200) {
         upload_status = 2;
         snprintf(last_result, sizeof(last_result), "Upload successful (HTTP %d)", status_code);
-        WQMS_LOG_I("Web upload successful");
+        INTEGRATION_LOG_I("Web upload successful");
         free(json_data);                           // ✅ Free after success
         buffer_recovery_clear_pending();
         return 0;
     } else {
         upload_status = 3;
         snprintf(last_result, sizeof(last_result), "Upload failed: HTTP %d", status_code);
-        WQMS_LOG_W("Web upload failed: HTTP %d", status_code);
+        INTEGRATION_LOG_W("Web upload failed: HTTP %d", status_code);
         // Save to buffer for recovery FIRST
         buffer_recovery_add_pending(json_data);    // ✅ Use before free
         free(json_data);                           // ✅ Free after use

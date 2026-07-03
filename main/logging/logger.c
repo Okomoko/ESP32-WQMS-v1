@@ -25,6 +25,9 @@ static const char *log_type_names[] = {
     [WQMS_LOG_TYPE_APPLICATION] = "APPL",
     [WQMS_LOG_TYPE_AUTOMATION] = "AUTO",
     [WQMS_LOG_TYPE_NOTIFICATION] = "NOTI",
+    [WQMS_LOG_TYPE_SENSOR] = "SENS",
+    [WQMS_LOG_TYPE_RELAY] = "RELY",
+    [WQMS_LOG_TYPE_API] = "API"
 };
 
 static const char *log_level_names[] = {
@@ -93,7 +96,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
     va_start(args, format);
     vsnprintf(msg_buffer, sizeof(msg_buffer), format, args);
     va_end(args);
-    
+
     // 3. Build full log line
     char full_line[320];
     snprintf(full_line, sizeof(full_line),
@@ -102,7 +105,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
              log_type_names[type],
              log_level_names[level],
              msg_buffer);
-    
+
     // 4. Write to log file (with rotation check)
     if (log_files[type] != NULL) {
         // Check if rotation needed (file size exceeded)
@@ -115,7 +118,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
         fprintf(log_files[type], "%s\n", full_line);
         fflush(log_files[type]);
     }
-    
+
     // 5. Write to RS232 console (if enabled and level <= INFO)
     #ifdef CONFIG_RS232_CONSOLE_ENABLE
         wqms_rs232_output(full_line);

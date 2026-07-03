@@ -18,7 +18,7 @@
 #include "logger.h"
 #include "system_config.h"
 
-#define TAG "RELAY"
+//#define TAG "RELAY"
 
 // ============================================================
 // Static Variables
@@ -33,14 +33,14 @@ static int relay_initialized = 0;
 static void relay_activity_timer_callback(TimerHandle_t xTimer) {
     uint8_t relay_id = (uint8_t)(uintptr_t)pvTimerGetTimerID(xTimer);
     if (relay_id >= RELAY_COUNT) {
-        ESP_LOGE(TAG, "Invalid relay ID in callback: %d", relay_id);
+        RELAY_LOG_E("Invalid relay ID in callback: %d", relay_id);
         return;
     }
     
     relay_instance_t *relay = &relays[relay_id];
     // Validate that this timer matches the one in our struct
     if (relay->activity_timer != xTimer) {
-        ESP_LOGE(TAG, "Timer handle mismatch for relay %d", relay_id);
+        RELAY_LOG_E("Timer handle mismatch for relay %d", relay_id);
         return;
     }
     
@@ -50,7 +50,7 @@ static void relay_activity_timer_callback(TimerHandle_t xTimer) {
         relay->state = RELAY_STATE_IDLE;
         relay->state_start_time = 0;
         
-        ESP_LOGI(TAG, "Relay %d (%s) turned OFF.", relay_id, relay->config.name);
+        RELAY_LOG_I("Relay %d (%s) turned OFF.", relay_id, relay->config.name);
         
         // Start cooldown timer if off_delay > 0
         if (relay->config.off_delay > 0) {
@@ -72,7 +72,7 @@ static void relay_cooldown_timer_callback(TimerHandle_t xTimer) {
     if (relay_mutex && xSemaphoreTake(relay_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         relay->state = RELAY_STATE_IDLE;
         relay->state_start_time = 0;
-        ESP_LOGI(TAG, "Relay %d (%s) cooldown ended", relay_id, relay->config.name);
+        RELAY_LOG_I("Relay %d (%s) cooldown ended", relay_id, relay->config.name);
         xSemaphoreGive(relay_mutex);
     }
 }
@@ -87,17 +87,17 @@ static int relay_trigger_internal(uint8_t relay_id, uint16_t duration_ms) {
     relay_instance_t *relay = &relays[relay_id];
     
     if (!relay->config.enabled) {
-        ESP_LOGW(TAG, "Relay %d is disabled", relay_id);
+        RELAY_LOG_W("Relay %d is disabled", relay_id);
         return -3;
     }
     
     if (relay->state == RELAY_STATE_ACTIVE) {
-        ESP_LOGW(TAG, "Relay %d already active", relay_id);
+        RELAY_LOG_W("Relay %d already active", relay_id);
         return -4;
     }
     
     if (relay->state == RELAY_STATE_COOLDOWN) {
-        ESP_LOGW(TAG, "Relay %d in cooldown", relay_id);
+        RELAY_LOG_W("Relay %d in cooldown", relay_id);
         return -5;
     }
     
@@ -114,7 +114,7 @@ static int relay_trigger_internal(uint8_t relay_id, uint16_t duration_ms) {
     xTimerChangePeriod(relay->activity_timer, pdMS_TO_TICKS(dur), 0);
     xTimerStart(relay->activity_timer, 0);
 
-    ESP_LOGI(TAG, "Relay %d (%s) triggered ON for %d ms", relay_id, relay->config.name, dur);
+    RELAY_LOG_I("Relay %d (%s) triggered ON for %d ms", relay_id, relay->config.name, dur);
 
     return 0;
 }
@@ -251,7 +251,7 @@ int relay_on(uint8_t relay_id) {
     relay->state = RELAY_STATE_ACTIVE;
     relay->state_start_time = esp_timer_get_time() / 1000000ULL;
     
-    ESP_LOGI(TAG, "Relay %d (%s) manually ON", relay_id, relay->config.name);
+    RELAY_LOG_I("Relay %d (%s) manually ON", relay_id, relay->config.name);
     return 0;
 }
 
@@ -271,7 +271,7 @@ int relay_off(uint8_t relay_id) {
     relay->state = RELAY_STATE_IDLE;
     relay->state_start_time = 0;
     
-    ESP_LOGI(TAG, "Relay %d (%s) manually OFF", relay_id, relay->config.name);
+    RELAY_LOG_I("Relay %d (%s) manually OFF", relay_id, relay->config.name);
     return 0;
 }
 

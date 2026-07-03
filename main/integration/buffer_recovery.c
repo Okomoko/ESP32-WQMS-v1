@@ -47,19 +47,19 @@ void buffer_recovery_init(void) {
     fclose(f);
     
     pending_count = count;
-    LOG_I("Buffer recovery initialized: %d pending uploads", pending_count);
+    INTEGRATION_LOG_I("Buffer recovery initialized: %d pending uploads", pending_count);
 }
 
 int buffer_recovery_add_pending(const char *data) {
     if (!data) return -1;
     if (pending_count >= MAX_PENDING) {
-        LOG_W("Buffer full, dropping oldest entry");
+        INTEGRATION_LOG_W("Buffer full, dropping oldest entry");
         // In production, we'd rotate the buffer
     }
     
     FILE *f = fopen(BUFFER_FILE, "a");
     if (!f) {
-        LOG_E("Failed to open buffer file");
+        INTEGRATION_LOG_E("Failed to open buffer file");
         return -2;
     }
     
@@ -67,7 +67,7 @@ int buffer_recovery_add_pending(const char *data) {
     fclose(f);
     pending_count++;
     
-    LOG_D("Added pending upload, total: %d", pending_count);
+    INTEGRATION_LOG_D("Added pending upload, total: %d", pending_count);
     return 0;
 }
 
@@ -98,7 +98,7 @@ int buffer_recovery_retry_all(void) {
         // (In production, we'd re-upload the data)
         // For now, just count as success
         success_count++;
-        LOG_D("Retried pending upload %d", retry_count);
+        INTEGRATION_LOG_D("Retried pending upload %d", retry_count);
     }
     fclose(f);
     
@@ -107,7 +107,7 @@ int buffer_recovery_retry_all(void) {
     pending_count = 0;
     
     snprintf(status_msg, sizeof(status_msg), "Retried %d uploads", retry_count);
-    LOG_I("Buffer recovery retried %d uploads", retry_count);
+    INTEGRATION_LOG_I("Buffer recovery retried %d uploads", retry_count);
     return success_count;
 }
 
@@ -117,7 +117,7 @@ void buffer_recovery_clear_pending(void) {
         fclose(f);
     }
     pending_count = 0;
-    LOG_D("Buffer cleared");
+    INTEGRATION_LOG_D("Buffer cleared");
 }
 
 int buffer_recovery_get_pending_count(void) {

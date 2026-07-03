@@ -53,7 +53,7 @@ static int read_adc_channel(int channel) {
             valid_samples++;
         } else {
             // If read fails, try reconfiguring
-            WQMS_LOG_D("ADC read failed on channel %d: %s", channel, esp_err_to_name(err));
+            SENSOR_LOG_D("ADC read failed on channel %d: %s", channel, esp_err_to_name(err));
         }
     }
     
@@ -70,14 +70,14 @@ static int read_adc_channel(int channel) {
 
 int wqms_adc_dma_init(void) {
     if (adc_initialized) {
-        WQMS_LOG_W("ADC already initialized");
+        SENSOR_LOG_W("ADC already initialized");
         return 0;
     }
     
     // Create mutex
     adc_mutex = xSemaphoreCreateMutex();
     if (!adc_mutex) {
-        WQMS_LOG_E("Failed to create ADC mutex");
+        SENSOR_LOG_E("Failed to create ADC mutex");
         return -1;
     }
     
@@ -89,7 +89,7 @@ int wqms_adc_dma_init(void) {
     
     esp_err_t err = adc_oneshot_new_unit(&init_config, &adc_handle);
     if (err != ESP_OK) {
-        WQMS_LOG_E("ADC oneshot init failed: %s", esp_err_to_name(err));
+        SENSOR_LOG_E("ADC oneshot init failed: %s", esp_err_to_name(err));
         vSemaphoreDelete(adc_mutex);
         adc_mutex = NULL;
         return -1;
@@ -104,7 +104,7 @@ int wqms_adc_dma_init(void) {
     for (int i = 0; i < ADC_CHANNEL_COUNT; i++) {
         err = adc_oneshot_config_channel(adc_handle, i, &config);
         if (err != ESP_OK) {
-            WQMS_LOG_W("Failed to config ADC channel %d: %s", i, esp_err_to_name(err));
+            SENSOR_LOG_W("Failed to config ADC channel %d: %s", i, esp_err_to_name(err));
         }
     }
     
@@ -116,23 +116,23 @@ int wqms_adc_dma_init(void) {
     };
     err = adc_cali_create_scheme_line_fitting(&cali_config, &adc_cali_handle);
     if (err != ESP_OK) {
-        WQMS_LOG_W("ADC calibration not available, using raw values");
+        SENSOR_LOG_W("ADC calibration not available, using raw values");
         adc_cali_handle = NULL;
     } else {
-        WQMS_LOG_I("ADC calibration initialized");
+        SENSOR_LOG_I("ADC calibration initialized");
     }
     
     adc_initialized = 1;
-    WQMS_LOG_I("ADC initialized (single-shot mode, 8 channels)");
+    SENSOR_LOG_I("ADC initialized (single-shot mode, 8 channels)");
     return 0;
 }
 
 int wqms_adc_dma_start(void) {
     if (!adc_initialized) {
-        WQMS_LOG_E("ADC not initialized");
+        SENSOR_LOG_E("ADC not initialized");
         return -1;
     }
-    WQMS_LOG_I("ADC ready (single-shot mode)");
+    SENSOR_LOG_I("ADC ready (single-shot mode)");
     return 0;
 }
 

@@ -192,11 +192,11 @@ static int process_request(uint8_t *request, int len, uint8_t *response) {
 // MODBUS Server Task
 // ============================================================
 static void modbus_server_task(void *pvParameters) {
-    WQMS_LOG_I("MODBUS server task started on port %d", MODBUS_PORT);
+    APP_LOG_I("MODBUS server task started on port %d", MODBUS_PORT);
     
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
-        WQMS_LOG_E("Failed to create MODBUS socket");
+        APP_LOG_E("Failed to create MODBUS socket");
         return;
     }
     
@@ -210,19 +210,19 @@ static void modbus_server_task(void *pvParameters) {
     };
     
     if (bind(server_socket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        WQMS_LOG_E("MODBUS bind failed");
+        APP_LOG_E("MODBUS bind failed");
         close(server_socket);
         return;
     }
     
     if (listen(server_socket, MAX_CLIENTS) < 0) {
-        WQMS_LOG_E("MODBUS listen failed");
+        APP_LOG_E("MODBUS listen failed");
         close(server_socket);
         return;
     }
     
     modbus_running = 1;
-    WQMS_LOG_I("MODBUS server listening on port %d", MODBUS_PORT);
+    APP_LOG_I("MODBUS server listening on port %d", MODBUS_PORT);
     
     while (modbus_running) {
         struct timeval tv = { .tv_sec = 1, .tv_usec = 0 };
@@ -293,7 +293,7 @@ static void modbus_server_task(void *pvParameters) {
     close(server_socket);
     server_socket = -1;
     modbus_running = 0;
-    WQMS_LOG_I("MODBUS server stopped");
+    APP_LOG_I("MODBUS server stopped");
 }
 
 // ============================================================
@@ -303,7 +303,7 @@ static void modbus_server_task(void *pvParameters) {
 void modbus_init(void) {
     modbus_mutex = xSemaphoreCreateMutex();
     if (!modbus_mutex) {
-        WQMS_LOG_E("Failed to create MODBUS mutex");
+        APP_LOG_E("Failed to create MODBUS mutex");
         return;
     }
     
@@ -313,7 +313,7 @@ void modbus_init(void) {
     
     watchdog_register_module(WDT_MODULE_MODBUS, 10);
     
-    WQMS_LOG_I("MODBUS initialized");
+    APP_LOG_I("MODBUS initialized");
 }
 
 void modbus_start(void) {
@@ -373,7 +373,7 @@ int modbus_write_register(uint16_t addr, uint16_t value) {
                 APP_LOG_I("MODBUS: Command - Clear alerts");
                 break;
             case CMD_RESET_SYSTEM:
-                LOG_I("MODBUS: Command - System reset");
+                APP_LOG_I("MODBUS: Command - System reset");
                 esp_restart();
                 break;
             default:

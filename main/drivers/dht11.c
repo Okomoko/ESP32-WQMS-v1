@@ -81,12 +81,12 @@ void dht11_init(int gpio_pin) {
     gpio_set_direction(dht11_pin, GPIO_MODE_OUTPUT);
     gpio_set_level(dht11_pin, 1);
     dht11_initialized = 1;
-    LOG_D("DHT11 initialized on GPIO %d", gpio_pin);
+    SENSOR_LOG_D("DHT11 initialized on GPIO %d", gpio_pin);
 }
 
 int dht11_read(dht11_data_t *data) {
     if (!dht11_initialized) {
-        LOG_E("DHT11 not initialized");
+        SENSOR_LOG_E("DHT11 not initialized");
         return -1;
     }
     
@@ -103,11 +103,11 @@ int dht11_read(dht11_data_t *data) {
     
     // 2. Wait for DHT11 response
     if (!dht11_wait_for_level(0, 80)) {
-        LOG_D("DHT11: No response (low)");
+        SENSOR_LOG_D("DHT11: No response (low)");
         return -1;
     }
     if (!dht11_wait_for_level(1, 80)) {
-        LOG_D("DHT11: No response (high)");
+        SENSOR_LOG_D("DHT11: No response (high)");
         return -1;
     }
     
@@ -123,7 +123,7 @@ int dht11_read(dht11_data_t *data) {
     // 4. Verify checksum
     uint8_t checksum = bytes[0] + bytes[1] + bytes[2] + bytes[3];
     if (checksum != bytes[4]) {
-        LOG_D("DHT11: Checksum error (calc=%d, got=%d)", checksum, bytes[4]);
+        SENSOR_LOG_D("DHT11: Checksum error (calc=%d, got=%d)", checksum, bytes[4]);
         data->checksum_ok = 0;
         return -2;
     }

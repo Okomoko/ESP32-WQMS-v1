@@ -208,7 +208,7 @@ void webserver_init(void) {
     config.stack_size = STACK_SIZE_WEBSERVER;
     
     if (httpd_start(&server, &config) == ESP_OK) {
-        WQMS_LOG_I("HTTP server started on port %d", config.server_port);
+        APP_LOG_I("HTTP server started on port %d", config.server_port);
         
         // ============================================================
         // Register HTML Routes
@@ -357,9 +357,9 @@ void webserver_init(void) {
         // ============================================================
         watchdog_register_module(WDT_MODULE_WEBSERVER, 10);
 
-       WQMS_LOG_I("Web server initialized with embedded assets");
+       APP_LOG_I("Web server initialized with embedded assets");
     } else {
-        WQMS_LOG_E("Failed to start HTTP server");
+        APP_LOG_E("Failed to start HTTP server");
     }
 }
 

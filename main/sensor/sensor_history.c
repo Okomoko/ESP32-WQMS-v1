@@ -61,7 +61,7 @@ static int history_read_index(void) {
     fclose(f);
     
     if (read != sizeof(sensor_idx ) || sensor_idx .magic != 0x53454E53) {
-        LOG_W("Invalid index file, recreating");
+        SENSOR_LOG_W("Invalid index file, recreating");
         // Reset to defaults
         sensor_idx .magic = 0x53454E53;
         sensor_idx .version = 1;
@@ -75,7 +75,7 @@ static int history_read_index(void) {
         return 0;
     }
     
-    LOG_D("History index loaded: %lu records, newest=%lu",
+    SENSOR_LOG_D("History index loaded: %lu records, newest=%lu",
           sensor_idx .record_count, sensor_idx .last_timestamp);
     return 0;
 }
@@ -83,7 +83,7 @@ static int history_read_index(void) {
 static int history_write_sensor_idx (void) {
     FILE *f = fopen(INDEX_FILE, "wb");
     if (!f) {
-        LOG_E("Failed to open index file for writing");
+        SENSOR_LOG_E("Failed to open index file for writing");
         return -1;
     }
     
@@ -91,7 +91,7 @@ static int history_write_sensor_idx (void) {
     fclose(f);
     
     if (written != sizeof(sensor_idx )) {
-        LOG_E("Failed to write index file");
+        SENSOR_LOG_E("Failed to write index file");
         return -1;
     }
     return 0;
@@ -109,7 +109,7 @@ static int history_file_exists(void) {
 static int history_create_file(void) {
     FILE *f = fopen(HISTORY_FILE, "wb");
     if (!f) {
-        LOG_E("Failed to create history file");
+        SENSOR_LOG_E("Failed to create history file");
         return -1;
     }
     
@@ -118,7 +118,7 @@ static int history_create_file(void) {
     fputc(0, f);
     fclose(f);
     
-    LOG_I("History file created: %lu bytes", HISTORY_FILE_SIZE);
+    SENSOR_LOG_I("History file created: %lu bytes", HISTORY_FILE_SIZE);
     return 0;
 }
 
@@ -133,13 +133,13 @@ void sensor_history_init(void) {
     // Create history file if it doesn't exist
     if (!history_file_exists()) {
         if (history_create_file() != 0) {
-            LOG_E("Failed to create history file");
+            SENSOR_LOG_E("Failed to create history file");
             return;
         }
     }
     
     history_initialized = 1;
-    LOG_I("Sensor history initialized: %lu records (%lu max)",
+    SENSOR_LOG_I("Sensor history initialized: %lu records (%lu max)",
           sensor_idx .record_count, sensor_idx .max_records);
 }
 
@@ -174,7 +174,7 @@ void sensor_history_add(void) {
     // 3. Write to file at current offset
     FILE *f = fopen(HISTORY_FILE, "r+b");
     if (!f) {
-        LOG_E("Failed to open history file for writing");
+        SENSOR_LOG_E("Failed to open history file for writing");
         return;
     }
     
