@@ -42,7 +42,7 @@ static void poll_analog_sensors(void) {
         return;
     }
     
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < SENSOR_COUNT; i++) {
         int sensor_id = adc_to_sensor[i];
         if (!sensor_config[sensor_id].enabled) continue;
         

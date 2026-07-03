@@ -36,6 +36,11 @@
 
         <main id="calibration">
             <h2>Calibration Wizard</h2>
+            <p style="color:#7a8aae; margin-bottom:20px;">
+                Calibrate sensors using standard solutions with known values.
+                Collect at least 2 samples to calculate the calibration factor.
+            </p>
+            
             <div id="calibration-container">
                 <!-- Step 1: Select Sensor -->
                 <div id="cal-step-1" class="cal-step active">
@@ -45,21 +50,28 @@
                         <select id="cal-sensor-select"></select>
                     </div>
                     <div id="cal-sensor-info">
-                        <span>PIN: <span id="cal-pin">--</span></span>
-                        <span>MODBUS: <span id="cal-modbus">--</span></span>
-                        <span>Current Value: <span id="cal-current">--</span></span>
+                        Current Value: <span id="cal-current1">--</span>
                     </div>
                     <button id="cal-start" class="btn btn-primary">Start Calibration</button>
                 </div>
 
                 <!-- Step 2: Add Samples -->
                 <div id="cal-step-2" class="cal-step">
+                    <h3 id="sensor-name"></h3>
+                    <div id="cal-sensor-info">
+                        Current Value: <span id="cal-current2">--</span>
+                    </div>
                     <h3>Step 2: Add Reference Samples</h3>
+                    <p style="color:#7a8aae; font-size:0.9rem; margin-bottom:15px;">
+                        Place sensor in a standard solution and enter the known value.
+                        Add at least 2 samples with different known values.
+                    </p>
                     <div class="config-group">
                         <label>Known Value</label>
-                        <input type="number" id="cal-known-value" step="0.01" placeholder="Enter reference value">
+                        <input type="number" id="cal-known-value" step="0.01" placeholder="Enter reference value" disabled>
                     </div>
-                    <button id="cal-add-sample" class="btn btn-primary">Add Sample</button>
+                    <button id="cal-add-sample" class="btn btn-primary" disabled>Add Sample</button>
+                    
                     <div id="cal-sample-list">
                         <table>
                             <thead>
@@ -73,13 +85,15 @@
                             <tbody id="cal-sample-body"></tbody>
                         </table>
                     </div>
+                    
                     <div class="cal-actions">
-                        <button id="cal-apply" class="btn btn-success">Apply Calibration</button>
+                        <button id="cal-apply" class="btn btn-success" disabled>Apply Calibration</button>
                         <button id="cal-cancel" class="btn btn-danger">Cancel</button>
                     </div>
+                    
                     <div id="cal-result">
                         <h4>Calibration Factor: <span id="cal-factor">--</span></h4>
-                        <p id="cal-confidence">Confidence: --</p>
+                        <p>Based on <span id="cal-sample-count">0</span> samples</p>
                     </div>
                 </div>
             </div>

@@ -16,7 +16,7 @@ const api = {
         const r = await fetch(endpoint);
         return r.json();
     },
-    async post(endpoint, data) {
+    async post(endpoint, data = {}) {
         const r = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -24,7 +24,7 @@ const api = {
         });
         return r.json();
     },
-    async put(endpoint, data) {
+    async put(endpoint, data = {}) {
         const r = await fetch(endpoint, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },

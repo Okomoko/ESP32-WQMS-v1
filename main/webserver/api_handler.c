@@ -847,20 +847,24 @@ esp_err_t calibrate_start_handler(httpd_req_t *req) {
     cJSON *sensor_id = cJSON_GetObjectItem(json, "sensor_id");
     cJSON *root = cJSON_CreateObject();
     
-    if (sensor_id && cJSON_IsNumber(sensor_id)) {
-        int id = sensor_id->valueint;
-        int result = cal_start(id);
-        if (result == 0) {
-            cJSON_AddBoolToObject(root, "success", true);
-            cJSON_AddStringToObject(root, "message", "Calibration started");
-            cJSON_AddStringToObject(root, "session_id", "cal_session");
-        } else {
-            cJSON_AddBoolToObject(root, "success", false);
-            cJSON_AddStringToObject(root, "message", "Failed to start calibration");
-        }
-    } else {
+    if (!sensor_id || !cJSON_IsNumber(sensor_id)) {
         cJSON_AddBoolToObject(root, "success", false);
         cJSON_AddStringToObject(root, "message", "Missing sensor_id");
+        cJSON_Delete(json);
+        send_json_response(req, root);
+        return ESP_OK;
+    }
+    
+    int id = sensor_id->valueint;
+    int result = cal_start(id);
+    
+    if (result == 0) {
+        cJSON_AddBoolToObject(root, "success", true);
+        cJSON_AddStringToObject(root, "message", "Calibration started");
+        cJSON_AddNumberToObject(root, "sensor_id", id);
+    } else {
+        cJSON_AddBoolToObject(root, "success", false);
+        cJSON_AddStringToObject(root, "message", "Failed to start calibration");
     }
     
     cJSON_Delete(json);
@@ -889,23 +893,46 @@ esp_err_t calibrate_sample_handler(httpd_req_t *req) {
     cJSON *known_value = cJSON_GetObjectItem(json, "known_value");
     cJSON *root = cJSON_CreateObject();
     
-    if (known_value && cJSON_IsNumber(known_value)) {
-        float value = known_value->valuedouble;
-        int result = cal_add_sample(value);
-        if (result == 0) {
-            cal_session_t *session = cal_get_session();
-            cJSON_AddBoolToObject(root, "success", true);
-            cJSON_AddNumberToObject(root, "sample_number", session->sample_count);
-            cJSON_AddNumberToObject(root, "known_value", value);
-            cJSON_AddNumberToObject(root, "raw_adc", session->samples[session->sample_count - 1].raw_adc);
-            cJSON_AddNumberToObject(root, "voltage", session->samples[session->sample_count - 1].voltage);
-        } else {
-            cJSON_AddBoolToObject(root, "success", false);
-            cJSON_AddStringToObject(root, "message", "Failed to add sample");
+    if (!known_value || !cJSON_IsNumber(known_value)) {
+        cJSON_AddBoolToObject(root, "success", false);
+        cJSON_AddStringToObject(root, "message", "Missing known_value");
+        cJSON_Delete(json);
+        send_json_response(req, root);
+        return ESP_OK;
+    }
+    
+    // Check if calibration is active
+    if (!cal_is_active()) {
+        cJSON_AddBoolToObject(root, "success", false);
+        cJSON_AddStringToObject(root, "message", "No active calibration session");
+        cJSON_Delete(json);
+        send_json_response(req, root);
+        return ESP_OK;
+    }
+    
+    float value = known_value->valuedouble;
+    int result = cal_add_sample(value);
+    
+    if (result == 0) {
+        cal_session_t *session = cal_get_session();
+        int sample_count = cal_get_sample_count();
+        float factor = cal_calculate_factor();
+        
+        cJSON_AddBoolToObject(root, "success", true);
+        cJSON_AddNumberToObject(root, "sample_number", sample_count);
+        cJSON_AddNumberToObject(root, "known_value", value);
+        
+        if (session && sample_count > 0) {
+            cJSON_AddNumberToObject(root, "raw_adc", session->samples[sample_count - 1].raw_adc);
+            cJSON_AddNumberToObject(root, "voltage", session->samples[sample_count - 1].voltage);
+        }
+        
+        if (factor > 0) {
+            cJSON_AddNumberToObject(root, "factor", factor);
         }
     } else {
         cJSON_AddBoolToObject(root, "success", false);
-        cJSON_AddStringToObject(root, "message", "Missing known_value");
+        cJSON_AddStringToObject(root, "message", "Failed to add sample");
     }
     
     cJSON_Delete(json);
@@ -917,37 +944,59 @@ esp_err_t calibrate_sample_handler(httpd_req_t *req) {
 // POST /api/calibrate/apply
 // ============================================================
 esp_err_t calibrate_apply_handler(httpd_req_t *req) {
+    // No need to parse body for apply - it's just an action
+    // But we still need to handle the case where body might be empty
+    
     char buffer[128];
     int len = httpd_req_recv(req, buffer, sizeof(buffer) - 1);
-    if (len <= 0) {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Empty request");
-        return ESP_FAIL;
-    }
-    buffer[len] = '\0';
     
-    cJSON *json = cJSON_Parse(buffer);
-    if (!json) {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
-        return ESP_FAIL;
+    // If there's a body, parse it (ignore if empty)
+    cJSON *json = NULL;
+    if (len > 0) {
+        buffer[len] = '\0';
+        json = cJSON_Parse(buffer);
+        // If parsing fails, it's not a critical error for apply
+        if (!json) {
+            SENSOR_LOG_W("Failed to parse JSON body, continuing anyway");
+        }
     }
     
     cJSON *root = cJSON_CreateObject();
     
+    // Check if calibration is active
+    if (!cal_is_active()) {
+        cJSON_AddBoolToObject(root, "success", false);
+        cJSON_AddStringToObject(root, "message", "No active calibration session");
+        send_json_response(req, root);
+        if (json) cJSON_Delete(json);
+        return ESP_OK;
+    }
+    
+    // Check if we have enough samples
+    int sample_count = cal_get_sample_count();
+    if (sample_count < 2) {
+        cJSON_AddBoolToObject(root, "success", false);
+        cJSON_AddStringToObject(root, "message", "Need at least 2 samples");
+        send_json_response(req, root);
+        if (json) cJSON_Delete(json);
+        return ESP_OK;
+    }
+    
+    // Apply calibration
     int result = cal_apply();
     if (result == 0) {
-        cal_session_t *session = cal_get_session();
         float factor = cal_calculate_factor();
         cJSON_AddBoolToObject(root, "success", true);
         cJSON_AddNumberToObject(root, "factor", factor);
-        cJSON_AddStringToObject(root, "message", "Calibration applied");
-        cJSON_AddNumberToObject(root, "sensor_id", session->sensor_id);
+        API_LOG_I("Coef: %f", factor);
+        cJSON_AddStringToObject(root, "message", "Calibration applied successfully");
     } else {
         cJSON_AddBoolToObject(root, "success", false);
-        cJSON_AddStringToObject(root, "message", "Failed to apply calibration (need at least 2 samples)");
+        cJSON_AddStringToObject(root, "message", "Failed to apply calibration");
     }
     
-    cJSON_Delete(json);
     send_json_response(req, root);
+    if (json) cJSON_Delete(json);
     return ESP_OK;
 }
 
@@ -955,10 +1004,26 @@ esp_err_t calibrate_apply_handler(httpd_req_t *req) {
 // POST /api/calibrate/cancel
 // ============================================================
 esp_err_t calibrate_cancel_handler(httpd_req_t *req) {
-    cal_cancel();
+    // No need to parse body for cancel
+    // Read body if present but ignore it
+    char buffer[64];
+    int len = httpd_req_recv(req, buffer, sizeof(buffer) - 1);
+    if (len > 0) {
+        // Body present but we ignore it
+        buffer[len] = '\0';
+    }
+    
     cJSON *root = cJSON_CreateObject();
-    cJSON_AddBoolToObject(root, "success", true);
-    cJSON_AddStringToObject(root, "message", "Calibration cancelled");
+    
+    int result = cal_cancel();
+    if (result == 0) {
+        cJSON_AddBoolToObject(root, "success", true);
+        cJSON_AddStringToObject(root, "message", "Calibration cancelled");
+    } else {
+        cJSON_AddBoolToObject(root, "success", false);
+        cJSON_AddStringToObject(root, "message", "No active calibration to cancel");
+    }
+    
     send_json_response(req, root);
     return ESP_OK;
 }
@@ -967,10 +1032,21 @@ esp_err_t calibrate_cancel_handler(httpd_req_t *req) {
 // GET /api/calibrate/factor
 // ============================================================
 esp_err_t calibrate_factor_handler(httpd_req_t *req) {
-    float factor = cal_calculate_factor();
     cJSON *root = cJSON_CreateObject();
+    
+    float factor = cal_calculate_factor();
+    int sample_count = cal_get_sample_count();
+    
     cJSON_AddBoolToObject(root, "success", true);
     cJSON_AddNumberToObject(root, "factor", factor);
+    cJSON_AddNumberToObject(root, "sample_count", sample_count);
+    
+    if (sample_count < 2) {
+        cJSON_AddStringToObject(root, "message", "Need at least 2 samples");
+    } else {
+        cJSON_AddStringToObject(root, "message", "Factor calculated");
+    }
+    
     send_json_response(req, root);
     return ESP_OK;
 }
