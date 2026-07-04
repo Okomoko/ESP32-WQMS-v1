@@ -43,7 +43,7 @@
                 <button class="tab-btn" data-tab="sensors">Sensors</button>
                 <button class="tab-btn" data-tab="relays">Relays</button>
                 <button class="tab-btn" data-tab="logging">Logging</button>
-                <button class="tab-btn" data-tab="notifications">Notifications</button>
+                <button class="tab-btn" data-tab="email">e-Mail</button>
             </div>
 
             <div id="config-content">
@@ -284,59 +284,59 @@
                     </div>
                 </div>
 
-				<!-- Email Configuration Section -->
-				<div class="config-section" id="email-section">
-					<h2><i class="fas fa-envelope"></i> Email Notification</h2>
-					<div class="config-grid">
-						<div class="config-field">
-							<label for="email_enabled">Enable Email</label>
-							<input type="checkbox" id="email_enabled" class="config-toggle">
-						</div>
-						
-						<div class="config-field">
-							<label for="email_smtp_server">SMTP Server *</label>
-							<input type="text" id="email_smtp_server" placeholder="smtp.gmail.com">
-						</div>
-						
-						<div class="config-field">
-							<label for="email_smtp_port">SMTP Port *</label>
-							<input type="number" id="email_smtp_port" placeholder="587">
-						</div>
-						
-						<div class="config-field">
-							<label for="email_username">Username *</label>
-							<input type="text" id="email_username" placeholder="your-email@gmail.com">
-						</div>
-						
-						<div class="config-field">
-							<label for="email_password">Password *</label>
-							<input type="password" id="email_password" placeholder="Enter password">
-						</div>
-						
-						<div class="config-field">
-							<label for="email_from">From Address *</label>
-							<input type="email" id="email_from" placeholder="sender@example.com">
-						</div>
-						
-						<div class="config-field">
-							<label for="email_to">To Addresses *</label>
-							<input type="text" id="email_to" placeholder="user1@example.com, user2@example.com">
-							<span class="field-hint">Separate multiple with commas</span>
-						</div>
-						
-						<div class="config-field">
-							<label for="email_tls">Use TLS</label>
-							<input type="checkbox" id="email_tls" class="config-toggle" checked>
-						</div>
-						
-						<div class="config-actions">
-							<button onclick="saveEmailConfig()" class="btn-primary">Save Settings</button>
-							<button onclick="testEmailConfig()" class="btn-secondary">Test Email</button>
-							<button onclick="resetEmailForm()" class="btn-secondary">Reset</button>
-							<button onclick="clearEmailFields()" class="btn-secondary" style="background:#dc3545;">Clear</button>
-						</div>
-					</div>
-				</div>
+                <!-- Email Configuration Section -->
+                <div class="tab-panel" id="tab-email">
+                    <h3>Email Notification</h2>
+                    <div class="config-grid">
+                        <div class="config-group config-field-checkbox">
+                            <label for="email_enabled">Enable Email</label>
+                            <input type="checkbox" id="email_enabled" class="config-toggle">
+                        </div>
+                        
+                        <div class="config-group">
+                            <label for="email_smtp_server">SMTP Server *</label>
+                            <input type="text" id="email_smtp_server" placeholder="smtp.gmail.com">
+                        </div>
+                        
+                        <div class="config-group">
+                            <label for="email_smtp_port">SMTP Port *</label>
+                            <input type="number" id="email_smtp_port" placeholder="587">
+                        </div>
+                        
+                        <div class="config-group">
+                            <label for="email_username">Username *</label>
+                            <input type="text" id="email_username" placeholder="your-email@gmail.com">
+                        </div>
+                        
+                        <div class="config-group">
+                            <label for="email_password">Password *</label>
+                            <input type="password" id="email_password" placeholder="Enter password">
+                        </div>
+                        
+                        <div class="config-group">
+                            <label for="email_from">From Address *</label>
+                            <input type="email" id="email_from" placeholder="sender@example.com">
+                        </div>
+                        
+                        <div class="config-group">
+                            <label for="email_to">To Addresses *</label>
+                            <input type="text" id="email_to" placeholder="user1@example.com, user2@example.com">
+                            <span class="field-hint">Separate multiple with commas</span>
+                        </div>
+                        
+                        <div class="config-group config-field-checkbox">
+                            <label for="email_tls">Use TLS</label>
+                            <input type="checkbox" id="email_tls" class="config-toggle" checked>
+                        </div>
+                        
+                        <div class="config-actions">
+                            <button onclick="saveEmailConfig()" class="btn-primary">Save Settings</button>
+                            <button onclick="testEmailConfig()" class="btn-secondary">Test Email</button>
+                            <button onclick="resetEmailForm()" class="btn-secondary">Reset</button>
+                            <button onclick="clearEmailFields()" class="btn-secondary" style="background:#dc3545;">Clear</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>

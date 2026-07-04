@@ -289,6 +289,69 @@ button:hover,
     box-shadow: 0 0 0 3px rgba(43, 123, 228, 0.12);
 }
 
+/* Existing config-group styling remains the same */
+
+/* Fix for checkbox fields - keep label and checkbox on same line */
+.config-group .config-field-checkbox {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.config-group .config-field-checkbox label {
+    margin-bottom: 0;  /* Remove bottom margin */
+    min-width: 120px;  /* Optional: keep labels aligned */
+    flex-shrink: 0;    /* Prevent label from shrinking */
+}
+
+.config-group .config-field-checkbox input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    flex-shrink: 0;
+    /* Keep existing checkbox styling */
+    accent-color: #007bff;  /* Modern browsers */
+}
+
+/* Optional: Add a hint text that stays on same line */
+.config-group .config-field-checkbox .field-hint {
+    margin-left: auto;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+/* Checkbox fields - keep label and checkbox on same line */
+.config-group:has(input[type="checkbox"]) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    max-width: 100%;
+}
+
+.config-group:has(input[type="checkbox"]) label {
+    margin-bottom: 0;
+    min-width: 120px;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.config-group:has(input[type="checkbox"]) input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: #2b7be4;
+}
+
+.config-group:has(input[type="checkbox"]) .field-hint {
+    font-size: 12px;
+    color: #6c757d;
+    margin-left: auto;
+}
+
 /* ============================================================
    TABS
    ============================================================ */

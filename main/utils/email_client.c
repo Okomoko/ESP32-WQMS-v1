@@ -299,46 +299,92 @@ esp_err_t email_client_init(void) {
 esp_err_t email_load_config(email_config_t *config) {
     if (!config) return ESP_ERR_INVALID_ARG;
     
+    // First, set ALL defaults
+    memset(config, 0, sizeof(email_config_t));
+    strcpy(config->smtp_server, "smtp.gmail.com");
+    config->smtp_port = 587;
+    strcpy(config->username, "");
+    strcpy(config->password, "");
+    strcpy(config->from_email, "");
+    strcpy(config->to_emails, "");
+    config->use_tls = true;
+    config->enabled = false;
+    
     nvs_handle_t handle;
     esp_err_t err = nvs_open("email", NVS_READWRITE, &handle);
-    if (err != ESP_OK) return err;
+    if (err != ESP_OK) {
+        NOTIFICATION_LOG_E("Failed to open NVS: %s", esp_err_to_name(err));
+        return err;  // Return defaults
+    }
     
+    // Read each parameter with proper error handling
     uint8_t val;
-    nvs_get_u8(handle, NVS_KEY_EMAIL_ENABLED, &val);
-    config->enabled = (val != 0);
-    
-    nvs_get_u8(handle, NVS_KEY_EMAIL_TLS, &val);
-    config->use_tls = (val != 0);
-    
     size_t len;
-    nvs_get_str(handle, NVS_KEY_EMAIL_SERVER, NULL, &len);
-    if (len > 0 && len < sizeof(config->smtp_server)) {
+    
+    // enabled
+    err = nvs_get_u8(handle, NVS_KEY_EMAIL_ENABLED, &val);
+    if (err == ESP_OK) {
+        config->enabled = (val != 0);
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_ENABLED, esp_err_to_name(err));
+    }
+    
+    // use_tls
+    err = nvs_get_u8(handle, NVS_KEY_EMAIL_TLS, &val);
+    if (err == ESP_OK) {
+        config->use_tls = (val != 0);
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_TLS, esp_err_to_name(err));
+    }
+    
+    // smtp_server
+    err = nvs_get_str(handle, NVS_KEY_EMAIL_SERVER, NULL, &len);
+    if (err == ESP_OK && len > 0 && len < sizeof(config->smtp_server)) {
         nvs_get_str(handle, NVS_KEY_EMAIL_SERVER, config->smtp_server, &len);
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_SERVER, esp_err_to_name(err));
     }
     
-    nvs_get_str(handle, NVS_KEY_EMAIL_USERNAME, NULL, &len);
-    if (len > 0 && len < sizeof(config->username)) {
+    // username
+    err = nvs_get_str(handle, NVS_KEY_EMAIL_USERNAME, NULL, &len);
+    if (err == ESP_OK && len > 0 && len < sizeof(config->username)) {
         nvs_get_str(handle, NVS_KEY_EMAIL_USERNAME, config->username, &len);
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_USERNAME, esp_err_to_name(err));
     }
     
-    nvs_get_str(handle, NVS_KEY_EMAIL_PASSWORD, NULL, &len);
-    if (len > 0 && len < sizeof(config->password)) {
+    // password
+    err = nvs_get_str(handle, NVS_KEY_EMAIL_PASSWORD, NULL, &len);
+    if (err == ESP_OK && len > 0 && len < sizeof(config->password)) {
         nvs_get_str(handle, NVS_KEY_EMAIL_PASSWORD, config->password, &len);
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_PASSWORD, esp_err_to_name(err));
     }
     
-    nvs_get_str(handle, NVS_KEY_EMAIL_FROM, NULL, &len);
-    if (len > 0 && len < sizeof(config->from_email)) {
+    // from_email
+    err = nvs_get_str(handle, NVS_KEY_EMAIL_FROM, NULL, &len);
+    if (err == ESP_OK && len > 0 && len < sizeof(config->from_email)) {
         nvs_get_str(handle, NVS_KEY_EMAIL_FROM, config->from_email, &len);
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_FROM, esp_err_to_name(err));
     }
     
-    nvs_get_str(handle, NVS_KEY_EMAIL_TO, NULL, &len);
-    if (len > 0 && len < sizeof(config->to_emails)) {
+    // to_emails
+    err = nvs_get_str(handle, NVS_KEY_EMAIL_TO, NULL, &len);
+    if (err == ESP_OK && len > 0 && len < sizeof(config->to_emails)) {
         nvs_get_str(handle, NVS_KEY_EMAIL_TO, config->to_emails, &len);
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_TO, esp_err_to_name(err));
     }
     
+    // smtp_port
     uint16_t port;
-    nvs_get_u16(handle, NVS_KEY_EMAIL_PORT, &port);
-    config->smtp_port = (port > 0) ? port : 587;
+    err = nvs_get_u16(handle, NVS_KEY_EMAIL_PORT, &port);
+    if (err == ESP_OK) {
+        config->smtp_port = port;
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_PORT, esp_err_to_name(err));
+    }
     
     nvs_close(handle);
     return ESP_OK;
