@@ -200,16 +200,16 @@ float sensor_convert_value(uint8_t sensor_id, uint16_t raw_adc) {
     
     switch (sensor_id) {
         case 0:  // Sensor 0
-            return (3.5f - calibrated) * 4.0f + 0.0f;
+//            return (3.5f - calibrated) * 4.0f + 0.0f;
         case 1:  // Sensor 1
-            return calibrated * 2.0f;
+//            return calibrated * 2.0f;
         case 2:  // Sensor 2
         case 3:  // Sensor 3
         case 4:  // Sensor 4
         case 5:  // Sensor 5
         case 6:  // Sensor 6
         case 7:  // Sensor 7
-            return calibrated * 200.0f;
+//            return calibrated * 200.0f;
         case 8:  // Sensor 8 (Temperature from DHT11)
         case 9:  // Sensor 9 (Humidity from DHT11)
             return calibrated;

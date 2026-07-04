@@ -126,8 +126,9 @@ async function initCalibration() {
                     document.getElementById('cal-result').style.display = 'block';
                 }
                 
+				document.getElementById('cal-sample-count').innerText = sampleNum
                 // Enable apply button if we have at least 2 samples
-                if (body.children.length >= 2) {
+                if (sampleNum >= 2) {
                     document.getElementById('cal-apply').disabled = false;
                 }
             } else {

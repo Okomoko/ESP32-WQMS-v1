@@ -44,8 +44,9 @@ idf_component_register(SRCS
     integration/web_upload.c
     integration/buffer_recovery.c
     integration/web_upload_task.c
-        # Notification
-    notification/webhook_notification.c
+
+    # Email notification
+    utils/email_client.c
     
     INCLUDE_DIRS
     "include"
@@ -86,6 +87,7 @@ set(COMPONENT_REQUIRES
     esp_event
     esp_wifi
     esp_base64
+    esp_tls
     nvs_flash
     spi_flash
     spiffs

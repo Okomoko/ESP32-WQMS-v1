@@ -651,44 +651,6 @@ async function wifiForget() {
     }
 }
 
-
-// ============================================================
-// Webhook Functions
-// ============================================================
-async function loadWebhookConfig() {
-    try {
-        const data = await api.get('/api/webhook/config');
-        document.getElementById('webhook-recipients').value = data.emails || '';
-        document.getElementById('webhook-subject').value = data.subject || '';
-        document.getElementById('webhook-enabled').checked = data.enabled || false;
-    } catch (e) {
-        console.warn('Failed to load webhook config:', e);
-    }
-}
-
-async function saveWebhookConfig() {
-    const config = {
-        emails: document.getElementById('webhook-recipients').value,
-        subject: document.getElementById('webhook-subject').value,
-        enabled: document.getElementById('webhook-enabled').checked
-    };
-    try {
-        const result = await api.post('/api/webhook/config', config);
-        alert(result.message || '✅ Notification settings saved');
-    } catch (e) {
-        alert('❌ Failed to save: ' + e.message);
-    }
-}
-
-async function testWebhook() {
-    try {
-        const result = await api.post('/api/webhook/test');
-        alert(result.message || '✅ Test notification sent');
-    } catch (e) {
-        alert('❌ Failed to send test: ' + e.message);
-    }
-}
-
 // ============================================================
 // Download All Logs
 // ============================================================
@@ -720,6 +682,319 @@ async function downloadAllLogs() {
     }
 }
 
+async function loadEmailConfig() {
+    try {
+        const response = await fetch('/api/email/config');
+        if (!response.ok) throw new Error('Failed to load email config');
+        
+        const config = await response.json();
+        
+        // Populate form fields (matching your existing pattern)
+        document.getElementById('email_enabled').checked = config.enabled || false;
+        document.getElementById('email_smtp_server').value = config.smtp_server || '';
+        document.getElementById('email_smtp_port').value = config.smtp_port || 587;
+        document.getElementById('email_username').value = config.username || '';
+        document.getElementById('email_password').value = ''; // Never show stored password
+        document.getElementById('email_from').value = config.from_email || '';
+        document.getElementById('email_to').value = config.to_emails || '';
+        document.getElementById('email_tls').checked = config.use_tls !== undefined ? config.use_tls : true;
+        
+        // Update UI based on enabled state
+        updateEmailUIState();
+        
+    } catch (error) {
+        console.error('Failed to load email config:', error);
+        showNotification('Failed to load email configuration', 'error');
+    }
+}
+
+/**
+ * Save email configuration to server
+ */
+async function saveEmailConfig() {
+    const enabled = document.getElementById('email_enabled').checked;
+    
+    // Gather config data
+    const config = {
+        enabled: enabled,
+        smtp_server: document.getElementById('email_smtp_server').value.trim(),
+        smtp_port: parseInt(document.getElementById('email_smtp_port').value) || 587,
+        username: document.getElementById('email_username').value.trim(),
+        password: document.getElementById('email_password').value.trim(),
+        from_email: document.getElementById('email_from').value.trim(),
+        to_emails: document.getElementById('email_to').value.trim(),
+        use_tls: document.getElementById('email_tls').checked
+    };
+    
+    // Validate if enabled
+    if (enabled) {
+        const required = [
+            { field: 'smtp_server', label: 'SMTP Server' },
+            { field: 'username', label: 'Username' },
+            { field: 'password', label: 'Password' },
+            { field: 'from_email', label: 'From Address' },
+            { field: 'to_emails', label: 'To Address(es)' }
+        ];
+        
+        const missing = required.filter(r => !config[r.field]);
+        if (missing.length > 0) {
+            showNotification(`Please fill in: ${missing.map(m => m.label).join(', ')}`, 'error');
+            return;
+        }
+        
+        // Validate email formats
+        if (!isValidEmail(config.from_email)) {
+            showNotification('Invalid "From" email address format', 'error');
+            return;
+        }
+        
+        const toEmails = config.to_emails.split(',').map(e => e.trim());
+        const invalidEmails = toEmails.filter(e => e && !isValidEmail(e));
+        if (invalidEmails.length > 0) {
+            showNotification(`Invalid "To" email(s): ${invalidEmails.join(', ')}`, 'error');
+            return;
+        }
+    }
+    
+    // Disable save button
+    const saveBtn = document.querySelector('#email-section .btn-primary');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+    }
+    
+    try {
+        const response = await fetch('/api/email/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Save failed');
+        }
+        
+        showNotification('Email configuration saved successfully', 'success');
+        
+        // Clear password field if it was set (security)
+        if (document.getElementById('email_password').value) {
+            document.getElementById('email_password').value = '';
+        }
+        
+    } catch (error) {
+        console.error('Failed to save email config:', error);
+        showNotification('Failed to save: ' + error.message, 'error');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Email Settings';
+        }
+    }
+}
+
+/**
+ * Send test email
+ */
+async function testEmailConfig() {
+    const enabled = document.getElementById('email_enabled').checked;
+    if (!enabled) {
+        showNotification('Email is disabled. Enable it first.', 'warning');
+        return;
+    }
+    
+    // Quick validation
+    const smtp_server = document.getElementById('email_smtp_server').value.trim();
+    const username = document.getElementById('email_username').value.trim();
+    const password = document.getElementById('email_password').value.trim();
+    const from_email = document.getElementById('email_from').value.trim();
+    const to_emails = document.getElementById('email_to').value.trim();
+    
+    if (!smtp_server || !username || !password || !from_email || !to_emails) {
+        showNotification('Please fill in all email fields before testing', 'error');
+        return;
+    }
+    
+    // Disable test button
+    const testBtn = document.querySelector('#email-section .btn-secondary');
+    if (testBtn) {
+        testBtn.disabled = true;
+        testBtn.textContent = 'Sending...';
+    }
+    
+    try {
+        const response = await fetch('/api/email/test', {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.status === 'ok') {
+            showNotification('✅ Test email sent! Check your inbox.', 'success');
+        } else {
+            showNotification('❌ Failed: ' + (result.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Test email failed:', error);
+        showNotification('Network error sending test email', 'error');
+    } finally {
+        if (testBtn) {
+            testBtn.disabled = false;
+            testBtn.textContent = 'Send Test Email';
+        }
+    }
+}
+
+/**
+ * Update UI based on email enabled state
+ */
+function updateEmailUIState() {
+    const enabled = document.getElementById('email_enabled').checked;
+    const fields = [
+        'email_smtp_server',
+        'email_smtp_port',
+        'email_username',
+        'email_password',
+        'email_from',
+        'email_to',
+        'email_tls'
+    ];
+    
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.disabled = !enabled;
+            el.style.opacity = enabled ? '1' : '0.6';
+        }
+    });
+    
+    // Update buttons
+    const saveBtn = document.querySelector('#email-section .btn-primary');
+    const testBtn = document.querySelector('#email-section .btn-secondary');
+    if (saveBtn) saveBtn.disabled = !enabled;
+    if (testBtn) testBtn.disabled = !enabled;
+}
+
+/**
+ * Validate email format
+ */
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/**
+ * Handle email enable/disable toggle
+ */
+function setupEmailToggle() {
+    const toggle = document.getElementById('email_enabled');
+    if (toggle) {
+        toggle.addEventListener('change', updateEmailUIState);
+    }
+}
+
+/**
+ * Handle email input validation
+ */
+function setupEmailValidation() {
+    const fields = [
+        'email_smtp_server',
+        'email_username',
+        'email_password',
+        'email_from',
+        'email_to'
+    ];
+    
+    fields.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('blur', function() {
+                if (document.getElementById('email_enabled').checked) {
+                    validateEmailField(this);
+                }
+            });
+        }
+    });
+    
+    // Port validation
+    const portInput = document.getElementById('email_smtp_port');
+    if (portInput) {
+        portInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value && (parseInt(this.value) < 1 || parseInt(this.value) > 65535)) {
+                this.style.borderColor = '#dc3545';
+            } else {
+                this.style.borderColor = '';
+            }
+        });
+    }
+}
+
+/**
+ * Validate individual email field
+ */
+function validateEmailField(input) {
+    if (!input) return;
+    
+    const id = input.id;
+    let isValid = true;
+    
+    switch(id) {
+        case 'email_smtp_server':
+            if (input.value.trim() && !input.value.match(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+                isValid = false;
+            }
+            break;
+        case 'email_from':
+            if (input.value.trim() && !isValidEmail(input.value.trim())) {
+                isValid = false;
+            }
+            break;
+        case 'email_to':
+            if (input.value.trim()) {
+                const emails = input.value.split(',').map(e => e.trim());
+                const invalid = emails.filter(e => e && !isValidEmail(e));
+                if (invalid.length > 0) isValid = false;
+            }
+            break;
+    }
+    
+    input.style.borderColor = isValid ? '' : '#dc3545';
+}
+
+/**
+ * Reset email form to saved config
+ */
+function resetEmailForm() {
+    if (confirm('Reset email form to saved configuration?')) {
+        loadEmailConfig();
+        showNotification('Email form reset', 'info');
+    }
+}
+
+/**
+ * Clear email fields
+ */
+function clearEmailFields() {
+    if (confirm('Clear all email fields? (This will not save changes)')) {
+        const fields = [
+            'email_smtp_server',
+            'email_smtp_port',
+            'email_username',
+            'email_password',
+            'email_from',
+            'email_to'
+        ];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('email_tls').checked = true;
+        document.getElementById('email_enabled').checked = false;
+        updateEmailUIState();
+        showNotification('Email fields cleared', 'info');
+    }
+}
+
 // ============================================================
 // Initialize Configuration
 // ============================================================
@@ -731,7 +1006,9 @@ async function initConfiguration() {
     await loadLogFiles();
     await loadWifiStatus();
     await loadNtpStatus();
-    await loadWebhookConfig();
+    await loadEmailConfig();
+    await setupEmailToggle();
+    await setupEmailValidation();
     initTabs();
 
     try {
@@ -798,9 +1075,6 @@ async function initConfiguration() {
     //Sensor & Relay buttons
     document.getElementById('save-sensor-config')?.addEventListener('click', saveSensorConfig);
     document.getElementById('save-relay-config')?.addEventListener('click', saveRelayConfig);
-    // Notification buttons
-    document.getElementById('save-webhook')?.addEventListener('click', saveWebhookConfig);
-    document.getElementById('test-webhook')?.addEventListener('click', testWebhook);
 
     setInterval(updateHeader, REFRESH_INTERVAL);
 }

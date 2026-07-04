@@ -22,7 +22,7 @@
 #include "spiffs_manager.h"
 #include "nvs_config.h"
 #include "wifi_manager.h"
-#include "webhook_notification.h"
+#include "email_client.h"
 
 // ============================================================
 // Tag for ESP_LOG
@@ -126,8 +126,6 @@ void app_main(void) {
     // ============================================================
     watchdog_init();
 //    WQMS_LOG_I("Watchdog initialized");
-
-    webhook_notification_init();
     
     // ============================================================
     // Step 5: Load System Configuration from NVS
@@ -157,8 +155,7 @@ void app_main(void) {
                  nvs_get_system_name(),
                  wifi_get_mac());
         
-        webhook_send_notification(WH_TYPE_CRITICAL, 
-                                   "Device Rebooted", 
+        email_send_notification("Device Rebooted", 
                                    message);
     } else {
         char message[256];
@@ -169,8 +166,7 @@ void app_main(void) {
                  nvs_get_system_name(),
                  wifi_get_mac());
         
-        webhook_send_notification(WH_TYPE_INFO, 
-                                   "Device Rebooted", 
+        email_send_notification("Device Rebooted", 
                                    message);
     }
     WQMS_LOG_I("Reboot notification is sent.");

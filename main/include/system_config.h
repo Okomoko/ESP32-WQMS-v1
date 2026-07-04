@@ -179,16 +179,6 @@ GND 	38  	   -	Power	Ground
 #define PRIORITY_INTEGRATION    2
 #define PRIORITY_LOGGING        1
 
-// ============================================================
-// WEBHOOK Constants
-// ============================================================
-#define WEBHOOK_TASK_STACK_SIZE 8192
-#define WEBHOOK_TASK_PRIORITY 2
-#define WEBHOOK_TIMEOUT_MS 5000
-
-#define DEFAULT_API_KEY "e86c0b5ff0e45c2269bb3d5c033a0908-a072c9bc-a9e21095"  
-#define DEFAULT_DOMAIN "sandbox037fe256b642458a92abdc77e253c15f.mailgun.org"
-#define DEFAULT_FROM "Mailgun Sandbox <postmaster@sandbox037fe256b642458a92abdc77e253c15f.mailgun.org>"
 #define DEFAULT_RECIPIENTS "okan.sengun@gmail.com"
 #define DEFAULT_SUBJECT "WQMS System Alert - {{system_name}}"
 

@@ -25,11 +25,11 @@ const uint16_t default_relay_modbus[] = {0x0100, 0x0101, 0x0102, 0x0103, 0x0104,
 // Default SENSOR Definitions
 // ============================================================
 const char *default_sensor_names[] = {"Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8"};
-const uint8_t default_sensor_pins[] = {32, 33, 34, 35, 36, 39, GPIO_DHT11, GPIO_DHT11};
+const uint8_t default_sensor_gpios[] = {36, 39, 32, 33, 34, 35, GPIO_DHT11, GPIO_DHT11};
 const uint8_t default_sensor_adc[] = {0, 3, 4, 5, 6, 7, 255, 255};
 const uint16_t default_sensor_modbus[] = {0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007};
 const float default_sensor_min[] = {0, 0, 0, 0, 0, 0, -10, 0};
-const float default_sensor_max[] = {14, 10, 1000, 1000, 1000, 1000, 60, 100};
+const float default_sensor_max[] = {1000, 1000, 1000, 1000, 1000, 1000, 60, 100};
 
 // Static array to be filled at runtime
 static modbus_map_entry_t default_modbus_map[MODBUS_MAP_ENTRY_COUNT];
@@ -42,7 +42,7 @@ static void load_default_sensor_configs(sensor_config_t *config, int count) {
         strncpy(config[i].name, default_sensor_names[i], sizeof(config[i].name) - 1);
         config[i].name[sizeof(config[i].name) - 1] = '\0';
         config[i].enabled = 0;
-        config[i].gpio_pin = default_sensor_pins[i];
+        config[i].gpio_pin = default_sensor_gpios[i];
         config[i].adc_channel = default_sensor_adc[i];
         config[i].modbus_register = default_sensor_modbus[i];
         config[i].calibration_factor = 1000;

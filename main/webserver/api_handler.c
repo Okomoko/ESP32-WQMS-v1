@@ -29,7 +29,7 @@
 #include "ntp_client.h"
 #include "modbus_tcp.h"
 #include "watchdog.h"
-#include "webhook_notification.h"
+#include "email_client.h"
 #include "rule_manager.h"
 #include "automation_engine.h"
 
@@ -1341,97 +1341,6 @@ esp_err_t logs_delete_handler(httpd_req_t *req) {
 }
 
 // ============================================================
-// GET /api/webhook/config
-// ============================================================
-esp_err_t webhook_config_get_handler(httpd_req_t *req) {
-    webhook_config_t config = {0};
-    webhook_load_config(&config);
-    
-//    API_LOG_I("webhook_config_get_handler: recipients='%s'", config.emails);
-    
-    // ✅ If empty, use defaults
-//    if (strlen(config.emails) == 0) {
-//        strncpy(config.emails, DEFAULT_RECIPIENTS, sizeof(config.emails) - 1);
-//        config.emails[sizeof(config.emails) - 1] = '\0';
-//        API_LOG_I("Recipients was empty, set to default: '%s'", config.emails);
-//    }
-    
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "emails", config.emails);
-    cJSON_AddStringToObject(root, "subject", config.subject);
-    cJSON_AddBoolToObject(root, "enabled", config.enabled);
-    
-    send_json_response(req, root);
-    return ESP_OK;
-}
-
-// ============================================================
-// POST /api/webhook/config
-// ============================================================
-esp_err_t webhook_config_post_handler(httpd_req_t *req) {
-    char buffer[512];
-    int len = httpd_req_recv(req, buffer, sizeof(buffer) - 1);
-    if (len <= 0) {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Empty request");
-        return ESP_FAIL;
-    }
-    buffer[len] = '\0';
-    
-    cJSON *json = cJSON_Parse(buffer);
-    if (!json) {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
-        return ESP_FAIL;
-    }
-    
-    webhook_config_t config = {0};
-    
-    cJSON *item = cJSON_GetObjectItem(json, "emails");
-    if (item && cJSON_IsString(item)) {
-        strncpy(config.emails, item->valuestring, sizeof(config.emails) - 1);
-        config.emails[sizeof(config.emails) - 1] = '\0';
-    }
-    
-    item = cJSON_GetObjectItem(json, "subject");
-    if (item && cJSON_IsString(item)) {
-        strncpy(config.subject, item->valuestring, sizeof(config.subject) - 1);
-        config.subject[sizeof(config.subject) - 1] = '\0';
-    }
-    
-    item = cJSON_GetObjectItem(json, "enabled");
-    if (item && cJSON_IsBool(item)) {
-        config.enabled = item->valueint;
-    }
-    
-    webhook_save_config(&config);
-    cJSON_Delete(json);
-    
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddBoolToObject(root, "success", true);
-    cJSON_AddStringToObject(root, "message", "Notification settings saved");
-    send_json_response(req, root);
-    return ESP_OK;
-}
-
-// ============================================================
-// POST /api/webhook/test
-// ============================================================
-esp_err_t webhook_test_handler(httpd_req_t *req) {
-    int result = webhook_test_notification();
-    
-    cJSON *root = cJSON_CreateObject();
-    if (result == 0) {
-        cJSON_AddBoolToObject(root, "success", true);
-        cJSON_AddStringToObject(root, "message", "Test notification sent");
-    } else {
-        cJSON_AddBoolToObject(root, "success", false);
-        cJSON_AddStringToObject(root, "message", "Failed to send test notification");
-    }
-    send_json_response(req, root);
-    return ESP_OK;
-}
-
-
-// ============================================================
 // Automation Rule API Endpoints
 // ============================================================
 // ============================================================
@@ -2429,6 +2338,131 @@ esp_err_t api_get_history_stats_handler(httpd_req_t *req)
 }
 
 // ============================================================
+// GET-POST /api/email/config - Get & Update email configuration
+// ============================================================
+esp_err_t email_config_handler(httpd_req_t *req) {
+    if (req->method == HTTP_GET) {
+        email_config_t config;
+        email_load_config(&config);
+        
+        char response[1024];
+        snprintf(response, sizeof(response),
+            "{\n"
+            "  \"enabled\": %s,\n"
+            "  \"smtp_server\": \"%s\",\n"
+            "  \"smtp_port\": %d,\n"
+            "  \"username\": \"%s\",\n"
+            "  \"password\": \"%s\",\n"
+            "  \"from_email\": \"%s\",\n"
+            "  \"to_emails\": \"%s\",\n"
+            "  \"use_tls\": %s\n"
+            "}",
+            config.enabled ? "true" : "false",
+            config.smtp_server,
+            config.smtp_port,
+            config.username,
+            "********", // Don't send real password
+            config.from_email,
+            config.to_emails,
+            config.use_tls ? "true" : "false"
+        );
+        
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, response, strlen(response));
+        return ESP_OK;
+    }
+    
+    // POST: Update email config
+    if (req->method == HTTP_POST) {
+        char buf[1024] = {0};
+        int ret = httpd_req_recv(req, buf, sizeof(buf) - 1);
+        if (ret <= 0) {
+            httpd_resp_send_500(req);
+            return ESP_FAIL;
+        }
+        
+        // Parse JSON and update config
+        email_config_t config;
+
+        cJSON *json = cJSON_Parse(buf);
+        if (!json) {
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+            return ESP_FAIL;
+        }
+
+        cJSON *item;
+
+        item = cJSON_GetObjectItem(json, "enabled");
+        if (item && cJSON_IsBool(item)) {
+            config.enabled = item->valueint;
+        }
+        
+        item = cJSON_GetObjectItem(json, "smtp_server");
+        if (item && cJSON_IsString(item)) {
+            strncpy(config.smtp_server, item->valuestring, sizeof(config.smtp_server) - 1);
+            config.smtp_server[sizeof(config.smtp_server) - 1] = '\0';
+        }
+
+        item = cJSON_GetObjectItem(json, "smtp_port");
+        if (item && cJSON_IsNumber(item)) {
+            config.smtp_port = item->valueint;
+        }
+
+        item = cJSON_GetObjectItem(json, "username");
+        if (item && cJSON_IsString(item)) {
+            strncpy(config.username, item->valuestring, sizeof(config.username) - 1);
+            config.username[sizeof(config.username) - 1] = '\0';
+        }
+
+        item = cJSON_GetObjectItem(json, "password");
+        if (item && cJSON_IsString(item)) {
+            strncpy(config.password, item->valuestring, sizeof(config.password) - 1);
+            config.password[sizeof(config.password) - 1] = '\0';
+        }
+
+        item = cJSON_GetObjectItem(json, "from_email");
+        if (item && cJSON_IsString(item)) {
+            strncpy(config.from_email, item->valuestring, sizeof(config.from_email) - 1);
+            config.from_email[sizeof(config.from_email) - 1] = '\0';
+        }
+
+        item = cJSON_GetObjectItem(json, "from_email");
+        if (item && cJSON_IsString(item)) {
+            strncpy(config.to_emails, item->valuestring, sizeof(config.to_emails) - 1);
+            config.to_emails[sizeof(config.to_emails) - 1] = '\0';
+        }
+
+        item = cJSON_GetObjectItem(json, "use_tls");
+        if (item && cJSON_IsBool(item)) {
+            config.use_tls = item->valueint;
+        }
+
+        email_save_config(&config);
+        httpd_resp_send(req, "{\"status\":\"ok\"}", strlen("{\"status\":\"ok\"}"));
+        return ESP_OK;
+    }
+
+    httpd_resp_send_err(req, HTTPD_405_METHOD_NOT_ALLOWED, "Either GET or POST is allowed");
+    return ESP_OK;
+}
+
+// ============================================================
+// GET /api/email/test - Get history statistics
+// ============================================================
+// Test email endpoint
+esp_err_t email_test_handler(httpd_req_t *req) {
+    esp_err_t err = email_send_test();
+    if (err == ESP_OK) {
+        httpd_resp_send(req, "{\"status\":\"ok\",\"message\":\"Test email sent\"}", 
+                       strlen("{\"status\":\"ok\",\"message\":\"Test email sent\"}"));
+    } else {
+        httpd_resp_send(req, "{\"status\":\"error\",\"message\":\"Failed to send test email\"}", 
+                       strlen("{\"status\":\"error\",\"message\":\"Failed to send test email\"}"));
+    }
+    return ESP_OK;
+}
+
+// ============================================================
 // Register all API endpoints
 // ============================================================
 void register_api_endpoints(httpd_handle_t server) {
@@ -2676,29 +2710,29 @@ void register_api_endpoints(httpd_handle_t server) {
     };
     httpd_register_uri_handler(server, &logs_delete_all_uri);
  
-    httpd_uri_t webhook_config_get_uri = {
-        .uri = "/api/webhook/config",
+    httpd_uri_t email_config_get_uri = {
+        .uri = "/api/email/config",
         .method = HTTP_GET,
-        .handler = webhook_config_get_handler,
+        .handler = email_config_handler,
         .user_ctx = NULL
     };
-    httpd_register_uri_handler(server, &webhook_config_get_uri);
+    httpd_register_uri_handler(server, &email_config_get_uri);
 
-    httpd_uri_t webhook_config_post_uri = {
-        .uri = "/api/webhook/config",
+    httpd_uri_t email_config_post_uri = {
+        .uri = "/api/email/config",
         .method = HTTP_POST,
-        .handler = webhook_config_post_handler,
+        .handler = email_config_handler,
         .user_ctx = NULL
     };
-    httpd_register_uri_handler(server, &webhook_config_post_uri);
+    httpd_register_uri_handler(server, &email_config_post_uri);
 
-    httpd_uri_t webhook_test_uri = {
-        .uri = "/api/webhook/test",
+    httpd_uri_t email_test_uri = {
+        .uri = "/api/email/test",
         .method = HTTP_POST,
-        .handler = webhook_test_handler,
+        .handler = email_test_handler,
         .user_ctx = NULL
     };
-    httpd_register_uri_handler(server, &webhook_test_uri);
+    httpd_register_uri_handler(server, &email_test_uri);
 
     // GET /api/rules
     httpd_uri_t rules_get = {

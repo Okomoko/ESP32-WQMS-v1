@@ -10,10 +10,11 @@
 #include "web_upload.h"
 #include "sensor_read.h"
 #include "nvs_config.h"
-#include "log_levels.h"
 #include "system_config.h"
 #include "watchdog.h"
 #include "buffer_recovery.h"
+#include "log_levels.h"
+#include "logger.h"
 
 // ============================================================
 // Static Variables
@@ -60,7 +61,7 @@ static esp_err_t http_event_handler(esp_http_client_event_t *evt) {
 void web_upload_init(void) {
     upload_status = 0;
     snprintf(last_result, sizeof(last_result), "Ready");
-    INTEGRATION_LOG_I("Web upload initialized");
+    WQMS_LOG_I("Web upload initialized");
 }
 
 int web_upload_sensors(void) {

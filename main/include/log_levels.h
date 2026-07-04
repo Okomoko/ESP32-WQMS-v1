@@ -127,7 +127,6 @@ typedef enum {
     #define INTEGRATION_LOG_D(format, ...)  ((void)0)
 #endif
 
-
 #if CONFIG_WQMS_LOG_LEVEL >= WQMS_LOG_LEVEL_VERBOSE
     #define WQMS_LOG_V(format, ...)  wqms_log_write(WQMS_LOG_TYPE_SYSTEM, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
 	#define APP_LOG_V(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
@@ -162,14 +161,5 @@ typedef enum {
 // Function Prototypes
 // ============================================================
 void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *format, ...);
-
-// ============================================================
-// Backward Compatibility Macros
-// ============================================================
-#define LOG_I WQMS_LOG_I
-#define LOG_W WQMS_LOG_W
-#define LOG_E WQMS_LOG_E
-#define LOG_D WQMS_LOG_D
-#define LOG_V WQMS_LOG_V
 
 #endif // LOG_LEVELS_H
