@@ -86,7 +86,7 @@ int web_upload_sensors(void) {
     cJSON_AddNumberToObject(root, "timestamp", time(NULL));
     
     cJSON *sensors = cJSON_CreateObject();
-    for (int i = 0; i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         if (readings[i].status == SENSOR_STATUS_OK) {
             cJSON_AddNumberToObject(sensors, sensor_get_name(i), readings[i].value);
         }

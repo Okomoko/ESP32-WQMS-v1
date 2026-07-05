@@ -41,7 +41,7 @@ static float adc_to_voltage(float raw_adc) {
 // Start Calibration
 // ============================================================
 int cal_start(int sensor_id) {
-    if (sensor_id < 0 || sensor_id >= SENSOR_COUNT) {
+    if (sensor_id < 0 || sensor_id >= ANALOGUE_SENSOR_COUNT) {
         SENSOR_LOG_E("Invalid sensor ID: %d", sensor_id);
         return -1;
     }
@@ -164,13 +164,13 @@ int cal_apply(void) {
     }
     
     // Load all sensor configs
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
     
     // Update the specific sensor's calibration factor
     configs[cal_session.sensor_id].calibration_factor = (int)(factor * 100);  // Store as scaled integer
     
-    nvs_save_sensor_config(configs, SENSOR_COUNT);
+    nvs_save_sensor_config(configs, TOTAL_SENSOR_COUNT);
     
     // Reload sensor config
     sensor_reload_config();

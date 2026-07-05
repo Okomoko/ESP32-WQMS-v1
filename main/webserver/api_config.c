@@ -20,45 +20,45 @@
 
 // -------- Sensor Helpers --------
 static uint16_t get_sensor_calibration(int sensor_id) {
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < SENSOR_COUNT) {
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
+    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
         return configs[sensor_id].calibration_factor;
     }
     return 1000;
 }
 
 static uint8_t get_sensor_gpio(int sensor_id) {
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < SENSOR_COUNT) {
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
+    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
         return configs[sensor_id].gpio_pin;
     }
     return 0;
 }
 
 static uint16_t get_sensor_modbus(int sensor_id) {
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < SENSOR_COUNT) {
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
+    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
         return configs[sensor_id].modbus_register;
     }
     return 0;
 }
 
 static float get_sensor_min(int sensor_id) {
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < SENSOR_COUNT) {
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
+    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
         return configs[sensor_id].min_value;
     }
     return 0.0f;
 }
 
 static float get_sensor_max(int sensor_id) {
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < SENSOR_COUNT) {
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
+    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
         return configs[sensor_id].max_value;
     }
     return 100.0f;
@@ -119,7 +119,7 @@ esp_err_t sensors_config_get_handler(httpd_req_t *req) {
     cJSON *root = cJSON_CreateObject();
     cJSON *sensors_array = cJSON_CreateArray();
     
-    for (int i = 0; i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         sensor_reading_t *reading = sensor_get_reading(i);
         cJSON *sensor = cJSON_CreateObject();
         cJSON_AddNumberToObject(sensor, "id", i);
@@ -163,8 +163,8 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
     
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
     
     cJSON *item;
     cJSON_ArrayForEach(item, sensors) {
@@ -175,7 +175,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         
         if (id && cJSON_IsNumber(id)) {
             int idx = id->valueint;
-            if (idx >= 0 && idx < SENSOR_COUNT) {
+            if (idx >= 0 && idx < TOTAL_SENSOR_COUNT) {
                 if (name && cJSON_IsString(name)) {
                     strncpy(configs[idx].name, name->valuestring, sizeof(configs[idx].name) - 1);
                     configs[idx].name[sizeof(configs[idx].name) - 1] = '\0';
@@ -191,7 +191,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         }
     }
     
-    nvs_save_sensor_config(configs, SENSOR_COUNT);
+    nvs_save_sensor_config(configs, TOTAL_SENSOR_COUNT);
     cJSON_Delete(json);
     sensor_reload_config();
     

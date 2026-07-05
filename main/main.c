@@ -6,7 +6,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
-#include "esp_log.h"
 #include "esp_flash.h"
 #include "nvs_flash.h"
 #include "esp_netif.h"
@@ -23,11 +22,6 @@
 #include "nvs_config.h"
 #include "wifi_manager.h"
 #include "email_client.h"
-
-// ============================================================
-// Tag for ESP_LOG
-// ============================================================
-static const char *TAG = "WQMS";
 
 // ============================================================
 // System Version
@@ -83,22 +77,22 @@ void app_main(void) {
             break;
     }
     
-    ESP_LOGI(TAG, "Last reset reason: %s (code: %d)", reason_str, reason);
+    WQMS_LOG_I("Last reset reason: %s (code: %d)", reason_str, reason);
     
     // ============================================================
     // Step 1: Initialize NVS
     // ============================================================
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_LOGW(TAG, "NVS corrupt, erasing...");
+        WQMS_LOG_W("NVS corrupt, erasing...");
         nvs_flash_erase();
         ret = nvs_flash_init();
     }
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "NVS init failed: %d", ret);
+        WQMS_LOG_E("NVS init failed: %d", ret);
         return;
     }
-    ESP_LOGI(TAG, "NVS initialized");
+    WQMS_LOG_I("NVS initialized");
 
     // ============================================================
     // Step 2: Initialize SPIFFS (webpartition, logs, sensors)

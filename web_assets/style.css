@@ -1445,3 +1445,88 @@ tr:hover {
     height: 100% !important;
     display: block;
 }
+
+/* ============================================================
+   WIFI CONFIG - Two Column Layout
+   ============================================================ */
+
+/* WiFi scan results styling */
+#wifi-network-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#wifi-network-list li {
+    padding: 6px 10px;
+    margin: 2px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+#wifi-network-list li:hover {
+    background: #e6edf6;
+    border-color: #dde6ef;
+}
+
+#wifi-network-list li.selected {
+    background: #e3f2fd;
+    border-color: #2b7be4;
+}
+
+#wifi-network-list li .ssid {
+    font-weight: 500;
+    color: #0a2744;
+}
+
+#wifi-network-list li .signal {
+    font-size: 0.7rem;
+    color: #7a9bbf;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#wifi-network-list li .signal .bars {
+    color: #f9a825;
+}
+
+#wifi-network-list li .signal .locked {
+    color: #d32f2f;
+}
+
+#wifi-network-list li .signal .open {
+    color: #2e7d32;
+}
+
+/* WiFi scan container scrollbar */
+#wifi-scan-results::-webkit-scrollbar {
+    width: 4px;
+}
+
+#wifi-scan-results::-webkit-scrollbar-track {
+    background: #f0f4f9;
+    border-radius: 4px;
+}
+
+#wifi-scan-results::-webkit-scrollbar-thumb {
+    background: #b0c4d9;
+    border-radius: 4px;
+}
+
+#wifi-scan-results::-webkit-scrollbar-thumb:hover {
+    background: #7a9bbf;
+}
+
+/* Responsive: Stack on mobile */
+@media (max-width: 768px) {
+    #tab-wifi .grid-2col {
+        grid-template-columns: 1fr !important;
+    }
+}

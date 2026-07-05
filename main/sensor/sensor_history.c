@@ -44,39 +44,39 @@ static int history_read_index(void) {
     FILE *f = fopen(INDEX_FILE, "rb");
     if (!f) {
         // File doesn't exist - create defaults
-        sensor_idx .magic = 0x53454E53;
-        sensor_idx .version = 1;
-        sensor_idx .max_records = HISTORY_MAX_RECORDS;
-        sensor_idx .write_offset = 0;
-        sensor_idx .record_count = 0;
-        sensor_idx .first_timestamp = 0;
-        sensor_idx .last_timestamp = 0;
-        sensor_idx .sensor_count = SENSOR_COUNT;
-        sensor_idx .sample_interval = 60;
-        memset(sensor_idx .reserved, 0, sizeof(sensor_idx .reserved));
+        sensor_idx.magic = 0x53454E53;
+        sensor_idx.version = 1;
+        sensor_idx.max_records = HISTORY_MAX_RECORDS;
+        sensor_idx.write_offset = 0;
+        sensor_idx.record_count = 0;
+        sensor_idx.first_timestamp = 0;
+        sensor_idx.last_timestamp = 0;
+        sensor_idx.sensor_count = TOTAL_SENSOR_COUNT;
+        sensor_idx.sample_interval = 60;
+        memset(sensor_idx.reserved, 0, sizeof(sensor_idx.reserved));
         return 0;
     }
     
     size_t read = fread(&sensor_idx , 1, sizeof(sensor_idx ), f);
     fclose(f);
     
-    if (read != sizeof(sensor_idx ) || sensor_idx .magic != 0x53454E53) {
+    if (read != sizeof(sensor_idx ) || sensor_idx.magic != 0x53454E53) {
         SENSOR_LOG_W("Invalid index file, recreating");
         // Reset to defaults
-        sensor_idx .magic = 0x53454E53;
-        sensor_idx .version = 1;
-        sensor_idx .max_records = HISTORY_MAX_RECORDS;
-        sensor_idx .write_offset = 0;
-        sensor_idx .record_count = 0;
-        sensor_idx .first_timestamp = 0;
-        sensor_idx .last_timestamp = 0;
-        sensor_idx .sensor_count = SENSOR_COUNT;
-        sensor_idx .sample_interval = 60;
+        sensor_idx.magic = 0x53454E53;
+        sensor_idx.version = 1;
+        sensor_idx.max_records = HISTORY_MAX_RECORDS;
+        sensor_idx.write_offset = 0;
+        sensor_idx.record_count = 0;
+        sensor_idx.first_timestamp = 0;
+        sensor_idx.last_timestamp = 0;
+        sensor_idx.sensor_count = TOTAL_SENSOR_COUNT;
+        sensor_idx.sample_interval = 60;
         return 0;
     }
     
     SENSOR_LOG_D("History index loaded: %lu records, newest=%lu",
-          sensor_idx .record_count, sensor_idx .last_timestamp);
+          sensor_idx.record_count, sensor_idx.last_timestamp);
     return 0;
 }
 
@@ -155,7 +155,7 @@ void sensor_history_add(void) {
     record.timestamp = time(NULL);
     record.sensor_mask = 0;
     
-    for (int i = 0; i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         if (readings[i].status == SENSOR_STATUS_OK) {
             record.sensor_mask |= (1 << i);
             // Store as scaled integer (pH×100, temp×10, etc.)

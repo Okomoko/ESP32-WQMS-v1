@@ -10,13 +10,15 @@
 // ============================================================
 // Hardware Configuration
 // ============================================================
-#define SENSOR_COUNT           8
+#define ANALOGUE_SENSOR_COUNT  6
+#define DIGITAL_SENSOR_COUNT   2
+#define TOTAL_SENSOR_COUNT     (ANALOGUE_SENSOR_COUNT + DIGITAL_SENSOR_COUNT)
 #define RELAY_COUNT            10
-#define MODBUS_MAP_ENTRY_COUNT (RELAY_COUNT + SENSOR_COUNT)
-#define ADC_CHANNEL_COUNT      6
+#define MODBUS_MAP_ENTRY_COUNT (RELAY_COUNT + TOTAL_SENSOR_COUNT)
+#define ADC_CHANNEL_COUNT      8
 // DHT11 sensor IDs - zero indexed id, always use the last two sensors (if there are 10 sensors, numbers must be 8 and 9 (starting from zero))
-#define DHT11_SENSOR_TEMP      6
-#define DHT11_SENSOR_HUMID     7
+#define DHT11_SENSOR_TEMP      (ANALOGUE_SENSOR_COUNT)
+#define DHT11_SENSOR_HUMID     (ANALOGUE_SENSOR_COUNT + 1)
 
 extern const char* default_sensor_names[];
 /*

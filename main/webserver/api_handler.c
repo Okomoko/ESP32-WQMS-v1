@@ -116,7 +116,7 @@ esp_err_t sensors_get_handler(httpd_req_t *req) {
     cJSON *sensors_array = cJSON_CreateArray();
     
     sensor_reading_t *readings = sensor_get_all_readings();
-    for (int i = 0; i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         cJSON *sensor = cJSON_CreateObject();
         cJSON_AddNumberToObject(sensor, "id", i);
         cJSON_AddStringToObject(sensor, "name", sensor_get_name(i));
@@ -141,13 +141,13 @@ esp_err_t sensors_config_get_handler(httpd_req_t *req) {
     cJSON *sensors_array = cJSON_CreateArray();
     
     // Get sensor configs from NVS
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
     
     // Get current readings
     sensor_reading_t *readings = sensor_get_all_readings();
     
-    for (int i = 0; i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         cJSON *sensor = cJSON_CreateObject();
         cJSON_AddNumberToObject(sensor, "id", i);
         cJSON_AddStringToObject(sensor, "name", configs[i].name);
@@ -160,7 +160,7 @@ esp_err_t sensors_config_get_handler(httpd_req_t *req) {
         cJSON_AddNumberToObject(sensor, "max_value", configs[i].max_value);
         
         // Add current reading if available
-        if (readings && i < SENSOR_COUNT) {
+        if (readings && i < TOTAL_SENSOR_COUNT) {
             cJSON_AddNumberToObject(sensor, "current_value", readings[i].value);
             cJSON_AddNumberToObject(sensor, "status", readings[i].status);
         }
@@ -199,8 +199,8 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
     }
     
     // Load current sensor configs from NVS
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
     
     cJSON *item;
     cJSON_ArrayForEach(item, sensors) {
@@ -211,7 +211,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         
         if (id && cJSON_IsNumber(id)) {
             int idx = id->valueint;
-            if (idx >= 0 && idx < SENSOR_COUNT) {
+            if (idx >= 0 && idx < TOTAL_SENSOR_COUNT) {
                 if (name && cJSON_IsString(name)) {
                     strncpy(configs[idx].name, name->valuestring, sizeof(configs[idx].name) - 1);
                     configs[idx].name[sizeof(configs[idx].name) - 1] = '\0';
@@ -227,7 +227,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         }
     }
     
-    nvs_save_sensor_config(configs, SENSOR_COUNT);
+    nvs_save_sensor_config(configs, TOTAL_SENSOR_COUNT);
     cJSON_Delete(json);
     sensor_reload_config();
     
@@ -2016,8 +2016,8 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
     int records_remaining = limit;
     
     // Load sensor configs once (for name mapping)
-    sensor_config_t sensor_config[SENSOR_COUNT];
-    nvs_load_sensor_config(sensor_config, SENSOR_COUNT);
+    sensor_config_t sensor_config[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(sensor_config, TOTAL_SENSOR_COUNT);
     
     // Keep reading in chunks until we have enough records
     while (records_remaining > 0) {
@@ -2049,7 +2049,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
                 records[i].sensor_mask);
             
             // Add each sensor value using configured names
-            for (int j = 0; j < SENSOR_COUNT; j++) {
+            for (int j = 0; j < TOTAL_SENSOR_COUNT; j++) {
                 // Use configured name if available, otherwise default
                 const char *name = sensor_config[j].name;
                 if (!name || name[0] == '\0' || name[0] == 0xFF) {
@@ -2158,10 +2158,10 @@ esp_err_t api_get_sensor_config_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
-    sensor_config_t configs[SENSOR_COUNT];
-    nvs_load_sensor_config(configs, SENSOR_COUNT);
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
 
-    for (int i = 0; i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         cJSON *sensor_obj = cJSON_CreateObject();
         if (!sensor_obj) continue;
         
@@ -2252,18 +2252,18 @@ esp_err_t api_export_csv_handler(httpd_req_t *req)
     
     int count = sensor_history_get_range(start_ts, end_ts, records, limit);
     
-    sensor_config_t sensor_config[SENSOR_COUNT];
-    nvs_load_sensor_config(sensor_config, SENSOR_COUNT);
+    sensor_config_t sensor_config[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(sensor_config, TOTAL_SENSOR_COUNT);
 
-    char *result = malloc((sizeof(sensor_config[0].name)+2)*SENSOR_COUNT); //+2 for comma&space for each entry and null terminator at the end.
+    char *result = malloc((sizeof(sensor_config[0].name)+2)*TOTAL_SENSOR_COUNT); //+2 for comma&space for each entry and null terminator at the end.
     if (!result) return 1;
     
     // Build the string
     char *ptr = result;
-    for (int i = 0; i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         ptr += sprintf(ptr, "%s", sensor_config[i].name);
         // Add separator
-        if (i < (SENSOR_COUNT - 1)) ptr += sprintf(ptr, ", ");
+        if (i < (TOTAL_SENSOR_COUNT - 1)) ptr += sprintf(ptr, ", ");
     }
     ptr += sprintf(ptr, "\n");
     // Write CSV header
@@ -2284,9 +2284,9 @@ esp_err_t api_export_csv_handler(httpd_req_t *req)
         
         pos += sprintf(line + pos, "%s ", ts_str);
         // Build CSV line
-        for (int i = 0; i < SENSOR_COUNT; i++) {
+        for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
             pos += sprintf(line + pos, "%d", r->values[i]);
-            if (i < (SENSOR_COUNT - 1)) pos += sprintf(line + pos, ", ");
+            if (i < (TOTAL_SENSOR_COUNT - 1)) pos += sprintf(line + pos, ", ");
         }
     }
     
@@ -2459,6 +2459,59 @@ esp_err_t email_test_handler(httpd_req_t *req) {
         httpd_resp_send(req, "{\"status\":\"error\",\"message\":\"Failed to send test email\"}", 
                        strlen("{\"status\":\"error\",\"message\":\"Failed to send test email\"}"));
     }
+    return ESP_OK;
+}
+
+esp_err_t api_adc_pin_mapping_get_handler(httpd_req_t *req) {
+    const char *json = adc_get_pin_mapping_json();
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    return ESP_OK;
+}
+
+/**
+ * @brief Handler for /api/sensor/gpio - Get GPIO info for a sensor
+ */
+esp_err_t api_sensor_gpio_info_get_handler(httpd_req_t *req) {
+    char query[128] = {0};
+    char sensor_name[64] = {0};
+    const char *gpio_info = "N/A";
+    
+    // Get the query string - returns esp_err_t, not a pointer
+    esp_err_t err = httpd_req_get_url_query_str(req, query, sizeof(query));
+    if (err == ESP_OK && query[0] != '\0') {
+        // Parse the sensor parameter manually
+        char *param = strstr(query, "sensor=");
+        if (param) {
+            param += 7;  // Skip "sensor="
+            char *end = strchr(param, '&');
+            if (end) {
+                int len = end - param;
+                if (len < (int)sizeof(sensor_name)) {
+                    strncpy(sensor_name, param, len);
+                    sensor_name[len] = '\0';
+                }
+            } else {
+                strncpy(sensor_name, param, sizeof(sensor_name) - 1);
+                sensor_name[sizeof(sensor_name) - 1] = '\0';
+            }
+            
+            // URL decode: replace + with space
+            for (int i = 0; sensor_name[i]; i++) {
+                if (sensor_name[i] == '+') sensor_name[i] = ' ';
+            }
+            
+            gpio_info = sensor_get_gpio_info(sensor_name);
+        }
+    }
+    
+    // Build JSON response
+    char response[128];
+    snprintf(response, sizeof(response), "{\"sensor\":\"%s\",\"gpio\":\"%s\"}", 
+             sensor_name[0] ? sensor_name : "unknown", gpio_info);
+    
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, response, strlen(response));
     return ESP_OK;
 }
 
@@ -2735,85 +2788,101 @@ void register_api_endpoints(httpd_handle_t server) {
     httpd_register_uri_handler(server, &email_test_uri);
 
     // GET /api/rules
-    httpd_uri_t rules_get = {
+    httpd_uri_t rules_get_uri = {
         .uri       = "/api/rules",
         .method    = HTTP_GET,
         .handler   = api_rules_get_handler,
         .user_ctx  = NULL
     };
-    httpd_register_uri_handler(server, &rules_get);
+    httpd_register_uri_handler(server, &rules_get_uri);
 
     // POST /api/rules
-    httpd_uri_t rules_post = {
+    httpd_uri_t rules_post_uri = {
         .uri       = "/api/rules",
         .method    = HTTP_POST,
         .handler   = api_rules_post_handler,
         .user_ctx  = NULL
     };
-    httpd_register_uri_handler(server, &rules_post);
+    httpd_register_uri_handler(server, &rules_post_uri);
 
     // GET /api/rules/export
-    httpd_uri_t rules_export = {
+    httpd_uri_t rules_export_uri = {
         .uri       = "/api/rules/export",
         .method    = HTTP_GET,
         .handler   = api_rules_export_handler,
         .user_ctx  = NULL
     };
-    httpd_register_uri_handler(server, &rules_export);
+    httpd_register_uri_handler(server, &rules_export_uri);
 
     // POST /api/rules/import
-    httpd_uri_t rules_import = {
+    httpd_uri_t rules_import_uri = {
         .uri       = "/api/rules/import",
         .method    = HTTP_POST,
         .handler   = api_rules_import_handler,
         .user_ctx  = NULL
     };
-    httpd_register_uri_handler(server, &rules_import);
+    httpd_register_uri_handler(server, &rules_import_uri);
 
     // GET /api/history
-    httpd_uri_t get_history = {
+    httpd_uri_t get_history_uri = {
         .uri       = "/api/history",
         .method    = HTTP_GET,
         .handler   = api_get_history_handler,
         .user_ctx  = NULL
     };
-    httpd_register_uri_handler(server, &get_history);
+    httpd_register_uri_handler(server, &get_history_uri);
 
     // GET /api/history/config - returns sensor configuration
-    httpd_uri_t history_config = {
+    httpd_uri_t history_config_uri = {
         .uri       = "/api/history/config",
         .method    = HTTP_GET,
         .handler   = api_get_sensor_config_handler,
         .user_ctx  = NULL
     };
-    httpd_register_uri_handler(server, &history_config);
+    httpd_register_uri_handler(server, &history_config_uri);
 
     // GET /api/history/stats - returns statistics
-    httpd_uri_t history_stats = {
+    httpd_uri_t history_stats_uri = {
         .uri       = "/api/history/stats",
         .method    = HTTP_GET,
         .handler   = api_get_history_stats_handler,
         .user_ctx  = NULL
     };
-    httpd_register_uri_handler(server, &history_stats);
+    httpd_register_uri_handler(server, &history_stats_uri);
 
     // GET /api/history/export - exports sensor data
-    httpd_uri_t history_export = {
+    httpd_uri_t history_export_uri = {
         .uri       = "/api/history/export",
         .method    = HTTP_GET,
         .handler   = api_export_csv_handler,
         .user_ctx  = NULL
     };
-    httpd_register_uri_handler(server, &history_export);
+    httpd_register_uri_handler(server, &history_export_uri);
 
     // DELETE /api/rules/* 
-    httpd_uri_t rules_delete = {
+    httpd_uri_t rules_delete_uri = {
         .uri       = "/api/rules/delete",
         .method    = HTTP_DELETE,
         .handler   = api_rules_delete_handler,
         .user_ctx  = NULL
     };
-    httpd_register_uri_handler(server, &rules_delete);
+    httpd_register_uri_handler(server, &rules_delete_uri);
+
+    httpd_uri_t api_adc_pin_mapping_uri = {
+        .uri       = "/api/adc/pins",
+        .method    = HTTP_GET,
+        .handler   = api_adc_pin_mapping_get_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &api_adc_pin_mapping_uri);
+
+     httpd_uri_t api_sensor_gpio_info_uri = {
+        .uri       = "/api/sensor/gpio",
+        .method    = HTTP_GET,
+        .handler   = api_sensor_gpio_info_get_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &api_sensor_gpio_info_uri);
 
    API_LOG_I("All API endpoints registered");
 }

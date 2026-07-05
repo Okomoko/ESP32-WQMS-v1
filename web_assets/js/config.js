@@ -1,4 +1,4 @@
- // js/config.js
+// js/config.js
 // Configuration page - loaded only when needed
 
 const RelayTestDuration = 2000
@@ -444,41 +444,155 @@ async function loadWifiStatus() {
 
 // WiFi Scan
 async function wifiScan() {
-    const list = document.getElementById('wifi-network-list');
-    const statusMsg = document.getElementById('wifi-status-message');
+    const scanBtn = document.getElementById('wifi-scan');
+    const networkList = document.getElementById('wifi-network-list');
+    const placeholder = document.getElementById('wifi-scan-placeholder');
+    const scanCount = document.getElementById('wifi-scan-count');
     
-    if (list) list.innerHTML = '<li style="color:#7a9bbf; padding:8px;">🔍 Scanning...</li>';
-    if (statusMsg) statusMsg.style.display = 'none';
+    // Disable button during scan
+    scanBtn.disabled = true;
+    scanBtn.textContent = '⏳ Scanning...';
     
     try {
-        const data = await api.get('/api/wifi/scan');
-        if (list) {
-            if (data.error) {
-                list.innerHTML = `<li style="color:#d32f2f; padding:8px;">❌ ${data.error}</li>`;
-            } else if (!data.networks || data.networks.length === 0) {
-                list.innerHTML = '<li style="color:#7a9bbf; padding:8px;">📡 No networks found</li>';
+        const response = await fetch('/api/wifi/scan');
+        if (!response.ok) throw new Error('Scan failed');
+        
+        const result = await response.json();
+        
+        // Clear existing list
+        networkList.innerHTML = '';
+        
+        // Handle different response formats
+        let networks = [];
+        
+        // Check if result is an array
+        if (Array.isArray(result)) {
+            networks = result;
+        } 
+        // Check if result has a 'networks' property (common API pattern)
+        else if (result.networks && Array.isArray(result.networks)) {
+            networks = result.networks;
+        }
+        // Check if result has a 'data' property
+        else if (result.data && Array.isArray(result.data)) {
+            networks = result.data;
+        }
+        // Check if result is an object with numeric keys (like {"0": {...}, "1": {...}})
+        else if (typeof result === 'object' && result !== null) {
+            // Try to convert object to array
+            const keys = Object.keys(result);
+            if (keys.length > 0 && !isNaN(keys[0])) {
+                networks = Object.values(result);
             } else {
-                list.innerHTML = data.networks.map(n => {
-                    const rssiBar = n.rssi > -50 ? '████████' :
-                                   n.rssi > -60 ? '██████░░' :
-                                   n.rssi > -70 ? '████░░░░' :
-                                   n.rssi > -80 ? '██░░░░░░' : '█░░░░░░░';
-                    return `
-                        <li style="padding:6px 10px; margin:2px 0; background:#f8fafd; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid ${n.secured ? '#d32f2f' : '#2e7d32'};">
-                            <span>
-                                <strong>${n.ssid || 'Unknown'}</strong>
-                                <span style="font-size:0.7rem; color:#7a9bbf; margin-left:8px;">${n.rssi || 0} dBm</span>
-                                <span style="font-size:0.7rem; margin-left:4px;">${n.secured ? '🔒' : '🔓'}</span>
-                                <span style="font-size:0.6rem; color:#7a9bbf; margin-left:4px;">${rssiBar}</span>
-                            </span>
-                            <button class="btn btn-primary" style="padding:2px 12px; font-size:0.7rem;" onclick="window.selectNetwork('${n.ssid.replace(/'/g, "\\'")}')">Select</button>
-                        </li>
-                    `;
-                }).join('');
+                // Maybe it's a single network object
+                if (result.ssid || result.essid) {
+                    networks = [result];
+                }
             }
         }
-    } catch (e) {
-        if (list) list.innerHTML = `<li style="color:#d32f2f; padding:8px;">❌ Failed to scan: ${e.message}</li>`;
+        
+        // If still no networks found, try to parse differently
+        if (networks.length === 0 && typeof result === 'object' && result !== null) {
+            // Try to find any array-like property
+            for (const key in result) {
+                if (Array.isArray(result[key])) {
+                    networks = result[key];
+                    break;
+                }
+            }
+        }
+        
+        // Check if networks is actually an array
+        if (!Array.isArray(networks)) {
+            console.warn('Networks is not an array:', networks);
+            placeholder.style.display = 'block';
+            placeholder.textContent = '⚠️ Unexpected data format from server';
+            scanCount.textContent = 'Error';
+            return;
+        }
+        
+        if (networks.length === 0) {
+            placeholder.style.display = 'block';
+            placeholder.textContent = '🔍 No networks found';
+            scanCount.textContent = '0 networks';
+            return;
+        }
+        
+        placeholder.style.display = 'none';
+        scanCount.textContent = `${networks.length} networks`;
+        
+        // Sort by signal strength (RSSI) - only if networks are objects with rssi
+        if (networks.length > 0 && networks[0] && typeof networks[0] === 'object') {
+            networks.sort((a, b) => {
+                const rssiA = a.rssi || a.signal || a.strength || -100;
+                const rssiB = b.rssi || b.signal || b.strength || -100;
+                return rssiB - rssiA;
+            });
+        }
+        
+        networks.forEach(network => {
+            const li = document.createElement('li');
+            
+            // Get SSID - handle different property names
+            const ssid = network.ssid || network.essid || network.name || 'Hidden Network';
+            
+            // SSID with lock icon
+            const ssidSpan = document.createElement('span');
+            ssidSpan.className = 'ssid';
+            ssidSpan.textContent = ssid || 'Hidden Network';
+            
+            // Signal strength - handle different property names
+            const rssi = network.rssi || network.signal || network.strength || -100;
+            
+            // Signal bars
+            let bars = '';
+            if (rssi > -50) bars = '📶 Excellent';
+            else if (rssi > -60) bars = '📶 Good';
+            else if (rssi > -70) bars = '📶 Fair';
+            else bars = '📶 Weak';
+            
+            // Lock icon - check auth mode
+            const isSecured = network.auth_mode !== undefined ? network.auth_mode !== 0 : true;
+            const lockIcon = isSecured ? '🔒' : '🔓';
+            const lockClass = isSecured ? 'locked' : 'open';
+            
+            const signalSpan = document.createElement('span');
+            signalSpan.className = 'signal';
+            signalSpan.innerHTML = `
+                <span class="bars">${bars}</span>
+                <span class="${lockClass}">${lockIcon}</span>
+            `;
+            
+            li.appendChild(ssidSpan);
+            li.appendChild(signalSpan);
+            
+            // Click to select network
+            li.addEventListener('click', function() {
+                // Remove selected class from all
+                document.querySelectorAll('#wifi-network-list li').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                this.classList.add('selected');
+                document.getElementById('wifi-ssid-input').value = ssid || '';
+                
+                // Auto-fill password? Only if it's a known network with saved password
+                // Otherwise user needs to enter it manually
+                if (network.password) {
+                    document.getElementById('wifi-password').value = network.password;
+                }
+            });
+            
+            networkList.appendChild(li);
+        });
+        
+    } catch (error) {
+        console.error('WiFi scan failed:', error);
+        placeholder.style.display = 'block';
+        placeholder.textContent = '❌ Scan failed: ' + error.message;
+        scanCount.textContent = 'Error';
+    } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = '🔍 Scan';
     }
 }
 
@@ -494,46 +608,49 @@ window.selectNetwork = function(ssid) {
 
 // WiFi Connect
 async function wifiConnect() {
-    const ssid = document.getElementById('wifi-ssid-input')?.value;
-    const password = document.getElementById('wifi-password')?.value;
+    const ssid = document.getElementById('wifi-ssid-input').value.trim();
+    const password = document.getElementById('wifi-password').value.trim();
+    const statusMsg = document.getElementById('wifi-status-message');
+    
     if (!ssid) {
-        alert('Please enter SSID');
+        statusMsg.style.display = 'block';
+        statusMsg.style.background = '#f8d7da';
+        statusMsg.style.color = '#721c24';
+        statusMsg.textContent = '⚠️ Please enter or select an SSID';
         return;
     }
     
-    const statusMsg = document.getElementById('wifi-status-message');
-    if (statusMsg) {
-        statusMsg.style.display = 'block';
-        statusMsg.textContent = '⏳ Connecting to ' + ssid + '...';
-        statusMsg.style.backgroundColor = '#fff3cd';
-        statusMsg.style.color = '#856404';
-    }
+    statusMsg.style.display = 'block';
+    statusMsg.style.background = '#fff3cd';
+    statusMsg.style.color = '#856404';
+    statusMsg.textContent = '⏳ Connecting...';
     
     try {
-        const result = await api.post('/api/wifi/connect', { ssid, password });
-        if (result.success) {
-            alert('✅ ' + result.message + '\nIP: ' + result.ip + '\n\nYou may need to reconnect to the new network.');
-            if (statusMsg) {
-                statusMsg.textContent = '✅ Connected to ' + ssid + '! Reconnect to new IP.';
-                statusMsg.style.backgroundColor = '#d4edda';
-                statusMsg.style.color = '#155724';
-            }
-            await loadWifiStatus();
+        const response = await fetch('/api/wifi/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ssid, password })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.status === 'ok') {
+            statusMsg.style.background = '#d4edda';
+            statusMsg.style.color = '#155724';
+            statusMsg.textContent = '✅ Connected successfully!';
+            
+            // Update current status
+            document.getElementById('wifi-current-ssid').textContent = ssid;
+            document.getElementById('wifi-current-status').textContent = 'Connected';
+            document.getElementById('wifi-current-status').style.color = '#2e7d32';
         } else {
-            if (statusMsg) {
-                statusMsg.textContent = '❌ ' + result.message;
-                statusMsg.style.backgroundColor = '#f8d7da';
-                statusMsg.style.color = '#721c24';
-            }
-            alert('❌ ' + result.message);
+            throw new Error(result.message || 'Connection failed');
         }
-    } catch (e) {
-        if (statusMsg) {
-            statusMsg.textContent = '❌ Failed to connect: ' + e.message;
-            statusMsg.style.backgroundColor = '#f8d7da';
-            statusMsg.style.color = '#721c24';
-        }
-        alert('Failed to connect: ' + e.message);
+    } catch (error) {
+        console.error('WiFi connection failed:', error);
+        statusMsg.style.background = '#f8d7da';
+        statusMsg.style.color = '#721c24';
+        statusMsg.textContent = '❌ Connection failed: ' + error.message;
     }
 }
 
@@ -995,6 +1112,157 @@ function clearEmailFields() {
     }
 }
 
+// ============================================
+// ADC GPIO MAPPING
+// ============================================
+
+/**
+ * Fetch ADC to GPIO pin mapping from server
+ */
+async function fetchAdcPinMapping() {
+    try {
+        const response = await fetch('/api/adc/pins');
+        if (!response.ok) throw new Error('Failed to fetch ADC mapping');
+        const mapping = await response.json();
+        return mapping;
+    } catch (error) {
+        console.error('Failed to fetch ADC mapping:', error);
+        return null;
+    }
+}
+
+/**
+ * Update sensor configuration with GPIO info
+ */
+async function updateSensorGpioInfo() {
+    const mapping = await fetchAdcPinMapping();
+    if (!mapping) return;
+    
+    // Find all sensor config items and add GPIO info
+    const sensorItems = document.querySelectorAll('.sensor-config-item, .sensor-card');
+    sensorItems.forEach(item => {
+        // Try to find sensor name
+        const nameElement = item.querySelector('.sensor-name, .sensor-card-title');
+        if (!nameElement) return;
+        
+        const sensorName = nameElement.textContent.trim();
+        // Extract sensor name (e.g., "pH Sensor" -> "pH")
+        const nameParts = sensorName.split(' ');
+        const shortName = nameParts[0];
+        
+        // Find GPIO info from mapping
+        // You'll need to map sensor name to ADC channel
+        // For example: pH -> ADC4, ORP -> ADC5, etc.
+        let gpio = 'N/A';
+        
+        // This mapping should match your hardware configuration
+        const sensorAdcMap = {
+            'pH': 'ADC4',
+            'ORP': 'ADC5',
+            'TDS': 'ADC6',
+            'TEMP': 'ADC7'
+        };
+        
+        const adcChannel = sensorAdcMap[shortName];
+        if (adcChannel && mapping[adcChannel]) {
+            gpio = `GPIO${mapping[adcChannel]}`;
+        }
+        
+        // Add GPIO info to the sensor card
+        const metaElement = item.querySelector('.sensor-meta, .sensor-card-meta');
+        if (metaElement) {
+            // Check if GPIO info already exists
+            let gpioElement = metaElement.querySelector('.gpio-info');
+            if (!gpioElement) {
+                gpioElement = document.createElement('span');
+                gpioElement.className = 'gpio-info';
+                metaElement.appendChild(gpioElement);
+            }
+            gpioElement.textContent = `🔌 ${gpio}`;
+            gpioElement.style.cssText = `
+                display: inline-block;
+                padding: 2px 10px;
+                background: #e6edf6;
+                border-radius: 12px;
+                font-size: 0.7rem;
+                color: #1f4a7a;
+                font-weight: 500;
+            `;
+        }
+    });
+}
+
+/**
+ * Add GPIO tooltip to sensor config fields
+ */
+async function addGpioTooltips() {
+    const mapping = await fetchAdcPinMapping();
+    if (!mapping) return;
+    
+    // Find all input fields with GPIO-related labels
+    const configGroups = document.querySelectorAll('.config-group');
+    configGroups.forEach(group => {
+        const label = group.querySelector('label');
+        if (!label) return;
+        
+        const labelText = label.textContent.toLowerCase();
+        // Check if this is a sensor pin configuration
+        if (labelText.includes('pin') || labelText.includes('gpio') || 
+            labelText.includes('adc') || labelText.includes('channel')) {
+            
+            // Try to extract the sensor name from the label
+            const sensorMatch = labelText.match(/(\w+)\s+(pin|gpio|adc|channel)/i);
+            if (sensorMatch) {
+                const sensorName = sensorMatch[1].toUpperCase();
+                
+                // Find GPIO pin
+                const sensorAdcMap = {
+                    'PH': 'ADC4',
+                    'ORP': 'ADC5', 
+                    'TDS': 'ADC6',
+                    'TEMP': 'ADC7'
+                };
+                
+                const adcChannel = sensorAdcMap[sensorName];
+                if (adcChannel && mapping[adcChannel]) {
+                    const gpio = mapping[adcChannel];
+                    
+                    // Add a small indicator next to the label
+                    const infoSpan = document.createElement('span');
+                    infoSpan.className = 'gpio-hint';
+                    infoSpan.textContent = `📍 GPIO${gpio}`;
+                    infoSpan.style.cssText = `
+                        display: inline-block;
+                        margin-left: 8px;
+                        padding: 1px 8px;
+                        background: #dde6ef;
+                        border-radius: 10px;
+                        font-size: 0.7rem;
+                        color: #1f4a7a;
+                        font-weight: 400;
+                    `;
+                    label.appendChild(infoSpan);
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Get GPIO pin for a specific sensor
+ */
+async function getSensorGpio(sensorName) {
+    try {
+        const response = await fetch(`/api/sensor/gpio?sensor=${encodeURIComponent(sensorName)}`);
+        if (!response.ok) throw new Error('Failed to fetch GPIO info');
+        const data = await response.json();
+        return data.gpio || 'N/A';
+    } catch (error) {
+        console.error('Failed to fetch GPIO for', sensorName, error);
+        return 'N/A';
+    }
+}
+
 // ============================================================
 // Initialize Configuration
 // ============================================================
@@ -1076,5 +1344,10 @@ async function initConfiguration() {
     document.getElementById('save-sensor-config')?.addEventListener('click', saveSensorConfig);
     document.getElementById('save-relay-config')?.addEventListener('click', saveRelayConfig);
 
+    setTimeout(() => {
+        updateSensorGpioInfo();
+        addGpioTooltips();
+    }, 500);
+    
     setInterval(updateHeader, REFRESH_INTERVAL);
 }

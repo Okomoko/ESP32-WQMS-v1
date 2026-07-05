@@ -44,7 +44,7 @@ typedef struct {
 
 /**
  * @brief Start a calibration session for a sensor
- * @param sensor_id Sensor ID to calibrate (0 to SENSOR_COUNT-1)
+ * @param sensor_id Sensor ID to calibrate (0 to TOTAL_SENSOR_COUNT-1)
  * @return 0 on success, -1 on error (invalid sensor or already active)
  */
 int cal_start(int sensor_id);

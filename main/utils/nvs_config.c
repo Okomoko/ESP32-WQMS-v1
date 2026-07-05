@@ -25,7 +25,7 @@ const uint16_t default_relay_modbus[] = {0x0100, 0x0101, 0x0102, 0x0103, 0x0104,
 // Default SENSOR Definitions
 // ============================================================
 const char *default_sensor_names[] = {"Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8"};
-const uint8_t default_sensor_gpios[] = {36, 39, 32, 33, 34, 35, GPIO_DHT11, GPIO_DHT11};
+const uint8_t default_sensor_gpios[] = {36, 39, 34, 35, 32, 33, GPIO_DHT11, GPIO_DHT11};
 const uint8_t default_sensor_adc[] = {0, 3, 4, 5, 6, 7, 255, 255};
 const uint16_t default_sensor_modbus[] = {0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007};
 const float default_sensor_min[] = {0, 0, 0, 0, 0, 0, -10, 0};
@@ -38,7 +38,7 @@ static modbus_map_entry_t default_modbus_map[MODBUS_MAP_ENTRY_COUNT];
 // Default Sensor Configurations
 // ============================================================
 static void load_default_sensor_configs(sensor_config_t *config, int count) {
-    for (int i = 0; i < count && i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < count && i < TOTAL_SENSOR_COUNT; i++) {
         strncpy(config[i].name, default_sensor_names[i], sizeof(config[i].name) - 1);
         config[i].name[sizeof(config[i].name) - 1] = '\0';
         config[i].enabled = 0;
@@ -152,11 +152,11 @@ void nvs_config_load(void) {
     if (version != CONFIG_VERSION) {
         WQMS_LOG_W("Config version mismatch (got %d, expected %d), loading defaults", version, CONFIG_VERSION);
         
-        sensor_config_t default_sensors[SENSOR_COUNT];
+        sensor_config_t default_sensors[TOTAL_SENSOR_COUNT];
         relay_config_t default_relays[RELAY_COUNT];
-        load_default_sensor_configs(default_sensors, SENSOR_COUNT);
+        load_default_sensor_configs(default_sensors, TOTAL_SENSOR_COUNT);
         load_default_relay_configs(default_relays, RELAY_COUNT);
-        nvs_save_sensor_config(default_sensors, SENSOR_COUNT);
+        nvs_save_sensor_config(default_sensors, TOTAL_SENSOR_COUNT);
         nvs_save_relay_config(default_relays, RELAY_COUNT);
         
         if (nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle) == ESP_OK) {
@@ -269,7 +269,7 @@ void nvs_load_modbus_map(modbus_map_entry_t *map, int count) {
     int entry_index = 0;
     
     // Add sensors
-    for (int i = 0; i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         default_modbus_map[entry_index].address = default_sensor_modbus[i];
         strcpy(default_modbus_map[entry_index].type, "Sensor");
         strcpy(default_modbus_map[entry_index].description, default_sensor_names[i]);
@@ -328,7 +328,7 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
         return;
     }
 
-    for (int i = 0; i < count && i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < count && i < TOTAL_SENSOR_COUNT; i++) {
         char key[32];
         snprintf(key, sizeof(key), "%s%d_name", NVS_KEY_SENSOR_PREFIX, i);
         size_t len = sizeof(config[i].name);
@@ -364,7 +364,7 @@ void nvs_save_sensor_config(sensor_config_t *config, int count) {
         return;
     }
 
-    for (int i = 0; i < count && i < SENSOR_COUNT; i++) {
+    for (int i = 0; i < count && i < TOTAL_SENSOR_COUNT; i++) {
         char key[32];
         snprintf(key, sizeof(key), "%s%d_name", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_str(handle, key, config[i].name);
