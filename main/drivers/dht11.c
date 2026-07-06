@@ -1,23 +1,32 @@
-// dht11.c
-// DHT11 driver implementation
+// dht11.c - Modified version with NO logging inside critical section
 
 #include <string.h>
 #include "driver/gpio.h"
 #include "esp_timer.h"
-#include "esp_rom_sys.h" 
+#include "esp_rom_sys.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "dht11.h"
 #include "log_levels.h"
 #include "logger.h"
+
+static const char *TAG = "DHT11";
 
 // ============================================================
 // Static Variables
 // ============================================================
 static int dht11_pin = 13;
 static int dht11_initialized = 0;
+static portMUX_TYPE dht11_mux = portMUX_INITIALIZER_UNLOCKED;
+
+// ✅ Error tracking for logging outside critical section
+static int last_error_code = 0;
+static int last_error_bit = -1;
 
 // ============================================================
-// Internal Functions
+// Internal Functions - NO LOGGING INSIDE
 // ============================================================
 static void dht11_set_output(void) {
     gpio_set_direction(dht11_pin, GPIO_MODE_OUTPUT);
@@ -40,36 +49,80 @@ static void dht11_delay_us(uint32_t us) {
     esp_rom_delay_us(us);
 }
 
+// ✅ NO LOGGING - just return success/failure
 static uint8_t dht11_wait_for_level(uint8_t level, uint32_t timeout_us) {
     uint32_t start = esp_timer_get_time();
     while (dht11_read_pin() != level) {
         if ((esp_timer_get_time() - start) > timeout_us) {
-            return 0;  // Timeout
+            return 0;  // Timeout - no logging
         }
     }
-    return 1;  // Success
+    return 1;
 }
 
+// ✅ NO LOGGING - just return 0 on error
 static uint8_t dht11_read_byte(void) {
     uint8_t value = 0;
     for (int i = 0; i < 8; i++) {
-        // Wait for high (start of bit)
         if (!dht11_wait_for_level(1, 100)) {
-            return 0;
+            return 0;  // Error - no logging
         }
         uint32_t start = esp_timer_get_time();
-        // Wait for low (end of bit)
         if (!dht11_wait_for_level(0, 100)) {
-            return 0;
+            return 0;  // Error - no logging
         }
         uint32_t elapsed = esp_timer_get_time() - start;
-        // If high lasted > 50us, it's a '1'
         value <<= 1;
-        if (elapsed > 50) {
+        if (elapsed > 40) {
             value |= 1;
         }
     }
     return value;
+}
+
+// ✅ NO LOGGING - just return error codes
+static int dht11_read_raw(dht11_data_t *data) {
+    memset(data, 0, sizeof(dht11_data_t));
+    
+    dht11_set_output();
+    dht11_write(0);
+    dht11_delay_us(18000);
+    dht11_write(1);
+    dht11_delay_us(40);
+    dht11_set_input();
+    
+    if (!dht11_wait_for_level(0, 80)) {
+        return -1;  // No response low
+    }
+    if (!dht11_wait_for_level(1, 80)) {
+        return -2;  // No response high
+    }
+    
+    uint8_t bytes[5] = {0};
+    for (int i = 0; i < 5; i++) {
+        bytes[i] = dht11_read_byte();
+    }
+    
+    uint8_t checksum = bytes[0] + bytes[1] + bytes[2] + bytes[3];
+    if (checksum != bytes[4]) {
+        return -3;  // Checksum error
+    }
+    data->checksum_ok = 1;
+    
+    data->humidity = bytes[0];
+    data->temperature = bytes[2];
+    
+    if (bytes[2] & 0x80) {
+        data->temperature = -((bytes[2] & 0x7F) + bytes[3] * 0.1);
+    } else {
+        data->temperature = bytes[2] + bytes[3] * 0.1;
+    }
+    data->humidity = bytes[0] + bytes[1] * 0.1;
+    
+    dht11_set_output();
+    dht11_write(1);
+
+    return 0;  // Success
 }
 
 // ============================================================
@@ -90,64 +143,54 @@ int dht11_read(dht11_data_t *data) {
         return -1;
     }
     
-    // Clear data
-    memset(data, 0, sizeof(dht11_data_t));
-    
-    // 1. Start signal: pull low for 18ms, then high for 40us
-    dht11_set_output();
-    dht11_write(0);
-    dht11_delay_us(18000);
-    dht11_write(1);
-    dht11_delay_us(40);
-    dht11_set_input();
-    
-    // 2. Wait for DHT11 response
-    if (!dht11_wait_for_level(0, 80)) {
-        SENSOR_LOG_D("DHT11: No response (low)");
-        return -1;
-    }
-    if (!dht11_wait_for_level(1, 80)) {
-        SENSOR_LOG_D("DHT11: No response (high)");
+    if (!data) {
+        SENSOR_LOG_E("DHT11: NULL data pointer");
         return -1;
     }
     
-    // 3. Read data (5 bytes: humidity, temp, checksum)
-    uint8_t bytes[5] = {0};
-    for (int i = 0; i < 5; i++) {
-        bytes[i] = dht11_read_byte();
-        if (bytes[i] == 0 && i > 0) {
-            // Could be valid zero, but check previous bytes
+    int ret = -1;
+    
+    // ✅ Enter critical section - NO LOGGING INSIDE
+    taskENTER_CRITICAL(&dht11_mux);
+    
+    for (int attempt = 0; attempt < 3; attempt++) {
+        ret = dht11_read_raw(data);
+        if (ret == 0) {
+            break;  // Success
+        }
+        if (attempt < 2) {
+            taskEXIT_CRITICAL(&dht11_mux);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            taskENTER_CRITICAL(&dht11_mux);
         }
     }
     
-    // 4. Verify checksum
-    uint8_t checksum = bytes[0] + bytes[1] + bytes[2] + bytes[3];
-    if (checksum != bytes[4]) {
-        SENSOR_LOG_D("DHT11: Checksum error (calc=%d, got=%d)", checksum, bytes[4]);
-        data->checksum_ok = 0;
-        return -2;
-    }
-    data->checksum_ok = 1;
+    // ✅ Exit critical section BEFORE any logging
+    taskEXIT_CRITICAL(&dht11_mux);
     
-    // 5. Extract values
-    data->humidity = bytes[0];
-    data->temperature = bytes[2];
-    
-    // Check for negative temperature (MSB of temp)
-    if (bytes[2] & 0x80) {
-        data->temperature = -((bytes[2] & 0x7F) + bytes[3] * 0.1);
+    // ✅ All logging happens OUTSIDE critical section
+    if (ret == 0) {
+        SENSOR_LOG_D("DHT11: Temp=%.1f°C, Humid=%.1f%%", 
+                     data->temperature, data->humidity);
     } else {
-        data->temperature = bytes[2] + bytes[3] * 0.1;
+        // Log the error outside critical section
+        switch(ret) {
+            case -1:
+                SENSOR_LOG_E("DHT11: No response (low)");
+                break;
+            case -2:
+                SENSOR_LOG_E("DHT11: No response (high)");
+                break;
+            case -3:
+                SENSOR_LOG_E("DHT11: Checksum error");
+                break;
+            default:
+                SENSOR_LOG_W("DHT11 read failed (attempts=3)");
+                break;
+        }
     }
     
-    // Handle humidity decimal
-    data->humidity = bytes[0] + bytes[1] * 0.1;
-    
-    // 6. Wait for bus release
-    dht11_set_output();
-    dht11_write(1);
-    
-    return 0;  // Success
+    return ret;
 }
 
 int dht11_present(void) {

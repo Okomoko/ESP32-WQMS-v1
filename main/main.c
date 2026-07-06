@@ -138,27 +138,29 @@ void app_main(void) {
     wifi_init();
 //    WQMS_LOG_I("WiFi initialized");
     
+    // ============================================================
+    // Step 8: Start NTP Client
+    // ============================================================
+    ntp_start();
+//    WQMS_LOG_I("NTP client started");
+  
+    // ============================================================
+    // Step 9: Start eMail Client
+    // ============================================================
+	email_client_init();
     // Send email notification if it was a panic or watchdog reset
     if (is_panic_reboot) {
         char message[256];
         snprintf(message, sizeof(message), 
-                 "⚠️ Device rebooted due to: %s\n"
-                 "System: %s\n"
-                 "MAC: %s\n",
-                 reason_str,
-                 nvs_get_system_name(),
-                 wifi_get_mac());
+                 "⚠️ Device rebooted due to: %s\n",
+                 reason_str);
         
         email_send_notification("Device Rebooted", 
                                    message);
     } else {
         char message[256];
         snprintf(message, sizeof(message), 
-                 "⚠️ Device is just rebooted\n"
-                 "System: %s\n"
-                 "MAC: %s\n",
-                 nvs_get_system_name(),
-                 wifi_get_mac());
+                 "⚠️ Device is just booted up.\n");
         
         email_send_notification("Device Rebooted", 
                                    message);
@@ -166,49 +168,43 @@ void app_main(void) {
     WQMS_LOG_I("Reboot notification is sent.");
 
     // ============================================================
-    // Step 8: Start NTP Client
-    // ============================================================
-    ntp_start();
-//    WQMS_LOG_I("NTP client started");
-    
-    // ============================================================
-    // Step 9: Start Sensor Polling (ADC DMA)
+    // Step 10: Start Sensor Polling (ADC DMA)
     // ============================================================
     sensor_init();
 //    WQMS_LOG_I("Sensor subsystem initialized");
     
     // ============================================================
-    // Step 10: Start Relay Control
+    // Step 11: Start Relay Control
     // ============================================================
     relay_init();
 //    WQMS_LOG_I("Relay subsystem initialized");
     
     // ============================================================
-    // Step 11: Start Automation Engine
+    // Step 12: Start Automation Engine
     // ============================================================
     automation_init();
 //    WQMS_LOG_I("Automation engine initialized");
     
     // ============================================================
-    // Step 12: Start MODBUS Slave
+    // Step 13: Start MODBUS Slave
     // ============================================================
     modbus_init();
 //    WQMS_LOG_I("MODBUS slave initialized");
     
     // ============================================================
-    // Step 13: Start Web Server
+    // Step 14: Start Web Server
     // ============================================================
     webserver_init();
 //    WQMS_LOG_I("Web server initialized");
     
     // ============================================================
-    // Step 14: Start Integration Uploads
+    // Step 15: Start Integration Uploads
     // ============================================================
     web_upload_init();
 //    WQMS_LOG_I("Integration subsystem initialized");
     
     // ============================================================
-    // Step 15: System Ready
+    // Step 16: System Ready
     // ============================================================
     WQMS_LOG_I("============================================");
     WQMS_LOG_I("WQMS System Ready");

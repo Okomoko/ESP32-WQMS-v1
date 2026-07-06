@@ -160,56 +160,56 @@
                         </div>
                     </div>
 
-					<!-- ============================================================ -->
-					<!-- Connect to STA Network - TWO COLUMN LAYOUT -->
-					<!-- ============================================================ -->
-					<div style="margin-bottom:16px;">
-						<label style="font-weight:500; display:block; margin-bottom:6px;">🔍 Connect to WiFi Network (STA Mode)</label>
-						
-						<!-- Two column layout: Left = Input fields, Right = Scan results -->
-						<div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start;">
-							
-							<!-- LEFT COLUMN: Input fields -->
-							<div>
-								<!-- SSID with Scan button inline -->
-								<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-									<input type="text" id="wifi-ssid-input" placeholder="Enter SSID" 
-										   style="flex:1; padding:6px 10px; border-radius:8px; border:1px solid #dde6ef; min-width:0;">
-									<button id="wifi-scan" class="btn btn-primary" style="padding:6px 16px; white-space:nowrap;">🔍 Scan</button>
-								</div>
-								
-								<!-- Password field -->
-								<div style="margin-bottom:8px;">
-									<input type="password" id="wifi-password" placeholder="Enter password" 
-										   style="width:100%; padding:6px 10px; border-radius:8px; border:1px solid #dde6ef;">
-								</div>
-								
-								<!-- Action buttons -->
-								<div style="display:flex; gap:8px; flex-wrap:wrap;">
-									<button id="wifi-connect" class="btn btn-success">Connect to STA</button>
-									<button id="wifi-forget" class="btn btn-danger">Forget Network</button>
-								</div>
-								
-								<!-- Status message -->
-								<div id="wifi-status-message" style="padding:8px 12px; border-radius:8px; margin-top:8px; display:none;"></div>
-							</div>
-							
-							<!-- RIGHT COLUMN: Scan Results -->
-							<div id="wifi-scan-container" style="background:#f8fafd; border-radius:10px; padding:10px; border:1px solid #e6edf6; min-height:120px;">
-								<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-									<span style="font-weight:500; font-size:0.85rem; color:#1f4a7a;">📶 Available Networks</span>
-									<span id="wifi-scan-count" style="font-size:0.7rem; color:#7a9bbf;">0 networks</span>
-								</div>
-								<div id="wifi-scan-results" style="max-height:200px; overflow-y:auto;">
-									<ul id="wifi-network-list" style="list-style:none; padding:0; margin:0;"></ul>
-									<div id="wifi-scan-placeholder" style="color:#7a9bbf; font-size:0.85rem; padding:20px; text-align:center;">
-										Click "Scan" to find networks
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+                    <!-- ============================================================ -->
+                    <!-- Connect to STA Network - TWO COLUMN LAYOUT -->
+                    <!-- ============================================================ -->
+                    <div style="margin-bottom:16px;">
+                        <label style="font-weight:500; display:block; margin-bottom:6px;">🔍 Connect to WiFi Network (STA Mode)</label>
+                        
+                        <!-- Two column layout: Left = Input fields, Right = Scan results -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start;">
+                            
+                            <!-- LEFT COLUMN: Input fields -->
+                            <div>
+                                <!-- SSID with Scan button inline -->
+                                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                                    <input type="text" id="wifi-ssid-input" placeholder="Enter SSID" 
+                                           style="flex:1; padding:6px 10px; border-radius:8px; border:1px solid #dde6ef; min-width:0;">
+                                    <button id="wifi-scan" class="btn btn-primary" style="padding:6px 16px; white-space:nowrap;">🔍 Scan</button>
+                                </div>
+                                
+                                <!-- Password field -->
+                                <div style="margin-bottom:8px;">
+                                    <input type="password" id="wifi-password" placeholder="Enter password" 
+                                           style="width:100%; padding:6px 10px; border-radius:8px; border:1px solid #dde6ef;">
+                                </div>
+                                
+                                <!-- Action buttons -->
+                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                    <button id="wifi-connect" class="btn btn-success">Connect to STA</button>
+                                    <button id="wifi-forget" class="btn btn-danger">Forget Network</button>
+                                </div>
+                                
+                                <!-- Status message -->
+                                <div id="wifi-status-message" style="padding:8px 12px; border-radius:8px; margin-top:8px; display:none;"></div>
+                            </div>
+                            
+                            <!-- RIGHT COLUMN: Scan Results -->
+                            <div id="wifi-scan-container" style="background:#f8fafd; border-radius:10px; padding:10px; border:1px solid #e6edf6; min-height:120px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <span style="font-weight:500; font-size:0.85rem; color:#1f4a7a;">📶 Available Networks</span>
+                                    <span id="wifi-scan-count" style="font-size:0.7rem; color:#7a9bbf;">0 networks</span>
+                                </div>
+                                <div id="wifi-scan-results" style="max-height:200px; overflow-y:auto;">
+                                    <ul id="wifi-network-list" style="list-style:none; padding:0; margin:0;"></ul>
+                                    <div id="wifi-scan-placeholder" style="color:#7a9bbf; font-size:0.85rem; padding:20px; text-align:center;">
+                                        Click "Scan" to find networks
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- NTP Tab -->
                 <div class="tab-panel" id="tab-ntp">

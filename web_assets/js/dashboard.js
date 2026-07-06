@@ -281,7 +281,7 @@ class DashboardManager {
                     
                     if (needsUpdate) {
                         this.selectedSensors = new Set(dataKeys);
-                        this.updateSensorCheckboxes();
+//                        this.updateSensorCheckboxes();
                     }
                 }
                 
@@ -458,6 +458,7 @@ class DashboardManager {
 // ============================================================
 
 let dashboardManager = null;
+let hiddenDatasets = [];
 
 function initDashboardManager() {
     if (!dashboardManager) {
@@ -634,7 +635,7 @@ async function loadRelays() {
         }
         grid.innerHTML = relays.map(r => {
             const stateLabel = r.state === RELAY_STATE_ACTIVE ? '🔴' : r.state === RELAY_STATE_COOLDOWN ? '🟡' : '⚪';
-            const stateText = r.state === RELAY_STATE_ACTIVE ? 'ON' : r.state === RELAY_STATE_COOLDOWN ? 'COOLDOWN' : 'OFF';
+            const stateText = r.state === RELAY_STATE_ACTIVE ? 'ON' : r.state === RELAY_STATE_COOLDOWN ? 'Cooldown' : 'OFF';
             return `
                 <div class="card">
                     <div class="name">${r.name || 'Relay ' + r.id}</div>

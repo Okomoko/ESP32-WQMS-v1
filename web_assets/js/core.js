@@ -107,6 +107,136 @@ function initNavigation() {
         });
     });
 }
+// ============================================
+// CORE.JS - Shared Utilities
+// ============================================
+
+/**
+ * Show a notification message (Global function)
+ * @param {string} message - The message to display
+ * @param {string} type - 'success', 'error', 'warning', 'info' (default: 'info')
+ * @param {number} duration - Time in ms to show notification (default: 5000)
+ */
+function showNotification(message, type = 'info', duration = 5000) {
+    // Remove existing notification if any
+    const existing = document.querySelector('.notification-container');
+    if (existing) {
+        existing.remove();
+    }
+    
+    // Create container
+    const container = document.createElement('div');
+    container.className = 'notification-container';
+    container.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 280px;
+        max-width: 500px;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    // Create notification
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    // Set colors based on type
+    const colors = {
+        success: { bg: '#28a745', text: '#fff', icon: '✅' },
+        error: { bg: '#dc3545', text: '#fff', icon: '❌' },
+        warning: { bg: '#ffc107', text: '#000', icon: '⚠️' },
+        info: { bg: '#17a2b8', text: '#fff', icon: 'ℹ️' }
+    };
+    
+    const color = colors[type] || colors.info;
+    
+    notification.style.cssText = `
+        background: ${color.bg};
+        color: ${color.text};
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid rgba(255,255,255,0.1);
+    `;
+    
+    // Add icon
+    const icon = document.createElement('span');
+    icon.textContent = color.icon;
+    icon.style.fontSize = '18px';
+    notification.appendChild(icon);
+    
+    // Add message
+    const text = document.createElement('span');
+    text.textContent = message;
+    text.style.flex = '1';
+    notification.appendChild(text);
+    
+    // Add close button
+    const closeBtn = document.createElement('span');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = `
+        cursor: pointer;
+        font-size: 20px;
+        line-height: 20px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+        margin-left: 8px;
+    `;
+    closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
+    closeBtn.onmouseout = () => closeBtn.style.opacity = '0.7';
+    closeBtn.onclick = () => {
+        container.remove();
+    };
+    notification.appendChild(closeBtn);
+    
+    container.appendChild(notification);
+    document.body.appendChild(container);
+    
+    // Auto-remove after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            if (container.parentNode) {
+                container.style.opacity = '0';
+                container.style.transition = 'opacity 0.3s';
+                setTimeout(() => container.remove(), 300);
+            }
+        }, duration);
+    }
+}
+
+// Make it globally accessible
+window.showNotification = showNotification;
+
+// Add CSS animation if not already present
+(function addStyles() {
+    if (document.getElementById('notification-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+// If using CommonJS
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { showNotification };
+}
 
 document.getElementById('reboot-btn')?.addEventListener('click', rebootSystem);
 document.getElementById('reboot-btn-config')?.addEventListener('click', rebootSystem);

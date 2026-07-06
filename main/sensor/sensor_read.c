@@ -115,6 +115,7 @@ static void poll_dht11(void) {
             }
         }
         if (sensor_config[DHT11_SENSOR_HUMID].enabled) {
+            SENSOR_LOG_W("DHT11 read failed (humid)");
             if (sensor_mutex && xSemaphoreTake(sensor_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
                 readings[DHT11_SENSOR_HUMID].status = SENSOR_STATUS_ERROR;
                 xSemaphoreGive(sensor_mutex);

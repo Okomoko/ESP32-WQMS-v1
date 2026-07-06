@@ -732,7 +732,7 @@ async function wifiForget() {
         console.log('Forget result:', result);
         
         if (result.success) {
-            showNotification('✅ WiFi credentials cleared. System restarting...', 'success');
+            showNotification('WiFi credentials cleared. System restarting...', 'success');
             
             // Update UI to show AP mode
             const dot = document.getElementById('wifi-status-dot');
@@ -921,16 +921,16 @@ async function testEmailConfig() {
     }
     
     // Quick validation
-    const smtp_server = document.getElementById('email_smtp_server').value.trim();
-    const username = document.getElementById('email_username').value.trim();
-    const password = document.getElementById('email_password').value.trim();
-    const from_email = document.getElementById('email_from').value.trim();
-    const to_emails = document.getElementById('email_to').value.trim();
+//    const smtp_server = document.getElementById('email_smtp_server').value.trim();
+//    const username = document.getElementById('email_username').value.trim();
+//    const password = document.getElementById('email_password').value.trim();
+//    const from_email = document.getElementById('email_from').value.trim();
+//    const to_emails = document.getElementById('email_to').value.trim();
     
-    if (!smtp_server || !username || !password || !from_email || !to_emails) {
-        showNotification('Please fill in all email fields before testing', 'error');
-        return;
-    }
+//    if (!smtp_server || !username || !password || !from_email || !to_emails) {
+//        showNotification('Please fill in all email fields before testing', 'error');
+//        return;
+//    }
     
     // Disable test button
     const testBtn = document.querySelector('#email-section .btn-secondary');
@@ -947,9 +947,9 @@ async function testEmailConfig() {
         const result = await response.json();
         
         if (response.ok && result.status === 'ok') {
-            showNotification('✅ Test email sent! Check your inbox.', 'success');
+            showNotification('Test email sent! Check your inbox.', 'success');
         } else {
-            showNotification('❌ Failed: ' + (result.message || 'Unknown error'), 'error');
+            showNotification('Failed: ' + (result.message || 'Unknown error'), 'error');
         }
     } catch (error) {
         console.error('Test email failed:', error);

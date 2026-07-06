@@ -67,6 +67,9 @@ idf_component_register(SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/api_docs.js
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/router.js
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/favicon.ico
+
+    EMBED_TXTFILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/r1.pem
 )
 
 # ============================================================

@@ -854,7 +854,7 @@ function finishConnection(clientX, clientY) {
     });
     
     renderWorkflow();
-    showNotification(`✅ Connected: ${fromNode.params.name || fromNode.type} → ${targetNode.params.name || targetNode.type}`, 'success');
+    showNotification(`Connected: ${fromNode.params.name || fromNode.type} → ${targetNode.params.name || targetNode.type}`, 'success');
     
     cleanupDragState();
 }
@@ -1315,7 +1315,7 @@ async function saveRule() {
 
         if (result.status === 'success' || result.rule_id !== undefined) {
             const action = isUpdate ? 'updated' : 'created';
-            showNotification(`✅ Rule "${ruleName}" ${action} successfully! (${validation.description})`, 'success');
+            showNotification(`Rule "${ruleName}" ${action} successfully! (${validation.description})`, 'success');
             clearCanvas(false);
             await loadRules();
             selectedRuleId = null;
@@ -1505,8 +1505,8 @@ async function loadRuleToCanvas(ruleId) {
             });
         } else {
             // Direct connections (paired)
-			const sensorNode = sensorNodes[0];
-			const cond = conditions[0];
+            const sensorNode = sensorNodes[0];
+            const cond = conditions[0];
             relayNodes.forEach(relay => {
                 workflowConnections.push({
                     from: sensorNode.id,
@@ -1517,7 +1517,7 @@ async function loadRuleToCanvas(ruleId) {
         }
 
         renderWorkflow();
-        showNotification(`✅ Rule "${rule.name}" loaded`, 'success');
+        showNotification(`Rule "${rule.name}" loaded`, 'success');
         
     } catch (e) {
         console.warn('Load rule failed:', e);
@@ -1624,62 +1624,6 @@ document.addEventListener('drop', function(e) {
         showNotification('Failed to add element: ' + err.message, 'error');
     }
 });
-
-// ============================================================
-// Notification System
-// ============================================================
-function showNotification(message, type = 'info') {
-    let container = document.getElementById('notification-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notification-container';
-        container.style.cssText = `
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 99999;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        `;
-        document.body.appendChild(container);
-    }
-    
-    const colors = {
-        success: '#d4edda',
-        error: '#f8d7da',
-        warning: '#fff3cd',
-        info: '#d1ecf1'
-    };
-    const textColors = {
-        success: '#155724',
-        error: '#721c24',
-        warning: '#856404',
-        info: '#0c5460'
-    };
-    
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        background: ${colors[type] || colors.info};
-        color: ${textColors[type] || textColors.info};
-        padding: 12px 20px;
-        border-radius: 8px;
-        border: 1px solid ${textColors[type] || textColors.info};
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        font-size: 0.9rem;
-        animation: slideIn 0.3s ease;
-        opacity: 1;
-        transition: opacity 0.3s;
-    `;
-    notification.textContent = message;
-    
-    container.appendChild(notification);
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
 
 // ============================================================
 // Export Rules (JSON)

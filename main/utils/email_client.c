@@ -10,6 +10,8 @@
 #include <time.h>
 #include "log_levels.h"
 #include "logger.h"
+#include "nvs_config.h"
+#include "wifi_manager.h"
 
 // Configuration
 static email_config_t g_config = {
@@ -35,6 +37,9 @@ static email_config_t g_config = {
 
 #define BUFFER_SIZE 512
 #define TIMEOUT_MS 10000
+
+extern const char r1_pem_start[] asm("_binary_r1_pem_start");
+extern const char r1_pem_end[]   asm("_binary_r1_pem_end");
 
 // ============================================
 // BASE64 ENCODING
@@ -122,122 +127,299 @@ static int tls_send_cmd_recv(esp_tls_t *tls, const char *cmd, const char *arg, c
 // SMTP SEND
 // ============================================
 static esp_err_t send_email_smtp(const email_message_t *msg) {
+    static char buf[BUFFER_SIZE];
+    static char from[BUFFER_SIZE];
+    static char to[BUFFER_SIZE];
+    static char email[2048];
+    static char to_copy[256];
+    static char date_str[64];
+    static char b64[256];
+    
     int sock = -1;
     esp_tls_t *tls = NULL;
-    char buf[BUFFER_SIZE];
     int ret = -1;
+    int len;
     
-    // 1. Connect
+//    NOTIFICATION_LOG_I("=== EMAIL SEND START ===");
+//    NOTIFICATION_LOG_I("Server: %s:%d", g_config.smtp_server, g_config.smtp_port);
+//    NOTIFICATION_LOG_I("From: %s", g_config.from_email);
+//    NOTIFICATION_LOG_I("To: %s", g_config.to_emails);
+//    NOTIFICATION_LOG_I("Subject: %s", msg->subject);
+
+    // 1. Connect - use TLS directly if port is 465
+    if (g_config.use_tls && g_config.smtp_port == 465) {
+//        NOTIFICATION_LOG_I("Using direct TLS on port 465");
+        
+        esp_tls_cfg_t cfg = {
+            .timeout_ms = TIMEOUT_MS,
+            .non_block = false,
+            .skip_common_name = true,
+            .cacert_pem_buf = (const unsigned char *)r1_pem_start,
+            .cacert_pem_bytes = r1_pem_end - r1_pem_start,
+        };
+        
+        tls = esp_tls_init();
+        if (!tls) { 
+            NOTIFICATION_LOG_E("TLS init failed"); 
+            goto cleanup; 
+        }
+        
+//        NOTIFICATION_LOG_I("Connecting to %s:%d", g_config.smtp_server, g_config.smtp_port);
+        
+        if (esp_tls_conn_new_sync(g_config.smtp_server, strlen(g_config.smtp_server),
+                                  g_config.smtp_port, &cfg, tls) != 1) {
+            NOTIFICATION_LOG_E("TLS connect failed");
+            esp_tls_conn_destroy(tls);
+            tls = NULL;
+            goto cleanup;
+        }
+        
+//        NOTIFICATION_LOG_I("TLS connected successfully");
+        
+        // ✅ Read the greeting after TLS handshake
+//        NOTIFICATION_LOG_I("Waiting for greeting...");
+        len = tls_read(tls, buf, sizeof(buf) - 1);
+        if (len <= 0) {
+            NOTIFICATION_LOG_E("Failed to receive greeting (len=%d)", len);
+            goto cleanup;
+        }
+        buf[len] = '\0';
+//        NOTIFICATION_LOG_I("Received greeting: %s", buf);
+        
+        // Check if it's a valid greeting (220 is standard SMTP greeting)
+        if (buf[0] != '2') {
+            NOTIFICATION_LOG_E("Invalid greeting: %s", buf);
+            goto cleanup;
+        }
+        
+        // ✅ Send EHLO
+//        NOTIFICATION_LOG_I("Sending EHLO");
+        if (tls_send_cmd_recv(tls, "EHLO", "localhost", buf, sizeof(buf)) != 0) {
+            NOTIFICATION_LOG_W("EHLO failed, trying HELO");
+            if (tls_send_cmd_recv(tls, "HELO", "localhost", buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("HELO also failed: %s", buf);
+                goto cleanup;
+            }
+        }
+//        NOTIFICATION_LOG_I("EHLO/HELO successful");
+        
+        // Skip STARTTLS since we're already using TLS
+        goto after_starttls;
+    }
+    
+    // Plain TCP connection for STARTTLS (port 587)
+//    NOTIFICATION_LOG_I("Connecting to %s:%d", g_config.smtp_server, g_config.smtp_port);
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(g_config.smtp_port);
     
     struct hostent *he = gethostbyname(g_config.smtp_server);
-    if (!he) { NOTIFICATION_LOG_E("DNS failed"); goto cleanup; }
+    if (!he) { 
+        NOTIFICATION_LOG_E("DNS failed for %s", g_config.smtp_server); 
+        goto cleanup; 
+    }
     memcpy(&addr.sin_addr, he->h_addr, he->h_length);
     
     sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) goto cleanup;
+    if (sock < 0) { 
+        NOTIFICATION_LOG_E("Socket creation failed"); 
+        goto cleanup; 
+    }
     
     struct timeval tv = {TIMEOUT_MS/1000, (TIMEOUT_MS%1000)*1000};
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
     
-    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0) goto cleanup;
-    if (recv_response(sock, buf, sizeof(buf)) != 0) goto cleanup;
-    
-    // 2. EHLO
-    if (send_cmd_recv(sock, "EHLO", "localhost", buf, sizeof(buf)) != 0) {
-        if (send_cmd_recv(sock, "HELO", "localhost", buf, sizeof(buf)) != 0) goto cleanup;
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+        NOTIFICATION_LOG_E("Connect failed to %s:%d", g_config.smtp_server, g_config.smtp_port);
+        goto cleanup;
     }
+//    NOTIFICATION_LOG_I("Connected successfully");
     
-    // 3. STARTTLS (if enabled)
-    if (g_config.use_tls && g_config.smtp_port != 465) {
+    if (recv_response(sock, buf, sizeof(buf)) != 0) {
+        NOTIFICATION_LOG_E("Failed to receive greeting: %s", buf);
+        goto cleanup;
+    }
+//    NOTIFICATION_LOG_I("Received greeting: %s", buf);
+
+    // 2. EHLO
+//    NOTIFICATION_LOG_I("Sending EHLO");
+    if (send_cmd_recv(sock, "EHLO", "localhost", buf, sizeof(buf)) != 0) {
+        NOTIFICATION_LOG_W("EHLO failed, trying HELO");
+        if (send_cmd_recv(sock, "HELO", "localhost", buf, sizeof(buf)) != 0) {
+            NOTIFICATION_LOG_E("HELO also failed: %s", buf);
+            goto cleanup;
+        }
+    }
+//    NOTIFICATION_LOG_I("EHLO/HELO successful");
+    
+    // 3. STARTTLS (if enabled and port is 587)
+    if (g_config.use_tls && g_config.smtp_port == 587) {
+//        NOTIFICATION_LOG_I("Sending STARTTLS");
         if (send_cmd_recv(sock, "STARTTLS", NULL, buf, sizeof(buf)) == 0) {
-            NOTIFICATION_LOG_I("Starting TLS...");
+//            NOTIFICATION_LOG_I("Starting TLS...");
+            
+            int sock_fd = sock;
+            sock = -1;
             
             esp_tls_cfg_t cfg = {
                 .timeout_ms = TIMEOUT_MS,
                 .non_block = false,
+                .skip_common_name = true,
+                .cacert_pem_buf = (const unsigned char *)r1_pem_start,
+                .cacert_pem_bytes = r1_pem_end - r1_pem_start,
             };
             
             tls = esp_tls_init();
-            if (!tls) goto cleanup;
-            
-            if (esp_tls_conn_new_sync(g_config.smtp_server, strlen(g_config.smtp_server),
-                                      g_config.smtp_port, &cfg, tls) != 1) {
-                esp_tls_conn_destroy(tls);
-                tls = NULL;
+            if (!tls) {
+                NOTIFICATION_LOG_E("TLS init failed");
+                close(sock_fd);
                 goto cleanup;
             }
             
-            NOTIFICATION_LOG_I("TLS established");
+            esp_tls_set_conn_sockfd(tls, sock_fd);
             
-            if (tls_send_cmd_recv(tls, "EHLO", "localhost", buf, sizeof(buf)) != 0) goto cleanup;
+            if (esp_tls_conn_new_sync(g_config.smtp_server, strlen(g_config.smtp_server),
+                                      g_config.smtp_port, &cfg, tls) != 1) {
+                NOTIFICATION_LOG_E("TLS handshake failed");
+                esp_tls_conn_destroy(tls);
+                tls = NULL;
+                close(sock_fd);
+                goto cleanup;
+            }
+            
+//            NOTIFICATION_LOG_I("TLS established");
+            
+            // Re-EHLO after TLS
+//            NOTIFICATION_LOG_I("Re-sending EHLO after TLS");
+            if (tls_send_cmd_recv(tls, "EHLO", "localhost", buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("EHLO after TLS failed: %s", buf);
+                goto cleanup;
+            }
+//            NOTIFICATION_LOG_I("EHLO after TLS successful");
+        } else {
+            NOTIFICATION_LOG_W("STARTTLS failed: %s", buf);
         }
     }
-    
+
+after_starttls:
     // 4. AUTH LOGIN
     if (strlen(g_config.username) > 0 && strlen(g_config.password) > 0) {
-        char b64[256];
+//        NOTIFICATION_LOG_I("Starting AUTH LOGIN");
         
         if (tls) {
-            if (tls_send_cmd_recv(tls, "AUTH", "LOGIN", buf, sizeof(buf)) != 0) goto cleanup;
+            if (tls_send_cmd_recv(tls, "AUTH", "LOGIN", buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("AUTH LOGIN failed: %s", buf);
+                goto cleanup;
+            }
         } else {
-            if (send_cmd_recv(sock, "AUTH", "LOGIN", buf, sizeof(buf)) != 0) goto cleanup;
+            if (send_cmd_recv(sock, "AUTH", "LOGIN", buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("AUTH LOGIN failed: %s", buf);
+                goto cleanup;
+            }
         }
+//        NOTIFICATION_LOG_I("AUTH LOGIN accepted");
         
         base64_encode((const unsigned char*)g_config.username, strlen(g_config.username), b64);
+//        NOTIFICATION_LOG_I("Username (base64): %s", b64);
+        
         if (tls) {
-            if (tls_send_cmd_recv(tls, b64, NULL, buf, sizeof(buf)) != 0) goto cleanup;
+            if (tls_send_cmd_recv(tls, b64, NULL, buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("Username rejected: %s", buf);
+                goto cleanup;
+            }
         } else {
-            if (send_cmd_recv(sock, b64, NULL, buf, sizeof(buf)) != 0) goto cleanup;
+            if (send_cmd_recv(sock, b64, NULL, buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("Username rejected: %s", buf);
+                goto cleanup;
+            }
         }
+//        NOTIFICATION_LOG_I("Username accepted");
         
         base64_encode((const unsigned char*)g_config.password, strlen(g_config.password), b64);
+//        NOTIFICATION_LOG_I("Password (base64): %s", b64);
+        
         if (tls) {
-            if (tls_send_cmd_recv(tls, b64, NULL, buf, sizeof(buf)) != 0) goto cleanup;
+            if (tls_send_cmd_recv(tls, b64, NULL, buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("Password rejected: %s", buf);
+                goto cleanup;
+            }
         } else {
-            if (send_cmd_recv(sock, b64, NULL, buf, sizeof(buf)) != 0) goto cleanup;
+            if (send_cmd_recv(sock, b64, NULL, buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("Password rejected: %s", buf);
+                goto cleanup;
+            }
         }
+//        NOTIFICATION_LOG_I("Authentication successful");
     }
     
     // 5. MAIL FROM
-    char from[BUFFER_SIZE];
-    snprintf(from, sizeof(from), "<%s>", g_config.from_email);
+//    NOTIFICATION_LOG_I("=== MAIL FROM ===");
+//    NOTIFICATION_LOG_I("From email: '%s'", g_config.from_email);
+    
+    snprintf(from, sizeof(from), "MAIL FROM:<%s>", g_config.from_email);
+    
     if (tls) {
-        if (tls_send_cmd_recv(tls, "MAIL FROM", from, buf, sizeof(buf)) != 0) goto cleanup;
+        if (tls_send_cmd_recv(tls, from, NULL, buf, sizeof(buf)) != 0) {
+            NOTIFICATION_LOG_E("MAIL FROM failed with response: %s", buf);
+            if (strstr(buf, "Sender") != NULL || strstr(buf, "address") != NULL) {
+                NOTIFICATION_LOG_E("The from address '%s' may be invalid", g_config.from_email);
+            }
+            goto cleanup;
+        }
     } else {
-        if (send_cmd_recv(sock, "MAIL FROM", from, buf, sizeof(buf)) != 0) goto cleanup;
+        if (send_cmd_recv(sock, from, NULL, buf, sizeof(buf)) != 0) {
+            NOTIFICATION_LOG_E("MAIL FROM failed with response: %s", buf);
+            if (strstr(buf, "Sender") != NULL || strstr(buf, "address") != NULL) {
+                NOTIFICATION_LOG_E("The from address '%s' may be invalid", g_config.from_email);
+            }
+            goto cleanup;
+        }
     }
+//    NOTIFICATION_LOG_I("MAIL FROM successful");
     
     // 6. RCPT TO
-    char to_copy[256];
+//    NOTIFICATION_LOG_I("=== RCPT TO ===");
     strncpy(to_copy, g_config.to_emails, sizeof(to_copy)-1);
     to_copy[sizeof(to_copy)-1] = '\0';
     char *token = strtok(to_copy, ",");
+    int rcpt_count = 0;
     while (token) {
         while (*token == ' ') token++;
-        char to[BUFFER_SIZE];
-        snprintf(to, sizeof(to), "<%s>", token);
+        snprintf(to, sizeof(to), "RCPT TO:<%s>", token);
+//        NOTIFICATION_LOG_I("RCPT TO %d: %s", ++rcpt_count, to);
+        
         if (tls) {
-            if (tls_send_cmd_recv(tls, "RCPT TO", to, buf, sizeof(buf)) != 0) goto cleanup;
+            if (tls_send_cmd_recv(tls, to, NULL, buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("RCPT TO failed for '%s': %s", token, buf);
+                goto cleanup;
+            }
         } else {
-            if (send_cmd_recv(sock, "RCPT TO", to, buf, sizeof(buf)) != 0) goto cleanup;
+            if (send_cmd_recv(sock, to, NULL, buf, sizeof(buf)) != 0) {
+                NOTIFICATION_LOG_E("RCPT TO failed for '%s': %s", token, buf);
+                goto cleanup;
+            }
         }
+//        NOTIFICATION_LOG_I("RCPT TO %d successful", rcpt_count);
         token = strtok(NULL, ",");
     }
     
     // 7. DATA
+//    NOTIFICATION_LOG_I("=== DATA ===");
     if (tls) {
-        if (tls_send_cmd_recv(tls, "DATA", NULL, buf, sizeof(buf)) != 0) goto cleanup;
+        if (tls_send_cmd_recv(tls, "DATA", NULL, buf, sizeof(buf)) != 0) {
+            NOTIFICATION_LOG_E("DATA command failed: %s", buf);
+            goto cleanup;
+        }
     } else {
-        if (send_cmd_recv(sock, "DATA", NULL, buf, sizeof(buf)) != 0) goto cleanup;
+        if (send_cmd_recv(sock, "DATA", NULL, buf, sizeof(buf)) != 0) {
+            NOTIFICATION_LOG_E("DATA command failed: %s", buf);
+            goto cleanup;
+        }
     }
+//    NOTIFICATION_LOG_I("DATA command accepted");
     
-    // 8. Email content - use larger buffer to avoid truncation warning
-    char email[2048];
-    char date_str[64];
+    // 8. Email content
     time_t now = time(NULL);
     strftime(date_str, sizeof(date_str), "%a, %d %b %Y %H:%M:%S %z", localtime(&now));
     
@@ -255,31 +437,46 @@ static esp_err_t send_email_smtp(const email_message_t *msg) {
         msg->subject, msg->body);
     
     if (written < 0 || written >= (int)sizeof(email)) {
-        NOTIFICATION_LOG_E("Email content too large");
+        NOTIFICATION_LOG_E("Email content too large (written=%d)", written);
         goto cleanup;
     }
+//    NOTIFICATION_LOG_I("Email content prepared (%d bytes)", written);
     
     if (tls) {
-        if (tls_write(tls, email) <= 0) goto cleanup;
-        if (tls_recv_response(tls, buf, sizeof(buf)) != 0) goto cleanup;
+        if (tls_write(tls, email) <= 0) {
+            NOTIFICATION_LOG_E("Failed to send email content over TLS");
+            goto cleanup;
+        }
+        if (tls_recv_response(tls, buf, sizeof(buf)) != 0) {
+            NOTIFICATION_LOG_E("Failed to get final response: %s", buf);
+            goto cleanup;
+        }
     } else {
-        if (send(sock, email, strlen(email), 0) < 0) goto cleanup;
-        if (recv_response(sock, buf, sizeof(buf)) != 0) goto cleanup;
+        if (send(sock, email, strlen(email), 0) < 0) {
+            NOTIFICATION_LOG_E("Failed to send email content over TCP");
+            goto cleanup;
+        }
+        if (recv_response(sock, buf, sizeof(buf)) != 0) {
+            NOTIFICATION_LOG_E("Failed to get final response: %s", buf);
+            goto cleanup;
+        }
     }
     
+    NOTIFICATION_LOG_I("Email sent successfully");
     ret = 0;
     
 cleanup:
+//    NOTIFICATION_LOG_I("=== EMAIL SEND CLEANUP ===");
     if (sock >= 0) {
-        if (tls) {
-            tls_send_cmd(tls, "QUIT", NULL);
-            tls_recv_response(tls, buf, sizeof(buf));
-            esp_tls_conn_destroy(tls);
-        } else {
-            send_cmd_recv(sock, "QUIT", NULL, buf, sizeof(buf));
-        }
+        send_cmd_recv(sock, "QUIT", NULL, buf, sizeof(buf));
         close(sock);
     }
+    if (tls) {
+        tls_send_cmd(tls, "QUIT", NULL);
+        tls_recv_response(tls, buf, sizeof(buf));
+        esp_tls_conn_destroy(tls);
+    }
+//    NOTIFICATION_LOG_I("=== EMAIL SEND END (ret=%d) ===", ret);
     return (ret == 0) ? ESP_OK : ESP_FAIL;
 }
 
@@ -298,7 +495,7 @@ esp_err_t email_client_init(void) {
 
 esp_err_t email_load_config(email_config_t *config) {
     if (!config) return ESP_ERR_INVALID_ARG;
-    
+
     // First, set ALL defaults
     memset(config, 0, sizeof(email_config_t));
     strcpy(config->smtp_server, "smtp.gmail.com");
@@ -309,18 +506,18 @@ esp_err_t email_load_config(email_config_t *config) {
     strcpy(config->to_emails, "");
     config->use_tls = true;
     config->enabled = false;
-    
+
     nvs_handle_t handle;
     esp_err_t err = nvs_open("email", NVS_READWRITE, &handle);
     if (err != ESP_OK) {
         NOTIFICATION_LOG_E("Failed to open NVS: %s", esp_err_to_name(err));
         return err;  // Return defaults
     }
-    
+
     // Read each parameter with proper error handling
     uint8_t val;
     size_t len;
-    
+
     // enabled
     err = nvs_get_u8(handle, NVS_KEY_EMAIL_ENABLED, &val);
     if (err == ESP_OK) {
@@ -328,7 +525,7 @@ esp_err_t email_load_config(email_config_t *config) {
     } else if (err != ESP_ERR_NVS_NOT_FOUND) {
         NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_ENABLED, esp_err_to_name(err));
     }
-    
+
     // use_tls
     err = nvs_get_u8(handle, NVS_KEY_EMAIL_TLS, &val);
     if (err == ESP_OK) {
@@ -336,7 +533,7 @@ esp_err_t email_load_config(email_config_t *config) {
     } else if (err != ESP_ERR_NVS_NOT_FOUND) {
         NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_TLS, esp_err_to_name(err));
     }
-    
+
     // smtp_server
     err = nvs_get_str(handle, NVS_KEY_EMAIL_SERVER, NULL, &len);
     if (err == ESP_OK && len > 0 && len < sizeof(config->smtp_server)) {
@@ -344,7 +541,7 @@ esp_err_t email_load_config(email_config_t *config) {
     } else if (err != ESP_ERR_NVS_NOT_FOUND) {
         NOTIFICATION_LOG_E("Error reading %s: %s", NVS_KEY_EMAIL_SERVER, esp_err_to_name(err));
     }
-    
+
     // username
     err = nvs_get_str(handle, NVS_KEY_EMAIL_USERNAME, NULL, &len);
     if (err == ESP_OK && len > 0 && len < sizeof(config->username)) {
@@ -417,16 +614,26 @@ esp_err_t email_save_config(const email_config_t *config) {
 
 esp_err_t email_send(const email_message_t *message) {
     if (!message) return ESP_ERR_INVALID_ARG;
-    if (!g_config.enabled) return ESP_ERR_INVALID_STATE;
+    if (!g_config.enabled) {
+        NOTIFICATION_LOG_W("Configuration is not enabled!");
+        return ESP_ERR_INVALID_STATE;
+    }
     if (strlen(g_config.username) == 0 || strlen(g_config.password) == 0 ||
         strlen(g_config.to_emails) == 0 || strlen(g_config.from_email) == 0) {
+        email_client_init();
+    }
+    if (strlen(g_config.username) == 0 || strlen(g_config.password) == 0 ||
+        strlen(g_config.to_emails) == 0 || strlen(g_config.from_email) == 0) {
+        NOTIFICATION_LOG_E("Configuration is not complete!");
         return ESP_ERR_INVALID_STATE;
     }
     
     char full_body[2048];
     snprintf(full_body, sizeof(full_body),
-        "%s\n\n--- System ---\nHeap: %lu bytes\nUptime: %llu sec",
+        "%s\n\n-----o-----\nSystem:%s\nMAC:%s\nHeap: %lu bytes\nUptime: %llu sec",
         message->body,
+        nvs_get_system_name(),
+        wifi_get_mac(),
         (unsigned long)esp_get_free_heap_size(),
         (unsigned long long)(esp_timer_get_time() / 1000000));
     

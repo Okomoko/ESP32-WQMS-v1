@@ -160,6 +160,11 @@ h3 {
     margin: 4px 0;
 }
 
+.relay-card .value {
+    font-size: 1.2rem !important;
+    font-weight: 600;
+}
+
 .card .meta {
     font-size: 0.7rem;
     color: #7a9bbf;
@@ -1422,7 +1427,7 @@ tr:hover {
 .sensor-selector input[type="checkbox"] {
     width: 12px;
     height: 12px;
-    accent-color: #4bc0c0;
+    accent-color: #f0f4f9;
 }
 
 /* Status indicators */
