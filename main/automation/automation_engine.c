@@ -16,6 +16,7 @@
 #include "log_levels.h"
 #include "system_config.h"
 #include "nvs_config.h"
+#include "email_client.h"
 
 // ============================================================
 // Static Variables
@@ -71,7 +72,11 @@ static void fire_rule_outputs(automation_rule_t *rule) {
             AUTO_LOG_I("Rule #%d '%s': Relay %d triggered for %d seconds",
                        rule->rule_id, rule->name, out->id, duration);
         } else if (out->type == OUTPUT_EMAIL) {
-            // Send email notification (stub)
+        char message[256];
+        snprintf(message, sizeof(message), 
+                 "Rule #%d '%s': Email notification to %s", rule->rule_id, rule->name, rule->email_recipient);
+            email_send_notification("Automation Alert", 
+                                    message);
             AUTO_LOG_I("Rule #%d '%s': Email notification to %s",
                        rule->rule_id, rule->name, rule->email_recipient);
         }
@@ -171,7 +176,7 @@ void automation_evaluate(void) {
             AUTO_LOG_I("Rule #%d '%s' fired: %s", i, rules[i].name, desc);
         } else {
             AUTO_LOG_I("Rule #%d '%s' is not fired!", i, rules[i].name);
-		}
+        }
     }
     
     xSemaphoreGive(eval_mutex);

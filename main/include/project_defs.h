@@ -7,23 +7,76 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include "system_config.h"
 
 // ============================================================
-// Sensor Types
+// SENSOR UNITS ENUMERATION
 // ============================================================
+
+// Unit types for sensors (stored in NVS as uint8_t)
 typedef enum {
-    SENSOR_PH = 0,
-    SENSOR_EC = 1,
-    SENSOR_POTASSIUM = 2,
-    SENSOR_MAGNESIUM = 3,
-    SENSOR_IRON = 4,
-    SENSOR_PHOSPHORUS = 5,
-    SENSOR_CALCIUM = 6,
-    SENSOR_NITROGEN = 7,
-    SENSOR_TEMPERATURE = 8,
-    SENSOR_HUMIDITY = 9
-} sensor_id_t;
+    UNIT_NONE = 0,          // Blank/Unknown
+    UNIT_CELSIUS,           // °C
+    UNIT_PH,                // pH units
+    UNIT_MILLIVOLT,         // mV
+    UNIT_MILLIGRAM_PER_L,   // mg/L
+    UNIT_MICROSIEMENS_PER_CM, // µS/cm
+    UNIT_PERCENT,           // %
+    UNIT_NTU,               // NTU (turbidity)
+    UNIT_PPM,               // ppm
+    UNIT_MICROGRAM_PER_L,   // µg/L
+    UNIT_COUNT              // Number of units (for array sizing)
+} sensor_unit_t;
+
+// Unit string lookup structure
+typedef struct {
+    sensor_unit_t unit;
+    const char *label;
+    const char *symbol;
+} unit_lookup_t;
+
+// Global unit lookup table
+static const unit_lookup_t UNIT_LOOKUP[] = {
+    {UNIT_NONE,               "None",         ""},
+    {UNIT_CELSIUS,            "Celsius",      "°C"},
+    {UNIT_PH,                 "pH",           "pH"},
+    {UNIT_MILLIVOLT,          "Millivolt",    "mV"},
+    {UNIT_MILLIGRAM_PER_L,    "mg/L",         "mg/L"},
+    {UNIT_MICROSIEMENS_PER_CM,"µS/cm",        "µS/cm"},
+    {UNIT_PERCENT,            "Percent",      "%"},
+    {UNIT_NTU,                "NTU",          "NTU"},
+    {UNIT_PPM,                "PPM",          "ppm"},
+    {UNIT_MICROGRAM_PER_L,    "µg/L",         "µg/L"}
+};
+
+// Helper functions
+static inline const char* get_unit_label(sensor_unit_t unit) {
+    for (int i = 0; i < sizeof(UNIT_LOOKUP)/sizeof(UNIT_LOOKUP[0]); i++) {
+        if (UNIT_LOOKUP[i].unit == unit) {
+            return UNIT_LOOKUP[i].label;
+        }
+    }
+    return "Unknown";
+}
+
+static inline const char* get_unit_symbol(sensor_unit_t unit) {
+    for (int i = 0; i < sizeof(UNIT_LOOKUP)/sizeof(UNIT_LOOKUP[0]); i++) {
+        if (UNIT_LOOKUP[i].unit == unit) {
+            return UNIT_LOOKUP[i].symbol;
+        }
+    }
+    return "";
+}
+
+static inline sensor_unit_t get_unit_from_label(const char *label) {
+    for (int i = 0; i < sizeof(UNIT_LOOKUP)/sizeof(UNIT_LOOKUP[0]); i++) {
+        if (strcmp(UNIT_LOOKUP[i].label, label) == 0) {
+            return UNIT_LOOKUP[i].unit;
+        }
+    }
+    return UNIT_NONE;
+}
 
 typedef enum {
     SENSOR_STATUS_OK = 0,
@@ -41,6 +94,7 @@ typedef struct __attribute__((packed)) {
     uint8_t adc_channel;
     uint16_t modbus_register;
     uint16_t calibration_factor;
+    sensor_unit_t unit;
     float min_value;
     float max_value;
     uint8_t reserved[6];

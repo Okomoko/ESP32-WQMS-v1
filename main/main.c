@@ -147,7 +147,7 @@ void app_main(void) {
     // ============================================================
     // Step 9: Start eMail Client
     // ============================================================
-	email_client_init();
+    email_client_init();
     // Send email notification if it was a panic or watchdog reset
     if (is_panic_reboot) {
         char message[256];

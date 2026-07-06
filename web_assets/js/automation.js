@@ -1480,6 +1480,12 @@ async function loadRuleToCanvas(ruleId) {
                     to: emailNode.id,
                     condition: `→`
                 });
+            } else {
+                workflowConnections.push({
+                    from: sensorNodes[0].id,
+                    to: emailNode.id,
+                    condition: `→`
+                });
             }
         }
         

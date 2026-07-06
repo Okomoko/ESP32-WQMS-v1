@@ -160,6 +160,10 @@ h3 {
     margin: 4px 0;
 }
 
+.card .value span {
+    font-size: 1.1rem;
+}
+
 .relay-card .value {
     font-size: 1.2rem !important;
     font-weight: 600;

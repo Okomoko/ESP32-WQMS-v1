@@ -158,14 +158,7 @@ void sensor_history_add(void) {
     for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         if (readings[i].status == SENSOR_STATUS_OK) {
             record.sensor_mask |= (1 << i);
-            // Store as scaled integer (pH×100, temp×10, etc.)
-            if (i == SENSOR_PH) {
-                record.values[i] = (uint16_t)(readings[i].value * 100);
-            } else if (i == SENSOR_TEMPERATURE) {
-                record.values[i] = (uint16_t)(readings[i].value * 10);
-            } else {
-                record.values[i] = (uint16_t)readings[i].value;
-            }
+            record.values[i] = (uint16_t)readings[i].value;
         } else {
             record.values[i] = 0;
         }

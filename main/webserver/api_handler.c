@@ -12,7 +12,7 @@
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "esp_netif.h"
-//#include "esp_log.h"
+#include "esp_log.h"
 #include "cJSON.h"
 
 #include "api_handler.h"
@@ -152,6 +152,7 @@ esp_err_t sensors_config_get_handler(httpd_req_t *req) {
         cJSON_AddNumberToObject(sensor, "id", i);
         cJSON_AddStringToObject(sensor, "name", configs[i].name);
         cJSON_AddBoolToObject(sensor, "enabled", configs[i].enabled);
+        cJSON_AddNumberToObject(sensor, "unit", configs[i].unit);
         cJSON_AddNumberToObject(sensor, "calibration_factor", configs[i].calibration_factor);
         cJSON_AddNumberToObject(sensor, "gpio_pin", configs[i].gpio_pin);
         cJSON_AddNumberToObject(sensor, "adc_channel", configs[i].adc_channel);
@@ -177,7 +178,7 @@ esp_err_t sensors_config_get_handler(httpd_req_t *req) {
 // POST /api/sensors/config
 // ============================================================
 esp_err_t sensors_config_post_handler(httpd_req_t *req) {
-    char buffer[2048];
+    char buffer[1024];
     int len = httpd_req_recv(req, buffer, sizeof(buffer) - 1);
     if (len <= 0) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Empty request");
@@ -208,7 +209,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         cJSON *name = cJSON_GetObjectItem(item, "name");
         cJSON *enabled = cJSON_GetObjectItem(item, "enabled");
         cJSON *cal = cJSON_GetObjectItem(item, "calibration_factor");
-        
+        cJSON *unit = cJSON_GetObjectItem(item, "unit");
         if (id && cJSON_IsNumber(id)) {
             int idx = id->valueint;
             if (idx >= 0 && idx < TOTAL_SENSOR_COUNT) {
@@ -222,6 +223,10 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
                 }
                 if (cal && cJSON_IsNumber(cal)) {
                     configs[idx].calibration_factor = cal->valueint;
+                }
+                if (unit && cJSON_IsNumber(unit)) {
+					APP_LOG_I("Sensor: %d, Unit: %d", id->valueint, unit->valueint);
+                    configs[idx].unit = unit->valueint;
                 }
             }
         }
@@ -957,7 +962,7 @@ esp_err_t calibrate_apply_handler(httpd_req_t *req) {
         json = cJSON_Parse(buffer);
         // If parsing fails, it's not a critical error for apply
         if (!json) {
-            SENSOR_LOG_W("Failed to parse JSON body, continuing anyway");
+            API_LOG_W("Failed to parse JSON body, continuing anyway");
         }
     }
     

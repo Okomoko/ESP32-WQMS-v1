@@ -5,6 +5,35 @@ const RelayTestDuration = 2000
 // ============================================================
 // Configuration - Sensor Config
 // ============================================================
+const UNIT_DEFINITIONS = [
+    { id: 0, label: 'None', symbol: '' },
+    { id: 1, label: 'Celsius', symbol: '°C' },
+    { id: 2, label: 'pH', symbol: 'pH' },
+    { id: 3, label: 'Millivolt', symbol: 'mV' },
+    { id: 4, label: 'mg/L', symbol: 'mg/L' },
+    { id: 5, label: 'µS/cm', symbol: 'µS/cm' },
+    { id: 6, label: 'Percent', symbol: '%' },
+    { id: 7, label: 'NTU', symbol: 'NTU' },
+    { id: 8, label: 'PPM', symbol: 'ppm' },
+    { id: 9, label: 'µg/L', symbol: 'µg/L' }
+];
+
+// Get unit symbol by ID
+function getUnitSymbol(unitId) {
+    const unit = UNIT_DEFINITIONS.find(u => u.id === unitId);
+    return unit ? unit.symbol : '';
+}
+
+function createUnitDropdown(sensorId, selectedId) {
+    let html = `<select class="sensor-unit-select" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;" data-id="${sensorId}">`;
+    UNIT_DEFINITIONS.forEach(unit => {
+        const selected = (unit.id === selectedId) ? 'selected' : '';
+        html += `<option value="${unit.id}" ${selected}>${unit.label} (${unit.symbol})</option>`;
+    });
+    html += `</select>`;
+    return html;
+}
+
 async function loadSensorConfig() {
     try {
         const data = await api.get('/api/sensors/config');
@@ -23,10 +52,14 @@ async function loadSensorConfig() {
                     <strong style="color:#0a2744;">${s.name || 'Sensor ' + s.id}</strong>
                     <span style="font-size:0.75rem; color:#7a9bbf;">PIN: ${s.gpio_pin || '--'} | ADC: ${adcDisplay} | MODBUS: 0x${(s.modbus_register || 0).toString(16).toUpperCase().padStart(4, '0')}</span>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
                     <div>
                         <label style="font-size:0.7rem; color:#7a9bbf;">Name</label>
                         <input type="text" value="${s.name || ''}" data-id="${s.id}" class="sensor-name-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                    </div>
+                    <div class="unit-container">
+                        <label style="font-size:0.7rem; color:#7a9bbf;">Unit</label>
+                        ${createUnitDropdown(s.id, s.unit || 0)}
                     </div>
                     <div>
                         <label class="calibrate-sensor-btn" data-id="${s.id}" style="font-size:0.7rem; color:#7a9bbf;">Calibration (×1000)</label>
@@ -66,7 +99,8 @@ async function saveSensorConfig() {
         const name = inp.value;
         const enabled = document.querySelector(`.sensor-enabled-check[data-id="${id}"]`)?.checked || false;
         const cal = parseInt(document.querySelector(`.sensor-cal-input[data-id="${id}"]`)?.value) || 1000;
-        configs.push({ id, name, enabled, calibration_factor: cal });
+        const unit = parseInt(document.querySelector(`.sensor-unit-select[data-id="${id}"]`)?.value) || 0;
+        configs.push({ id, name, enabled, calibration_factor: cal, unit});
     });
     try {
         const result = await api.post('/api/sensors/config', { sensors: configs });

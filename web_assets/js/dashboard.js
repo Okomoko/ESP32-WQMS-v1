@@ -4,6 +4,21 @@
 // DASHBOARD MANAGER
 // ============================================================
 
+function getUnitSymbol(unitId) {
+    const UNIT_SYMBOLS = {
+        0: '',      // None
+        1: '°C',    // Celsius
+        2: 'pH',    // pH
+        3: 'mV',    // Millivolt
+        4: 'mg/L',  // mg/L
+        5: 'µS/cm', // µS/cm
+        6: '%',     // Percent
+        7: 'NTU',   // NTU
+        8: 'ppm',   // PPM
+        9: 'µg/L'  // µg/L
+    };
+    return UNIT_SYMBOLS[unitId] || '';
+}
 class DashboardManager {
     constructor() {
         // Chart configuration
@@ -23,7 +38,7 @@ class DashboardManager {
         this.sensorNameMap = {};
         this.sensorColorMap = {};
         this.sensorKeyMap = {};
-        
+        this.sensorUnit = {}
         this.defaultColors = [
             '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
             '#FF9F40', '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'
@@ -85,6 +100,7 @@ class DashboardManager {
                 this.sensorKeyMap = {};
                 this.sensorLabels = {};
                 this.colors = {};
+				this.sensorUnit = {}
                 this.selectedSensors = new Set();
                 
                 this.sensorConfig.forEach(sensor => {
@@ -92,6 +108,7 @@ class DashboardManager {
                     const name = sensor.name || 'Sensor ' + (id + 1);
                     const color = sensor.color || this.defaultColors[id % this.defaultColors.length];
                     const key = name.replace(/ /g, '_');
+					const unit = sensor.unit;
                     
                     this.sensorMap[id] = { name, color, key };
                     this.sensorNameMap[id] = name;
@@ -100,6 +117,7 @@ class DashboardManager {
                     this.sensorLabels[key] = name;
                     this.colors[key] = color;
                     this.selectedSensors.add(key);
+					this.sensorUnit[key] = unit;
                 });
             }
         } catch (error) {
@@ -118,6 +136,7 @@ class DashboardManager {
         this.sensorKeyMap = {};
         this.sensorLabels = {};
         this.colors = {};
+		this.sensorUnit = {};
         this.selectedSensors = new Set();
         
         for (let i = 0; i < 8; i++) {
@@ -125,6 +144,7 @@ class DashboardManager {
             const name = defaultNames[i] || 'Sensor ' + (i + 1);
             const color = this.defaultColors[i % this.defaultColors.length];
             const key = name.replace(/ /g, '_');
+			const unit = 0;
             
             this.sensorMap[id] = { name, color, key };
             this.sensorNameMap[id] = name;
@@ -133,6 +153,7 @@ class DashboardManager {
             this.sensorLabels[key] = name;
             this.colors[key] = color;
             this.selectedSensors.add(key);
+			this.sensorUnit[key] = unit;
         }
     }
 
@@ -180,6 +201,7 @@ class DashboardManager {
             const name = sensor.name || 'Sensor ' + (id + 1);
             const color = sensor.color || this.defaultColors[id % this.defaultColors.length];
             const key = name.replace(/ /g, '_');
+			const unit = sensor.unit;
             
             const label = document.createElement('label');
             label.style.cssText = `
@@ -518,7 +540,8 @@ async function loadSensors() {
                 value: reading ? reading.value : 0,
                 raw_adc: reading ? reading.raw_adc : 0,
                 status: reading ? reading.status : 0,
-                quality: reading ? reading.quality : 0
+                quality: reading ? reading.quality : 0,
+				unit: cfg.unit || 0
             };
         });
         
@@ -548,7 +571,8 @@ async function loadSensorSelectors() {
                 value: reading ? reading.value : 0,
                 raw_adc: reading ? reading.raw_adc : 0,
                 status: reading ? reading.status : 0,
-                quality: reading ? reading.quality : 0
+                quality: reading ? reading.quality : 0,
+				unit: cfg.unit || 0
             };
         });
         
@@ -589,7 +613,7 @@ function renderSensorCards(sensors) {
         return `
             <div class="card">
                 <div class="name">${s.name || 'Sensor ' + s.id}</div>
-                <div class="value">${isDisabled ? '--' : (s.value || 0).toFixed(2)}</div>
+                <div class="value">${isDisabled ? '--' : (s.value || 0).toFixed(2)}<span class="unit">${' ' + getUnitSymbol(s.unit)}</span></div>
                 <div class="meta">
                     <span class="${statusClass}">${statusLabel}</span>
                     <span>ID: ${s.id}</span>

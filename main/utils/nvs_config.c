@@ -48,6 +48,7 @@ static void load_default_sensor_configs(sensor_config_t *config, int count) {
         config[i].calibration_factor = 1000;
         config[i].min_value = default_sensor_min[i];
         config[i].max_value = default_sensor_max[i];
+		config[i].unit = 0; //blank
     }
 }
 
@@ -351,6 +352,12 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
         if (nvs_get_u16(handle, key, &mb) == ESP_OK) {
             config[i].modbus_register = mb;
         }
+
+        snprintf(key, sizeof(key), "%s%d_unit", NVS_KEY_SENSOR_PREFIX, i);
+        uint8_t unit = 0;
+        if (nvs_get_u8(handle, key, &unit) == ESP_OK) {
+            config[i].unit = unit;
+        }
     }
     
     nvs_close(handle);
@@ -377,6 +384,9 @@ void nvs_save_sensor_config(sensor_config_t *config, int count) {
         
         snprintf(key, sizeof(key), "%s%d_mb", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u16(handle, key, config[i].modbus_register);
+
+        snprintf(key, sizeof(key), "%s%d_unit", NVS_KEY_SENSOR_PREFIX, i);
+        nvs_set_u8(handle, key, config[i].unit);
     }
     
     nvs_commit(handle);
