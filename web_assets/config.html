@@ -47,163 +47,212 @@
             </div>
 
             <div id="config-content">
-                <!-- General Tab -->
                 <div class="tab-panel active" id="tab-general">
                     <h3>General Settings</h3>
-                    <div class="config-group">
-                        <label>System Name</label>
-                        <input type="text" id="sys-name" value="WQMS-System">
+                    
+                    <div class="sensor-card" style="max-width:100%;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">
+                                ⚙️ System Configuration
+                                <span class="badge">Main</span>
+                            </div>
+                            <div class="sensor-card-meta">
+                                <span>ID: WQMS-001</span>
+                            </div>
+                        </div>
+                        
+                        <div class="sensor-card-body">
+                            <div class="field-group">
+                                <label>System Name</label>
+                                <input type="text" id="sys-name" value="WQMS-System" style="width:100%;">
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>Location</label>
+                                <input type="text" id="sys-location" value="Unknown" style="width:100%;">
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>Timezone</label>
+                                <select id="sys-timezone" style="width:100%;">
+                                    <option value="EET-3">UTC+3 (Istanbul)</option>
+                                    <option value="UTC0">UTC</option>
+                                    <option value="EST5EDT">US Eastern</option>
+                                    <option value="CST6CDT">US Central</option>
+                                    <option value="PST8PDT">US Pacific</option>
+                                    <option value="GMT0BST">UK (GMT/BST)</option>
+                                    <option value="CET-1CEST">Central Europe</option>
+                                    <option value="JST-9">Japan (JST)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>Sensor Read Cycle (ms)</label>
+                                <input type="number" id="sample-interval" value="1000" min="10" max="10000" style="width:100%;">
+                            </div>
+
+                            <div class="field-group">
+                                <label>MODBUS Interval (ms)</label>
+                                <input type="number" id="modbus-interval" value="1000" min="10" max="10000" style="width:100%;">
+                            </div>
+
+                            <div class="field-group">
+                                <label>Automation Interval (seconds)</label>
+                                <input type="number" id="automation-interval" value="60" min="10" max="3600" style="width:100%;">
+                            </div>
+
+                            <div class="field-group">
+                                <label>Integration URL</label>
+                                <input type="text" id="integration-url" value="https://api.example.com/water" style="width:100%;">
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>Integration Interval (seconds)</label>
+                                <input type="number" id="integration-interval" value="60" min="10" max="3600" style="width:100%;">
+                            </div>
+                        </div>
+                        
+                        <div class="sensor-card-footer">
+                            <div class="readings">
+                                <span>🔄 Last Saved: Never</span>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button id="save-config" class="btn btn-primary">💾 Save All</button>
+                                <button id="reset-config" class="btn btn-danger">↩️ Reset to Defaults</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="config-group">
-                        <label>Location</label>
-                        <input type="text" id="sys-location" value="Unknown">
-                    </div>
-                    <div class="config-group">
-                        <label>Timezone</label>
-                        <select id="sys-timezone">
-                            <option value="EET-3">UTC+3 (Istanbul)</option>
-                            <option value="UTC0">UTC</option>
-                            <option value="EST5EDT">US Eastern</option>
-                            <option value="CST6CDT">US Central</option>
-                            <option value="PST8PDT">US Pacific</option>
-                            <option value="GMT0BST">UK (GMT/BST)</option>
-                            <option value="CET-1CEST">Central Europe</option>
-                            <option value="JST-9">Japan (JST)</option>
-                        </select>
-                    </div>
-                    <div class="config-group">
-                        <label>Sensor Read Cycle (ms)</label>
-                        <input type="number" id="sample-interval" value="1000" min="10" max="10000">
-                    </div>
-                    <div class="config-group">
-                        <label>MODBUS Interval (ms)</label>
-                        <input type="number" id="modbus-interval" value="1000" min="10" max="10000">
-                    </div>
-                    <div class="config-group">
-                        <label>Integration URL</label>
-                        <input type="text" id="integration-url" value="https://api.example.com/water">
-                    </div>
-                    <div class="config-group">
-                        <label>Integration Interval (seconds)</label>
-                        <input type="number" id="integration-interval" value="60" min="10" max="3600">
-                    </div>
-                    <button id="save-config">Save All</button>
-                    <button id="reset-config">Reset to Defaults</button>
                 </div>
 
-                <!-- WiFi Tab -->
                 <div class="tab-panel" id="tab-wifi">
                     <h3>WiFi Settings</h3>
 
-                    <!-- ============================================================ -->
-                    <!-- Current Status Card -->
-                    <!-- ============================================================ -->
-                    <div style="background:#f8fafd; border-radius:10px; padding:12px 16px; margin-bottom:16px; border:1px solid #e6edf6;">
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px 16px; font-size:0.85rem;">
-                            <span style="color:#7a9bbf;">Mode:</span>
-                            <span id="wifi-current-mode" style="font-weight:500;">Unknown</span>
-                            
-                            <span style="color:#7a9bbf;">SSID:</span>
-                            <span id="wifi-current-ssid" style="font-weight:500;">--</span>
-                            
-                            <span style="color:#7a9bbf;">IP Address:</span>
-                            <span id="wifi-current-ip" style="font-weight:500;">--</span>
-                            
-                            <span style="color:#7a9bbf;">Signal:</span>
-                            <span id="wifi-current-rssi" style="font-weight:500;">--</span>
-                            
-                            <span style="color:#7a9bbf;">MAC Address:</span>
-                            <span id="wifi-current-mac" style="font-weight:500;">--</span>
-                            
-                            <span style="color:#7a9bbf;">Status:</span>
-                            <span id="wifi-current-status" style="font-weight:500; color:#f9a825;">⏳ Checking...</span>
+                    <div class="sensor-card" style="max-width:100%;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">
+                                📶 Network Status
+                                <span class="badge">Live</span>
+                            </div>
+                            <div class="sensor-card-meta">
+                                <span id="wifi-current-status" style="font-weight:500; color:#f9a825;">⏳ Checking...</span>
+                            </div>
+                        </div>
+                        <div class="sensor-card-body" style="grid-template-columns: 1fr 1fr;">
+                            <div class="field-group">
+                                <label>Mode</label>
+                                <div id="wifi-current-mode" style="font-weight:500; padding:6px 0;">Unknown</div>
+                            </div>
+                            <div class="field-group">
+                                <label>SSID</label>
+                                <div id="wifi-current-ssid" style="font-weight:500; padding:6px 0; font-family:monospace;">--</div>
+                            </div>
+                            <div class="field-group">
+                                <label>IP Address</label>
+                                <div id="wifi-current-ip" style="font-weight:500; padding:6px 0; font-family:monospace;">--</div>
+                            </div>
+                            <div class="field-group">
+                                <label>Signal Strength</label>
+                                <div id="wifi-current-rssi" style="font-weight:500; padding:6px 0;">--</div>
+                            </div>
+                            <div class="field-group">
+                                <label>MAC Address</label>
+                                <div id="wifi-current-mac" style="font-weight:500; padding:6px 0; font-family:monospace;">--</div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- ============================================================ -->
-                    <!-- Mode Selection -->
-                    <!-- ============================================================ -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:500; display:block; margin-bottom:6px;">Mode</label>
-                        <div style="display:flex; flex-direction:column; gap:4px; background:#f8fafd; border-radius:10px; padding:10px 14px; border:1px solid #e6edf6;">
-                            <label style="display:flex; align-items:center; gap:8px; font-size:0.9rem; cursor:pointer;">
-                                <input type="radio" name="wifi-mode-radio" value="0"> AP (Access Point)
-                                <span style="font-size:0.75rem; color:#7a9bbf;">- Devices connect directly to ESP32</span>
-                            </label>
-                            <label style="display:flex; align-items:center; gap:8px; font-size:0.9rem; cursor:pointer;">
-                                <input type="radio" name="wifi-mode-radio" value="1"> STA (Client)
-                                <span style="font-size:0.75rem; color:#7a9bbf;">- ESP32 connects to your WiFi network</span>
-                            </label>
-                            <label style="display:flex; align-items:center; gap:8px; font-size:0.9rem; cursor:pointer;">
-                                <input type="radio" name="wifi-mode-radio" value="2"> AP+STA (Both)
-                                <span style="font-size:0.75rem; color:#7a9bbf;">- Both modes active</span>
-                            </label>
+                    <div class="sensor-card" style="max-width:100%; margin-top:16px;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">📡 WiFi Mode</div>
                         </div>
-                        <button id="wifi-apply-mode" class="btn btn-primary" style="margin-top:6px;">Apply Mode</button>
-                        <div id="wifi-mode-notice" style="font-size:0.8rem; color:#f9a825; margin-top:4px; display:none;">
-                            ⚠️ Mode changed. You may need to reconnect to the new network.
-                        </div>
-                    </div>
-
-                    <!-- ============================================================ -->
-                    <!-- AP Settings (visible when in AP mode) -->
-                    <!-- ============================================================ -->
-                    <div id="wifi-ap-settings" style="margin-bottom:16px; display:none; background:#f0f7ff; border-radius:10px; padding:12px 16px; border:1px solid #2b7be4;">
-                        <h4 style="margin:0 0 6px 0; font-size:0.95rem; color:#0a2744;">📡 AP Mode Settings</h4>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px 16px; font-size:0.85rem;">
-                            <span style="color:#7a9bbf;">AP SSID:</span>
-                            <span id="wifi-ap-ssid" style="font-weight:500; font-family:monospace;">--</span>
-                            <span style="color:#7a9bbf;">AP Password:</span>
-                            <span id="wifi-ap-password" style="font-weight:500; font-family:monospace;">--</span>
-                            <span style="color:#7a9bbf;">AP IP:</span>
-                            <span id="wifi-ap-ip" style="font-weight:500; font-family:monospace;">192.168.4.1</span>
+                        <div class="sensor-card-body" style="grid-template-columns: 1fr;">
+                            <div class="field-group">
+                                <div style="display:flex; flex-direction:column; gap:6px; background:#f8fafd; border-radius:10px; padding:12px 16px; border:1px solid #e6edf6;">
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:0.9rem; cursor:pointer;">
+                                        <input type="radio" name="wifi-mode-radio" value="0"> AP (Access Point)
+                                        <span style="font-size:0.75rem; color:#7a9bbf;">- Devices connect directly to ESP32</span>
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:0.9rem; cursor:pointer;">
+                                        <input type="radio" name="wifi-mode-radio" value="1"> STA (Client)
+                                        <span style="font-size:0.75rem; color:#7a9bbf;">- ESP32 connects to your WiFi network</span>
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:0.9rem; cursor:pointer;">
+                                        <input type="radio" name="wifi-mode-radio" value="2"> AP+STA (Both)
+                                        <span style="font-size:0.75rem; color:#7a9bbf;">- Both modes active</span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                                    <button id="wifi-apply-mode" class="btn btn-primary">Apply Mode</button>
+                                    <div id="wifi-mode-notice" style="font-size:0.8rem; color:#f9a825; margin-top:4px; display:none;">
+                                        ⚠️ Mode changed. You may need to reconnect to the new network.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- ============================================================ -->
-                    <!-- Connect to STA Network - TWO COLUMN LAYOUT -->
-                    <!-- ============================================================ -->
-                    <div style="margin-bottom:16px;">
-                        <label style="font-weight:500; display:block; margin-bottom:6px;">🔍 Connect to WiFi Network (STA Mode)</label>
-                        
-                        <!-- Two column layout: Left = Input fields, Right = Scan results -->
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start;">
-                            
-                            <!-- LEFT COLUMN: Input fields -->
-                            <div>
-                                <!-- SSID with Scan button inline -->
-                                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                    <div id="wifi-ap-settings" style="margin-top:16px; display:none;">
+                        <div class="sensor-card" style="max-width:100%; background:#f0f7ff; border-color:#2b7be4;">
+                            <div class="sensor-card-header">
+                                <div class="sensor-card-title">📡 AP Mode Settings</div>
+                            </div>
+                            <div class="sensor-card-body" style="grid-template-columns: 1fr 1fr;">
+                                <div class="field-group">
+                                    <label>AP SSID</label>
+                                    <div id="wifi-ap-ssid" style="font-weight:500; font-family:monospace; padding:6px 0;">--</div>
+                                </div>
+                                <div class="field-group">
+                                    <label>AP Password</label>
+                                    <div id="wifi-ap-password" style="font-weight:500; font-family:monospace; padding:6px 0;">--</div>
+                                </div>
+                                <div class="field-group">
+                                    <label>AP IP</label>
+                                    <div id="wifi-ap-ip" style="font-weight:500; font-family:monospace; padding:6px 0;">192.168.4.1</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sensor-card" style="max-width:100%; margin-top:16px;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">🔍 Connect to WiFi Network (STA Mode)</div>
+                        </div>
+                        <div class="sensor-card-body" style="grid-template-columns: 1fr 1fr;">
+                            <div class="field-group" style="grid-column: 1;">
+                                <label>SSID</label>
+                                <div style="display:flex; gap:8px; align-items:center;">
                                     <input type="text" id="wifi-ssid-input" placeholder="Enter SSID" 
                                            style="flex:1; padding:6px 10px; border-radius:8px; border:1px solid #dde6ef; min-width:0;">
                                     <button id="wifi-scan" class="btn btn-primary" style="padding:6px 16px; white-space:nowrap;">🔍 Scan</button>
                                 </div>
-                                
-                                <!-- Password field -->
-                                <div style="margin-bottom:8px;">
-                                    <input type="password" id="wifi-password" placeholder="Enter password" 
-                                           style="width:100%; padding:6px 10px; border-radius:8px; border:1px solid #dde6ef;">
-                                </div>
-                                
-                                <!-- Action buttons -->
+                            </div>
+                            
+                            <div class="field-group" style="grid-column: 1;">
+                                <label>Password</label>
+                                <input type="password" id="wifi-password" placeholder="Enter password" 
+                                       style="width:100%; padding:6px 10px; border-radius:8px; border:1px solid #dde6ef;">
+                            </div>
+                            
+                            <div class="field-group" style="grid-column: 1;">
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                                     <button id="wifi-connect" class="btn btn-success">Connect to STA</button>
                                     <button id="wifi-forget" class="btn btn-danger">Forget Network</button>
                                 </div>
-                                
-                                <!-- Status message -->
                                 <div id="wifi-status-message" style="padding:8px 12px; border-radius:8px; margin-top:8px; display:none;"></div>
                             </div>
                             
-                            <!-- RIGHT COLUMN: Scan Results -->
-                            <div id="wifi-scan-container" style="background:#f8fafd; border-radius:10px; padding:10px; border:1px solid #e6edf6; min-height:120px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                    <span style="font-weight:500; font-size:0.85rem; color:#1f4a7a;">📶 Available Networks</span>
-                                    <span id="wifi-scan-count" style="font-size:0.7rem; color:#7a9bbf;">0 networks</span>
-                                </div>
-                                <div id="wifi-scan-results" style="max-height:200px; overflow-y:auto;">
-                                    <ul id="wifi-network-list" style="list-style:none; padding:0; margin:0;"></ul>
-                                    <div id="wifi-scan-placeholder" style="color:#7a9bbf; font-size:0.85rem; padding:20px; text-align:center;">
-                                        Click "Scan" to find networks
+                            <div class="field-group" style="grid-column: 2; grid-row: 1 / span 3;">
+                                <label>Available Networks</label>
+                                <div id="wifi-scan-container" style="background:#f8fafd; border-radius:10px; padding:10px; border:1px solid #e6edf6; min-height:120px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                        <span style="font-weight:500; font-size:0.85rem; color:#1f4a7a;">📶 Networks</span>
+                                        <span id="wifi-scan-count" style="font-size:0.7rem; color:#7a9bbf;">0 networks</span>
+                                    </div>
+                                    <div id="wifi-scan-results" style="max-height:200px; overflow-y:auto;">
+                                        <ul id="wifi-network-list" style="list-style:none; padding:0; margin:0;"></ul>
+                                        <div id="wifi-scan-placeholder" style="color:#7a9bbf; font-size:0.85rem; padding:20px; text-align:center;">
+                                            Click "Scan" to find networks
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -211,146 +260,176 @@
                     </div>
                 </div>
 
-                <!-- NTP Tab -->
                 <div class="tab-panel" id="tab-ntp">
                     <h3>NTP Settings</h3>
-                    <div class="config-group" style="background:#f8fafd; padding:12px 16px; border-radius:8px;">
-                        <label>NTP Status</label>
-                        <div id="ntp-status" style="font-weight:500;">⏳ Checking...</div>
+                    <div class="sensor-card" style="max-width:100%;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">🕐 Time Synchronization</div>
+                            <div class="sensor-card-meta">
+                                <span id="ntp-status" style="font-weight:500;">⏳ Checking...</span>
+                            </div>
+                        </div>
+                        <div class="sensor-card-body">
+                            <div class="field-group" style="grid-column: 1 / -1;">
+                                <label>Current System Time</label>
+                                <div id="ntp-current-time" style="font-weight:500; font-size:1.2rem; padding:6px 0;">--:--:--</div>
+                            </div>
+                            <div class="field-group">
+                                <label>NTP Servers (comma-separated)</label>
+                                <input type="text" id="ntp-servers" value="pool.ntp.org,time.google.com,time.cloudflare.com" style="width:100%;">
+                            </div>
+                            <div class="field-group">
+                                <label>Manual Time</label>
+                                <input type="datetime-local" id="manual-time" style="width:100%;">
+                                <button id="set-manual-time" class="btn btn-primary" style="margin-top:4px;">Set Manual Time</button>
+                            </div>
+                        </div>
+                        <div class="sensor-card-footer">
+                            <button id="ntp-sync-now" class="btn btn-success">🔄 Sync Now</button>
+                        </div>
                     </div>
-                    <div class="config-group">
-                        <label>Current System Time</label>
-                        <div id="ntp-current-time" style="font-weight:500; font-size:1.1rem;">--:--:--</div>
-                    </div>
-                    <div class="config-group">
-                        <label>NTP Servers (comma-separated)</label>
-                        <input type="text" id="ntp-servers" value="pool.ntp.org,time.google.com,time.cloudflare.com">
-                    </div>
-                    <div class="config-group">
-                        <label>Timezone</label>
-                        <select id="ntp-timezone">
-                            <option value="EET-3">UTC+3 (Istanbul)</option>
-                            <option value="UTC0">UTC</option>
-                            <option value="EST5EDT">US Eastern</option>
-                            <option value="CST6CDT">US Central</option>
-                            <option value="PST8PDT">US Pacific</option>
-                            <option value="GMT0BST">UK (GMT/BST)</option>
-                            <option value="CET-1CEST">Central Europe</option>
-                            <option value="JST-9">Japan (JST)</option>
-                        </select>
-                    </div>
-                    <div class="config-group">
-                        <label>Manual Time</label>
-                        <input type="datetime-local" id="manual-time">
-                        <button id="set-manual-time" class="btn btn-primary" style="margin-top:4px;">Set Manual Time</button>
-                    </div>
-                    <button id="ntp-sync-now" class="btn btn-success">🔄 Sync Now</button>
                 </div>
 
-                <!-- MODBUS Tab -->
                 <div class="tab-panel" id="tab-modbus">
                     <h3>MODBUS Settings</h3>
-                    <div class="config-group">
-                        <label>Port</label>
-                        <input type="number" id="modbus-port" value="502" readonly>
+                    <div class="sensor-card" style="max-width:100%;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">🔌 MODBUS Configuration</div>
+                        </div>
+                        <div class="sensor-card-body">
+                            <div class="field-group">
+                                <label>Port</label>
+                                <input type="number" id="modbus-port" value="502" readonly style="width:100%;">
+                            </div>
+                            <div class="field-group">
+                                <label>Interval (ms)</label>
+                                <input type="number" id="modbus-interval-2" value="1000" min="10" max="10000" style="width:100%;">
+                            </div>
+                            <div class="field-group" style="grid-column: 1 / -1;">
+                                <label>Register Mapping</label>
+                                <div id="modbus-map-table">
+                                    <table>
+                                        <thead>
+                                            <tr><th>Address</th><th>Type</th><th>Description</th><th>Access</th><th>Action</th></tr>
+                                        </thead>
+                                        <tbody id="modbus-map-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sensor-card-footer">
+                            <button id="modbus-reset-map" class="btn btn-danger">Reset to Defaults</button>
+                        </div>
                     </div>
-                    <div class="config-group">
-                        <label>Interval (ms)</label>
-                        <input type="number" id="modbus-interval-2" value="1000" min="10" max="10000">
-                    </div>
-                    <h4>Register Mapping</h4>
-                    <div id="modbus-map-table">
-                        <table>
-                            <thead>
-                                <tr><th>Address</th><th>Type</th><th>Description</th><th>Access</th><th>Action</th></tr>
-                            </thead>
-                            <tbody id="modbus-map-body"></tbody>
-                        </table>
-                    </div>
-                    <button id="modbus-reset-map">Reset to Defaults</button>
                 </div>
 
-                <!-- Sensors Tab -->
                 <div class="tab-panel" id="tab-sensors">
                     <h3>Sensor Configuration</h3>
                     <div id="sensor-config-list"></div>
-                    <button id="save-sensor-config">Save Sensor Config</button>
+                    <div style="margin-top:16px;">
+                        <button id="save-sensor-config" class="btn btn-primary">💾 Save Sensor Config</button>
+                    </div>
                 </div>
 
-                <!-- Relays Tab -->
                 <div class="tab-panel" id="tab-relays">
                     <h3>Relay Configuration</h3>
                     <div id="relay-config-list"></div>
-                    <button id="save-relay-config">Save Relay Config</button>
+                    <div style="margin-top:16px;">
+                        <button id="save-relay-config" class="btn btn-primary">💾 Save Relay Config</button>
+                    </div>
                 </div>
 
-                <!-- Logging Tab -->
                 <div class="tab-panel" id="tab-logging">
                     <h3>Logging</h3>
-                    <div id="log-file-list">
-                        <table>
-                            <thead>
-                                <tr><th>Name</th><th>Size</th><th>Modified</th><th>Actions</th></tr>
-                            </thead>
-                            <tbody id="log-file-body"></tbody>
-                        </table>
-                    </div>
-                    <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;">
-                        <button id="download-all-logs" class="btn btn-primary">📥 Download All</button>
-                        <button id="erase-all-logs" class="btn btn-danger">🗑️ Erase All Logs</button>
+                    <div class="sensor-card" style="max-width:100%;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">📄 Log Files</div>
+                        </div>
+                        <div class="sensor-card-body">
+                            <div class="field-group" style="grid-column: 1 / -1;">
+                                <div id="log-file-list">
+                                    <table>
+                                        <thead>
+                                            <tr><th>Name</th><th>Size</th><th>Modified</th><th>Actions</th></tr>
+                                        </thead>
+                                        <tbody id="log-file-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sensor-card-footer">
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button id="download-all-logs" class="btn btn-primary">📥 Download All</button>
+                                <button id="erase-all-logs" class="btn btn-danger">🗑️ Erase All Logs</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Email Configuration Section -->
                 <div class="tab-panel" id="tab-email">
-                    <h3>Email Notification</h2>
-                    <div class="config-grid">
-                        <div class="config-group config-field-checkbox">
-                            <label for="email_enabled">Enable Email</label>
-                            <input type="checkbox" id="email_enabled" class="config-toggle">
+                    <h3>Email Notification</h3>
+                    <div class="sensor-card" style="max-width:100%;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">📧 Email Settings</div>
+                            <div class="sensor-card-meta">
+                                <span class="badge">SMTP</span>
+                            </div>
                         </div>
-                        
-                        <div class="config-group">
-                            <label for="email_smtp_server">SMTP Server *</label>
-                            <input type="text" id="email_smtp_server" placeholder="smtp.gmail.com">
+                        <div class="sensor-card-body">
+                            <div class="field-group">
+                                <label>Enable Email</label>
+                                <div style="display:flex; align-items:center; gap:8px; padding:4px 0;">
+                                    <input type="checkbox" id="email_enabled" class="config-toggle" style="width:18px; height:18px;">
+                                    <span style="font-size:0.9rem;">Enabled</span>
+                                </div>
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>SMTP Server *</label>
+                                <input type="text" id="email_smtp_server" placeholder="smtp.gmail.com" style="width:100%;">
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>SMTP Port *</label>
+                                <input type="number" id="email_smtp_port" placeholder="587" style="width:100%;">
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>Username *</label>
+                                <input type="text" id="email_username" placeholder="your-email@gmail.com" style="width:100%;">
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>Password *</label>
+                                <input type="password" id="email_password" placeholder="Enter password" style="width:100%;">
+                            </div>
+
+                            <div class="field-group">
+                                <label>From Address *</label>
+                                <input type="email" id="email_from" placeholder="sender@example.com" style="width:100%;">
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>To Addresses *</label>
+                                <input type="text" id="email_to" placeholder="user1@example.com, user2@example.com" style="width:100%;">
+                                <span class="field-hint" style="display:block; font-size:0.75rem; color:#7a9bbf; margin-top:4px;">Separate multiple with commas</span>
+                            </div>
+                            
+                            <div class="field-group">
+                                <label>Use TLS</label>
+                                <div style="display:flex; align-items:center; gap:8px; padding:4px 0;">
+                                    <input type="checkbox" id="email_tls" class="config-toggle" checked style="width:18px; height:18px;">
+                                    <span style="font-size:0.9rem;">Enabled</span>
+                                </div>
+                            </div>
                         </div>
-                        
-                        <div class="config-group">
-                            <label for="email_smtp_port">SMTP Port *</label>
-                            <input type="number" id="email_smtp_port" placeholder="587">
-                        </div>
-                        
-                        <div class="config-group">
-                            <label for="email_username">Username *</label>
-                            <input type="text" id="email_username" placeholder="your-email@gmail.com">
-                        </div>
-                        
-                        <div class="config-group">
-                            <label for="email_password">Password *</label>
-                            <input type="password" id="email_password" placeholder="Enter password">
-                        </div>
-                        
-                        <div class="config-group">
-                            <label for="email_from">From Address *</label>
-                            <input type="email" id="email_from" placeholder="sender@example.com">
-                        </div>
-                        
-                        <div class="config-group">
-                            <label for="email_to">To Addresses *</label>
-                            <input type="text" id="email_to" placeholder="user1@example.com, user2@example.com">
-                            <span class="field-hint">Separate multiple with commas</span>
-                        </div>
-                        
-                        <div class="config-group config-field-checkbox">
-                            <label for="email_tls">Use TLS</label>
-                            <input type="checkbox" id="email_tls" class="config-toggle" checked>
-                        </div>
-                        
-                        <div class="config-actions">
-                            <button onclick="saveEmailConfig()" class="btn-primary">Save Settings</button>
-                            <button onclick="testEmailConfig()" class="btn-secondary">Test Email</button>
-                            <button onclick="resetEmailForm()" class="btn-secondary">Reset</button>
-                            <button onclick="clearEmailFields()" class="btn-secondary" style="background:#dc3545;">Clear</button>
+                        <div class="sensor-card-footer">
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button onclick="saveEmailConfig()" class="btn btn-primary">💾 Save Settings</button>
+                                <button onclick="testEmailConfig()" class="btn btn-success">📧 Test Email</button>
+                                <button onclick="resetEmailForm()" class="btn btn-warning">↩️ Reset</button>
+                                <button onclick="clearEmailFields()" class="btn btn-danger">🗑️ Clear</button>
+                            </div>
                         </div>
                     </div>
                 </div>

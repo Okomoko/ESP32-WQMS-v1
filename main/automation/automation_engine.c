@@ -75,10 +75,9 @@ static void fire_rule_outputs(automation_rule_t *rule) {
         char message[256];
         snprintf(message, sizeof(message), 
                  "Rule #%d '%s': Email notification to %s", rule->rule_id, rule->name, rule->email_recipient);
-            email_send_notification("Automation Alert", 
-                                    message);
-            AUTO_LOG_I("Rule #%d '%s': Email notification to %s",
-                       rule->rule_id, rule->name, rule->email_recipient);
+        AUTO_LOG_I(message);
+        email_send_notification("Automation Alert", 
+                                message);
         }
     }
 }
@@ -87,14 +86,16 @@ static void fire_rule_outputs(automation_rule_t *rule) {
 // Automation Evaluation Task
 // ============================================================
 static void automation_task(void *pvParameters) {
+    uint32_t AUTOMATION_REFRESH_CYCLE;
+    AUTOMATION_REFRESH_CYCLE = nvs_get_automation_interval();
     AUTO_LOG_I("Automation engine task started");
     
     while (1) {
         automation_evaluate();
         watchdog_heartbeat(WDT_MODULE_AUTOMATION);
         
-        // Wait for next interval (1 second)
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        // Wait for next interval (in seconds)
+        vTaskDelay(pdMS_TO_TICKS(AUTOMATION_REFRESH_CYCLE * 1000));
     }
 }
 

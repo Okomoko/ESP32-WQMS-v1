@@ -25,6 +25,7 @@
 #define NVS_KEY_INTEGRATION_URL "int_url"
 #define NVS_KEY_INTEGRATION_INT "int_int"
 #define NVS_KEY_CONFIG_VERSION  "cfg_ver"
+#define NVS_KEY_AUTOMATION_INT  "auto_int"
 
 #define NVS_KEY_SENSOR_PREFIX   "sens_"
 #define NVS_KEY_RELAY_PREFIX    "relay_"
@@ -71,6 +72,9 @@ void nvs_set_integration_url(const char *url);
 
 uint32_t nvs_get_integration_interval(void);
 void nvs_set_integration_interval(uint32_t sec);
+
+uint32_t nvs_get_automation_interval(void);
+void nvs_set_automation_interval(uint32_t sec);
 
 // ============================================================
 // MODBUS Map Configuration

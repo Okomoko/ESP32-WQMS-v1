@@ -225,7 +225,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
                     configs[idx].calibration_factor = cal->valueint;
                 }
                 if (unit && cJSON_IsNumber(unit)) {
-					APP_LOG_I("Sensor: %d, Unit: %d", id->valueint, unit->valueint);
+                    APP_LOG_I("Sensor: %d, Unit: %d", id->valueint, unit->valueint);
                     configs[idx].unit = unit->valueint;
                 }
             }
@@ -485,11 +485,11 @@ esp_err_t config_get_handler(httpd_req_t *req) {
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "system_name", nvs_get_system_name());
     cJSON_AddStringToObject(root, "system_location", nvs_get_system_location());
-    cJSON_AddStringToObject(root, "timezone", nvs_get_timezone());
     cJSON_AddNumberToObject(root, "sample_interval_ms", nvs_get_sample_interval());
     cJSON_AddNumberToObject(root, "modbus_interval_ms", nvs_get_modbus_interval());
     cJSON_AddStringToObject(root, "integration_url", nvs_get_integration_url());
     cJSON_AddNumberToObject(root, "integration_interval_sec", nvs_get_integration_interval());
+    cJSON_AddNumberToObject(root, "automation_interval_sec", nvs_get_automation_interval());
     cJSON_AddStringToObject(root, "ntp_servers", ntp_get_servers());
     
     cJSON_AddStringToObject(root, "wifi_ssid", wifi_get_ssid());
@@ -531,12 +531,6 @@ esp_err_t config_post_handler(httpd_req_t *req) {
         API_LOG_I("System location updated to: %s", item->valuestring);
     }
     
-    item = cJSON_GetObjectItem(json, "timezone");
-    if (item && cJSON_IsString(item)) {
-        ntp_set_timezone(item->valuestring);
-        API_LOG_I("Timezone updated to: %s", item->valuestring);
-    }
-    
     item = cJSON_GetObjectItem(json, "sample_interval_ms");
     if (item && cJSON_IsNumber(item)) {
         nvs_set_sample_interval(item->valueint);
@@ -559,6 +553,12 @@ esp_err_t config_post_handler(httpd_req_t *req) {
     if (item && cJSON_IsNumber(item)) {
         nvs_set_integration_interval(item->valueint);
         API_LOG_I("Integration interval updated to: %d sec", item->valueint);
+    }
+    
+    item = cJSON_GetObjectItem(json, "automation_interval_sec");
+    if (item && cJSON_IsNumber(item)) {
+        nvs_set_automation_interval(item->valueint);
+        API_LOG_I("Automation interval updated to: %d sec", item->valueint);
     }
     
     item = cJSON_GetObjectItem(json, "ntp_servers");

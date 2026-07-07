@@ -1165,138 +1165,6 @@ async function fetchAdcPinMapping() {
     }
 }
 
-/**
- * Update sensor configuration with GPIO info
- */
-async function updateSensorGpioInfo() {
-    const mapping = await fetchAdcPinMapping();
-    if (!mapping) return;
-    
-    // Find all sensor config items and add GPIO info
-    const sensorItems = document.querySelectorAll('.sensor-config-item, .sensor-card');
-    sensorItems.forEach(item => {
-        // Try to find sensor name
-        const nameElement = item.querySelector('.sensor-name, .sensor-card-title');
-        if (!nameElement) return;
-        
-        const sensorName = nameElement.textContent.trim();
-        // Extract sensor name (e.g., "pH Sensor" -> "pH")
-        const nameParts = sensorName.split(' ');
-        const shortName = nameParts[0];
-        
-        // Find GPIO info from mapping
-        // You'll need to map sensor name to ADC channel
-        // For example: pH -> ADC4, ORP -> ADC5, etc.
-        let gpio = 'N/A';
-        
-        // This mapping should match your hardware configuration
-        const sensorAdcMap = {
-            'pH': 'ADC4',
-            'ORP': 'ADC5',
-            'TDS': 'ADC6',
-            'TEMP': 'ADC7'
-        };
-        
-        const adcChannel = sensorAdcMap[shortName];
-        if (adcChannel && mapping[adcChannel]) {
-            gpio = `GPIO${mapping[adcChannel]}`;
-        }
-        
-        // Add GPIO info to the sensor card
-        const metaElement = item.querySelector('.sensor-meta, .sensor-card-meta');
-        if (metaElement) {
-            // Check if GPIO info already exists
-            let gpioElement = metaElement.querySelector('.gpio-info');
-            if (!gpioElement) {
-                gpioElement = document.createElement('span');
-                gpioElement.className = 'gpio-info';
-                metaElement.appendChild(gpioElement);
-            }
-            gpioElement.textContent = `🔌 ${gpio}`;
-            gpioElement.style.cssText = `
-                display: inline-block;
-                padding: 2px 10px;
-                background: #e6edf6;
-                border-radius: 12px;
-                font-size: 0.7rem;
-                color: #1f4a7a;
-                font-weight: 500;
-            `;
-        }
-    });
-}
-
-/**
- * Add GPIO tooltip to sensor config fields
- */
-async function addGpioTooltips() {
-    const mapping = await fetchAdcPinMapping();
-    if (!mapping) return;
-    
-    // Find all input fields with GPIO-related labels
-    const configGroups = document.querySelectorAll('.config-group');
-    configGroups.forEach(group => {
-        const label = group.querySelector('label');
-        if (!label) return;
-        
-        const labelText = label.textContent.toLowerCase();
-        // Check if this is a sensor pin configuration
-        if (labelText.includes('pin') || labelText.includes('gpio') || 
-            labelText.includes('adc') || labelText.includes('channel')) {
-            
-            // Try to extract the sensor name from the label
-            const sensorMatch = labelText.match(/(\w+)\s+(pin|gpio|adc|channel)/i);
-            if (sensorMatch) {
-                const sensorName = sensorMatch[1].toUpperCase();
-                
-                // Find GPIO pin
-                const sensorAdcMap = {
-                    'PH': 'ADC4',
-                    'ORP': 'ADC5', 
-                    'TDS': 'ADC6',
-                    'TEMP': 'ADC7'
-                };
-                
-                const adcChannel = sensorAdcMap[sensorName];
-                if (adcChannel && mapping[adcChannel]) {
-                    const gpio = mapping[adcChannel];
-                    
-                    // Add a small indicator next to the label
-                    const infoSpan = document.createElement('span');
-                    infoSpan.className = 'gpio-hint';
-                    infoSpan.textContent = `📍 GPIO${gpio}`;
-                    infoSpan.style.cssText = `
-                        display: inline-block;
-                        margin-left: 8px;
-                        padding: 1px 8px;
-                        background: #dde6ef;
-                        border-radius: 10px;
-                        font-size: 0.7rem;
-                        color: #1f4a7a;
-                        font-weight: 400;
-                    `;
-                    label.appendChild(infoSpan);
-                }
-            }
-        }
-    });
-}
-
-/**
- * Get GPIO pin for a specific sensor
- */
-async function getSensorGpio(sensorName) {
-    try {
-        const response = await fetch(`/api/sensor/gpio?sensor=${encodeURIComponent(sensorName)}`);
-        if (!response.ok) throw new Error('Failed to fetch GPIO info');
-        const data = await response.json();
-        return data.gpio || 'N/A';
-    } catch (error) {
-        console.error('Failed to fetch GPIO for', sensorName, error);
-        return 'N/A';
-    }
-}
-
 // ============================================================
 // Initialize Configuration
 // ============================================================
@@ -1323,6 +1191,7 @@ async function initConfiguration() {
             'modbus-interval': config.modbus_interval_ms || 1000,
             'integration-url': config.integration_url || '',
             'integration-interval': config.integration_interval_sec || 60,
+            'automation-interval': config.automation_interval_sec || 60,
             'ntp-servers': config.ntp_servers || '',
             'ntp-timezone': config.timezone || 'EET-3',
             'wifi-ssid-input': config.wifi_ssid || ''
@@ -1345,6 +1214,7 @@ async function initConfiguration() {
             modbus_interval_ms: parseInt(document.getElementById('modbus-interval').value) || 1000,
             integration_url: document.getElementById('integration-url').value,
             integration_interval_sec: parseInt(document.getElementById('integration-interval').value) || 60,
+            automation_interval_sec: document.getElementById('automation-interval').value || 60,
             ntp_servers: document.getElementById('ntp-servers') ? document.getElementById('ntp-servers').value : '',
             modbus_interval_ms: parseInt(document.getElementById('modbus-interval-2').value) || 1000
         };
@@ -1378,10 +1248,5 @@ async function initConfiguration() {
     document.getElementById('save-sensor-config')?.addEventListener('click', saveSensorConfig);
     document.getElementById('save-relay-config')?.addEventListener('click', saveRelayConfig);
 
-    setTimeout(() => {
-        updateSensorGpioInfo();
-        addGpioTooltips();
-    }, 500);
-    
     setInterval(updateHeader, REFRESH_INTERVAL);
 }

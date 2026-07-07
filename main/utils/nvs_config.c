@@ -48,7 +48,7 @@ static void load_default_sensor_configs(sensor_config_t *config, int count) {
         config[i].calibration_factor = 1000;
         config[i].min_value = default_sensor_min[i];
         config[i].max_value = default_sensor_max[i];
-		config[i].unit = 0; //blank
+        config[i].unit = 0; //blank
     }
 }
 
@@ -131,7 +131,8 @@ static char timezone[16] = "EET-3";
 static uint32_t sample_interval_ms = 1000;
 static uint32_t modbus_interval_ms = 1000;
 static char integration_url[128] = "https://api.example.com/water";
-static uint32_t integration_interval_sec = 60;
+static uint32_t integration_interval_sec = DEFAULT_INTEGRATION_INTERVAL_SEC;
+static uint32_t automation_interval_sec = DEFAULT_AUTOMATION_INTERVAL_SEC;
 
 // ============================================================
 // Public Functions - System Config
@@ -181,8 +182,9 @@ void nvs_config_load(void) {
     
     sample_interval_ms = wqms_nvs_get_u32(NVS_KEY_SAMPLE_INTERVAL, 1000);
     modbus_interval_ms = wqms_nvs_get_u32(NVS_KEY_MODBUS_INTERVAL, 1000);
-    integration_interval_sec = wqms_nvs_get_u32(NVS_KEY_INTEGRATION_INT, 60);
+    integration_interval_sec = wqms_nvs_get_u32(NVS_KEY_INTEGRATION_INT, DEFAULT_INTEGRATION_INTERVAL_SEC);
     wqms_nvs_get_str(NVS_KEY_INTEGRATION_URL, integration_url, sizeof(integration_url));
+    automation_interval_sec = wqms_nvs_get_u32(NVS_KEY_AUTOMATION_INT, DEFAULT_AUTOMATION_INTERVAL_SEC);
     
     WQMS_LOG_I("Config loaded: system='%s', location='%s', interval=%lu ms", 
                system_name, system_location, sample_interval_ms);
@@ -196,6 +198,7 @@ void nvs_config_save(void) {
     wqms_nvs_set_u32(NVS_KEY_MODBUS_INTERVAL, modbus_interval_ms);
     wqms_nvs_set_u32(NVS_KEY_INTEGRATION_INT, integration_interval_sec);
     wqms_nvs_set_str(NVS_KEY_INTEGRATION_URL, integration_url);
+    wqms_nvs_set_u32(NVS_KEY_AUTOMATION_INT, automation_interval_sec);
     WQMS_LOG_I("Config saved");
 }
 
@@ -206,6 +209,7 @@ uint32_t nvs_get_sample_interval(void) { return sample_interval_ms; }
 uint32_t nvs_get_modbus_interval(void) { return modbus_interval_ms; }
 const char* nvs_get_integration_url(void) { return integration_url; }
 uint32_t nvs_get_integration_interval(void) { return integration_interval_sec; }
+uint32_t nvs_get_automation_interval(void) { return automation_interval_sec; }
 
 void nvs_set_system_name(const char *name) {
     if (name) {
@@ -259,6 +263,12 @@ void nvs_set_integration_interval(uint32_t sec) {
     integration_interval_sec = sec;
     wqms_nvs_set_u32(NVS_KEY_INTEGRATION_INT, integration_interval_sec);
     WQMS_LOG_I("Integration interval updated to: %lu sec", integration_interval_sec);
+}
+
+void nvs_set_automation_interval(uint32_t sec) {
+    automation_interval_sec = sec;
+    wqms_nvs_set_u32(NVS_KEY_AUTOMATION_INT, automation_interval_sec);
+    WQMS_LOG_I("Automation interval updated to: %lu sec", automation_interval_sec);
 }
 
 // ============================================================

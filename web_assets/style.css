@@ -864,9 +864,9 @@ tr:hover {
     font-size: 0.7rem;
     color: #7a9bbf;
     font-weight: 500;
-    text-transform: uppercase;
     letter-spacing: 0.3px;
 }
+/*    text-transform: uppercase;*/
 
 .sensor-card-body .field-group input[type="text"],
 .sensor-card-body .field-group input[type="number"] {
