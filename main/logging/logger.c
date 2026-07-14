@@ -24,10 +24,11 @@ static const char *log_type_names[] = {
     [WQMS_LOG_TYPE_SYSTEM] = "SYS",
     [WQMS_LOG_TYPE_APPLICATION] = "APPL",
     [WQMS_LOG_TYPE_AUTOMATION] = "AUTO",
-    [WQMS_LOG_TYPE_NOTIFICATION] = "NOTF",
-    [WQMS_LOG_TYPE_SENSOR] = "SENS",
-    [WQMS_LOG_TYPE_RELAY] = "RELY",
-    [WQMS_LOG_TYPE_API] = "API"
+    [WQMS_LOG_TYPE_NOTIFICATION] = "APPL",
+    [WQMS_LOG_TYPE_INTEGRATION] = "APPL",
+    [WQMS_LOG_TYPE_SENSOR] = "APPL",
+    [WQMS_LOG_TYPE_RELAY] = "APPL",
+    [WQMS_LOG_TYPE_API] = "APPL"
 };
 
 static const char *log_level_names[] = {

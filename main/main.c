@@ -5,6 +5,7 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "driver/gpio.h"
 #include "esp_system.h"
 #include "esp_flash.h"
 #include "nvs_flash.h"
@@ -22,11 +23,12 @@
 #include "nvs_config.h"
 #include "wifi_manager.h"
 #include "email_client.h"
+#include "relay_control.h"
 
 // ============================================================
 // System Version
 // ============================================================
-#define FW_VERSION "v1.0.0"
+#define FW_VERSION "v1.0.1"
 
 // ============================================================
 // External function prototypes
@@ -168,10 +170,10 @@ void app_main(void) {
     WQMS_LOG_I("Reboot notification is sent.");
 
     // ============================================================
-    // Step 10: Start Sensor Polling (ADC DMA)
+    // Step 10: Start Web Server
     // ============================================================
-    sensor_init();
-//    WQMS_LOG_I("Sensor subsystem initialized");
+    webserver_init();
+//    WQMS_LOG_I("Web server initialized");
     
     // ============================================================
     // Step 11: Start Relay Control
@@ -180,22 +182,22 @@ void app_main(void) {
 //    WQMS_LOG_I("Relay subsystem initialized");
     
     // ============================================================
-    // Step 12: Start Automation Engine
+    // Step 12: Start Sensor Polling (ADC DMA)
+    // ============================================================
+    sensor_init();
+//    WQMS_LOG_I("Sensor subsystem initialized");
+    
+    // ============================================================
+    // Step 13: Start Automation Engine
     // ============================================================
     automation_init();
 //    WQMS_LOG_I("Automation engine initialized");
     
     // ============================================================
-    // Step 13: Start MODBUS Slave
+    // Step 14: Start MODBUS Slave
     // ============================================================
     modbus_init();
 //    WQMS_LOG_I("MODBUS slave initialized");
-    
-    // ============================================================
-    // Step 14: Start Web Server
-    // ============================================================
-    webserver_init();
-//    WQMS_LOG_I("Web server initialized");
     
     // ============================================================
     // Step 15: Start Integration Uploads
@@ -210,10 +212,18 @@ void app_main(void) {
     WQMS_LOG_I("WQMS System Ready");
     WQMS_LOG_I("============================================");
     WQMS_LOG_I("Free heap: %lu bytes", esp_get_free_heap_size());
-    
+
+//    int led_gpio = 1;
+//    gpio_set_direction(led_gpio, GPIO_MODE_OUTPUT);
+
     // Send heartbeat to watchdog (main task)
     while (1) {
         watchdog_heartbeat(WDT_MODULE_LOGGING);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+//        gpio_set_level(led_gpio, RELAY_STATE_IDLE);
+//        WQMS_LOG_I("GPIO%d : %d", led_gpio, gpio_get_level(led_gpio));
+        vTaskDelay(pdMS_TO_TICKS(500));
+//        gpio_set_level(led_gpio, RELAY_STATE_ACTIVE);
+//        WQMS_LOG_I("GPIO%d : %d", led_gpio, gpio_get_level(led_gpio));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
