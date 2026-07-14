@@ -4,9 +4,11 @@
 #include <string.h>
 #include <stdio.h>
 #include "esp_system.h"
+#include "esp_mac.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 
+//#include "wifi_manager.h"
 #include "nvs_config.h"
 #include "log_levels.h"
 #include "logger.h"
@@ -125,6 +127,7 @@ esp_err_t wqms_nvs_set_u32(const char *key, uint32_t value) {
 // ============================================================
 // Static Variables for System Config
 // ============================================================
+static char system_name_prefix[12] = "WQMS-System";
 static char system_name[32] = "WQMS-System";
 static char system_location[32] = "Unknown";
 static char timezone[16] = "EET-3";
@@ -174,6 +177,10 @@ void nvs_config_load(void) {
         strcpy(system_name, temp_name);
         WQMS_LOG_I("Loaded system_name from NVS: '%s'", system_name);
     } else {
+        uint8_t mac[6];
+        esp_read_mac(mac, ESP_MAC_WIFI_STA);
+        snprintf(system_name, sizeof(system_name), "%s-%02X%02X%02X%02X%02X%02X",
+                 system_name_prefix, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         WQMS_LOG_W("System name not found in NVS (err=%d), using default: '%s'", err, system_name);
     }
     

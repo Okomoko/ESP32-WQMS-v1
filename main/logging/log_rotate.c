@@ -90,6 +90,10 @@ FILE* log_rotate_open(wqms_log_type_t type) {
         }
     }
     
+    if (smallest_size != 0 && smallest_index == 0) {
+        smallest_index = 1;
+    }
+
     // If all files exist, overwrite the smallest (oldest)
     index = smallest_index;
     current_index[type] = index;
