@@ -250,19 +250,24 @@ async function updateModbusAddress(index, address) {
 async function resetModbusMap() {
     if (!confirm('Reset MODBUS map to defaults?')) return;
     const defaults = [
-        { index: 0, address: 0x0000, type: 'Sensor', description: 'pH', access: 'RO' },
-        { index: 1, address: 0x0001, type: 'Sensor', description: 'EC', access: 'RO' },
+        { index: 0, address: 0x0000, type: 'Sensor', description: 'EC', access: 'RO' },
+        { index: 1, address: 0x0001, type: 'Sensor', description: 'pH', access: 'RO' },
         { index: 2, address: 0x0002, type: 'Sensor', description: 'Potassium', access: 'RO' },
         { index: 3, address: 0x0003, type: 'Sensor', description: 'Magnesium', access: 'RO' },
         { index: 4, address: 0x0004, type: 'Sensor', description: 'Iron', access: 'RO' },
         { index: 5, address: 0x0005, type: 'Sensor', description: 'Phosphorus', access: 'RO' },
-        { index: 6, address: 0x0006, type: 'Sensor', description: 'Calcium', access: 'RO' },
-        { index: 7, address: 0x0007, type: 'Sensor', description: 'Nitrogen', access: 'RO' },
-        { index: 8, address: 0x0008, type: 'Sensor', description: 'Temperature', access: 'RO' },
-        { index: 9, address: 0x0009, type: 'Sensor', description: 'Humidity', access: 'RO' },
-        { index: 10, address: 0x0100, type: 'Relay', description: 'Relay 0', access: 'RW' },
-        { index: 11, address: 0x0101, type: 'Relay', description: 'Relay 1', access: 'RW' },
-        { index: 12, address: 0x0102, type: 'Relay', description: 'Relay 2', access: 'RW' }
+        { index: 6, address: 0x0008, type: 'Sensor', description: 'Temperature', access: 'RO' },
+        { index: 7, address: 0x0009, type: 'Sensor', description: 'Humidity', access: 'RO' },
+        { index: 8, address: 0x0100, type: 'Relay', description: 'Relay 0', access: 'RW' },
+        { index: 9, address: 0x0101, type: 'Relay', description: 'Relay 1', access: 'RW' },
+        { index: 10, address: 0x0102, type: 'Relay', description: 'Relay 2', access: 'RW' },
+        { index: 11, address: 0x0103, type: 'Relay', description: 'Relay 3', access: 'RW' },
+        { index: 12, address: 0x0104, type: 'Relay', description: 'Relay 4', access: 'RW' },
+        { index: 13, address: 0x0105, type: 'Relay', description: 'Relay 5', access: 'RW' },
+        { index: 14, address: 0x0106, type: 'Relay', description: 'Relay 6', access: 'RW' },
+        { index: 15, address: 0x0107, type: 'Relay', description: 'Relay 7', access: 'RW' },
+        { index: 16, address: 0x0108, type: 'Relay', description: 'Relay 8', access: 'RW' },
+        { index: 17, address: 0x0109, type: 'Relay', description: 'Relay 9', access: 'RW' }
     ];
     try {
         const result = await api.post('/api/modbus/map', { entries: defaults });
@@ -292,13 +297,14 @@ async function loadLogFiles() {
         
         body.innerHTML = logs.map(log => {
             const date = new Date(log.modified * 1000).toLocaleString();
-            const size = log.size > 1024 ? (log.size / 1024).toFixed(1) + ' KB' : log.size + ' B';
+            const size = formatFileSize(log.size);
             return `
                 <tr>
                     <td>${log.name}</td>
                     <td>${size}</td>
                     <td>${date}</td>
                     <td>
+                        <button onclick="viewLogFile('${log.name}')" class="btn btn-info" style="padding:2px 10px; font-size:0.7rem;">👁️ View</button>
                         <button class="btn btn-primary download-log" data-name="${log.name}" style="padding:2px 12px; font-size:0.7rem;">📥 Download</button>
                         <button class="btn btn-danger erase-log" data-name="${log.name}" style="padding:2px 12px; font-size:0.7rem;">🗑️ Erase</button>
                     </td>
@@ -326,7 +332,47 @@ async function loadLogFiles() {
                 });
             }
         });
-        
+         // ============================================================
+        // MODAL EVENT LISTENERS
+        // ============================================================
+
+		// Close modal with close button
+		const closeBtn = document.getElementById('log-viewer-close');
+		if (closeBtn) {
+			closeBtn.addEventListener('click', closeLogViewer);
+		}
+
+		// Close modal with bottom close button
+		const closeBtn2 = document.getElementById('log-viewer-close-btn');
+		if (closeBtn2) {
+			closeBtn2.addEventListener('click', closeLogViewer);
+		}
+		
+		// Close modal by clicking outside
+		const modal = document.getElementById('log-viewer-modal');
+		if (modal) {
+			modal.addEventListener('click', function(e) {
+				if (e.target === this) {
+					closeLogViewer();
+				}
+			});
+		}
+		
+		// Download viewed log button
+		const downloadBtn = document.getElementById('log-viewer-download');
+		if (downloadBtn) {
+			downloadBtn.addEventListener('click', downloadViewedLog);
+		}
+		
+		// Keyboard shortcut: Escape to close
+		document.addEventListener('keydown', function(e) {
+			if (e.key === 'Escape') {
+				const modal = document.getElementById('log-viewer-modal');
+				if (modal && modal.style.display === 'flex') {
+					closeLogViewer();
+				}
+			}
+        });
     } catch (e) {
         console.warn('Log files load failed:', e);
         const body = document.getElementById('log-file-body');
@@ -345,6 +391,130 @@ async function eraseAllLogs() {
     } catch (e) {
         alert('❌ Failed to erase: ' + e.message);
     }
+}
+
+let logViewerState = {
+    filename: '',
+    content: '',
+    fileSize: 0,
+    fileModified: ''
+};
+
+/**
+ * Open log viewer modal with file content
+ */
+async function viewLogFile(filename) {
+    const modal = document.getElementById('log-viewer-modal');
+    const textElement = document.getElementById('log-viewer-text');
+    const loadingElement = document.getElementById('log-viewer-loading');
+    const errorElement = document.getElementById('log-viewer-error');
+    const titleElement = document.getElementById('log-viewer-title');
+    const infoElement = document.getElementById('log-viewer-info');
+    const downloadBtn = document.getElementById('log-viewer-download');
+    
+    // Show modal
+    modal.style.display = 'flex';
+    
+    // Reset states
+    textElement.textContent = '';
+    textElement.style.display = 'none';
+    loadingElement.style.display = 'flex';
+    errorElement.style.display = 'none';
+    downloadBtn.disabled = true;
+    
+    // Update title
+    titleElement.textContent = `📄 ${filename}`;
+    
+    try {
+        // ✅ Fetch log content as plain text (not JSON)
+        const response = await fetch(`/api/logs?name=${encodeURIComponent(filename)}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // ✅ Get content as text directly (not JSON)
+        const content = await response.text();
+        
+        // Get file size from Content-Length header if available
+        const contentLength = response.headers.get('Content-Length');
+        const fileSize = contentLength ? parseInt(contentLength) : content.length;
+        
+        // Display content
+        textElement.textContent = content;
+        textElement.style.display = 'block';
+        
+        // Store state for download
+        logViewerState = {
+            filename: filename,
+            content: content,
+            fileSize: fileSize,
+            fileModified: '' // We don't get this from text response
+        };
+        
+        // Update info
+        const lineCount = content.split('\n').length;
+        const sizeDisplay = formatFileSize(fileSize);
+        infoElement.textContent = `Size: ${sizeDisplay} | Lines: ${lineCount}`;
+        
+        // Enable download button
+        downloadBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Failed to view log:', error);
+        errorElement.style.display = 'flex';
+        const errorSpan = errorElement.querySelector('span');
+        if (errorSpan) {
+            errorSpan.textContent = `❌ Failed to load log: ${error.message}`;
+        }
+    } finally {
+        loadingElement.style.display = 'none';
+    }
+}
+
+/**
+ * Download current viewed log file
+ */
+function downloadViewedLog() {
+    if (!logViewerState.content) {
+        showNotification('No log content to download', 'error');
+        return;
+    }
+    
+    // Create blob and download
+    const blob = new Blob([logViewerState.content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = logViewerState.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showNotification(`Downloaded: ${logViewerState.filename}`, 'success');
+}
+
+/**
+ * Close log viewer modal
+ */
+function closeLogViewer() {
+    const modal = document.getElementById('log-viewer-modal');
+    modal.style.display = 'none';
+    
+    // Clear content
+    document.getElementById('log-viewer-text').textContent = '';
+    document.getElementById('log-viewer-text').style.display = 'none';
+    logViewerState.content = '';
+}
+
+/**
+ * Format file size for display
+ */
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 // ============================================================

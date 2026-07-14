@@ -1539,3 +1539,338 @@ tr:hover {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* ============================================================
+   LOG VIEWER MODAL
+   ============================================================ */
+
+/* Modal Overlay - Larger size for log viewing */
+.modal-large {
+    max-width: 800px;
+    width: 90%;
+    max-height: 85vh;
+    padding: 24px 28px;
+    background: #1a1a2e;
+    border-radius: 16px;
+    border: 1px solid #2a3a6e;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Modal Header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #2a3a6e;
+    flex-shrink: 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #60a5fa;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    color: #7a8aae;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.modal-close-btn:hover {
+    color: #ff6b6b;
+}
+
+/* Log Content Area */
+#log-viewer-content {
+    flex: 1;
+    min-height: 300px;
+    max-height: 55vh;
+    position: relative;
+    margin: 12px 0;
+    background: #0f0f1a;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.log-text {
+    margin: 0;
+    padding: 16px 20px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #d4e2f0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 55vh;
+    overflow-y: auto;
+    height: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: #2a3a6e transparent;
+}
+
+/* Scrollbar styling for webkit browsers */
+.log-text::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-text::-webkit-scrollbar-track {
+    background: #0f0f1a;
+    border-radius: 4px;
+}
+
+.log-text::-webkit-scrollbar-thumb {
+    background: #2a3a6e;
+    border-radius: 4px;
+}
+
+.log-text::-webkit-scrollbar-thumb:hover {
+    background: #3a4a8e;
+}
+
+/* ============================================================
+   LOG VIEWER MODAL - LIGHT THEME
+   ============================================================ */
+
+/* Modal Overlay - Light theme */
+.modal-large {
+    max-width: 800px;
+    width: 90%;
+    max-height: 85vh;
+    padding: 24px 28px;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e6edf6;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Modal Header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e6edf6;
+    flex-shrink: 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #0a2744;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    color: #7a9bbf;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.modal-close-btn:hover {
+    color: #d32f2f;
+}
+
+/* Log Content Area */
+#log-viewer-content {
+    flex: 1;
+    min-height: 300px;
+    max-height: 55vh;
+    position: relative;
+    margin: 12px 0;
+    background: #f8fafd;
+    border-radius: 10px;
+    border: 1px solid #e6edf6;
+    overflow: hidden;
+}
+
+.log-text {
+    margin: 0;
+    padding: 16px 20px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #1e2b3c;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 55vh;
+    overflow-y: auto;
+    height: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: #dde6ef transparent;
+}
+
+/* Scrollbar styling for webkit browsers */
+.log-text::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-text::-webkit-scrollbar-track {
+    background: #f8fafd;
+    border-radius: 4px;
+}
+
+.log-text::-webkit-scrollbar-thumb {
+    background: #dde6ef;
+    border-radius: 4px;
+}
+
+.log-text::-webkit-scrollbar-thumb:hover {
+    background: #b0c4d9;
+}
+
+/* Log loading/error states - Light theme */
+.log-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #7a9bbf;
+    font-size: 1rem;
+}
+
+.log-error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #d32f2f;
+    font-size: 1rem;
+}
+
+/* Log info and footer - Light theme */
+#log-viewer-info {
+    color: #7a9bbf;
+    font-size: 0.8rem;
+    flex: 1;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 2px solid #e6edf6;
+    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.modal-actions .btn {
+    padding: 6px 18px;
+    font-size: 0.85rem;
+}
+
+/* Button styles for modal */
+.modal-actions .btn-primary {
+    background: #2b7be4;
+    color: #ffffff;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-actions .btn-primary:hover {
+    background: #1a5fb0;
+}
+
+.modal-actions .btn-secondary {
+    background: #e6edf6;
+    color: #1f4a7a;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-actions .btn-secondary:hover {
+    background: #d0ddea;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .modal-large {
+        max-width: 95%;
+        padding: 16px;
+        max-height: 90vh;
+    }
+    
+    #log-viewer-content {
+        max-height: 45vh;
+        min-height: 200px;
+    }
+    
+    .log-text {
+        font-size: 12px;
+        padding: 12px 14px;
+        max-height: 45vh;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .modal-actions {
+        justify-content: center;
+    }
+}
+
+/* Animation for modal */
+.modal-overlay {
+    animation: modalFadeIn 0.25s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Close button for modal (X) */
+#log-viewer-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+    color: #7a9bbf;
+    transition: color 0.2s;
+}
+
+#log-viewer-close:hover {
+    color: #d32f2f;
+}
