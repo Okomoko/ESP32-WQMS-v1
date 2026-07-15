@@ -1,0 +1,17 @@
+#------------------------------------------------------
+#
+# Project created by ViewPLUS SCADA 2026-07-14T21:37:58
+#
+#------------------------------------------------------
+
+SCA_FILES += intro.sca
+BG_COLOR = ffffff
+SHOW_TAGNAMES = 0
+SHOW_BLOCKNO = 0
+SCREEN_HEIGHT = 1080
+SCREEN_WIDTH = 1920
+SHOW_FULLSCREEN = 0
+CHTAG_FILE = ovascada.tcf
+
+PAGE_ORDER = 000
+

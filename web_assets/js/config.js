@@ -50,7 +50,7 @@ async function loadSensorConfig() {
             <div class="sensor-card" style="background:#fff; border-radius:12px; border:1px solid #e6edf6; padding:14px 16px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid #f0f4f9; padding-bottom:8px; margin-bottom:8px;">
                     <strong style="color:#0a2744;">${s.name || 'Sensor ' + s.id}</strong>
-                    <span style="font-size:0.75rem; color:#7a9bbf;">PIN: ${s.gpio_pin || '--'} | ADC: ${adcDisplay} | MODBUS: 0x${(s.modbus_register || 0).toString(16).toUpperCase().padStart(4, '0')}</span>
+                    <span style="font-size:0.75rem; color:#7a9bbf;">PIN: ${s.gpio_pin || '--'} | ADC: ${adcDisplay} | MODBUS: 0x0${(s.modbus_register || 0).toString(16).toUpperCase().padStart(1, '0')}</span>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
                     <div>
@@ -128,7 +128,7 @@ async function loadRelayConfig() {
             <div style="background:#fff; border-radius:12px; border:1px solid #e6edf6; padding:14px 16px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid #f0f4f9; padding-bottom:8px; margin-bottom:8px;">
                     <strong style="color:#0a2744;">${r.name || 'Relay ' + r.id}</strong>
-                    <span style="font-size:0.75rem; color:#7a9bbf;">PIN: ${r.gpio_pin || '--'} | MODBUS: 0x${(r.modbus_register || 0).toString(16).toUpperCase().padStart(4, '0')}</span>
+                    <span style="font-size:0.75rem; color:#7a9bbf;">PIN: ${r.gpio_pin || '--'} | MODBUS: 0x1${(r.modbus_register || 0).toString(16).toUpperCase().padStart(1, '0')}</span>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
                     <div>
@@ -203,24 +203,29 @@ async function loadModbusMap() {
         if (!body) return;
         body.innerHTML = entries.map(e => `
             <tr>
-                <td>0x${e.address.toString(16).toUpperCase().padStart(4, '0')}</td>
+                <td>0x${e.type === 'Sensor' ? '0' : '1'}${e.address.toString(16).toUpperCase().padStart(1, '0')}</td>
                 <td>${e.type}</td>
                 <td>${e.description}</td>
                 <td>${e.access}</td>
-                <td><button class="btn btn-primary edit-modbus" data-index="${e.index}" data-address="${e.address}" style="padding:2px 12px; font-size:0.7rem;">✏️ Edit</button></td>
+                <td><button class="btn btn-primary edit-modbus" data-index="${e.index}" data-type="${e.type}" data-address="${e.address}" style="padding:2px 12px; font-size:0.7rem;">✏️ Edit</button></td>
             </tr>
         `).join('');
         document.querySelectorAll('.edit-modbus').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const index = parseInt(this.dataset.index);
                 const currentAddr = parseInt(this.dataset.address);
-                const newAddr = prompt(`Enter new MODBUS address for entry ${index}:`, `0x${currentAddr.toString(16).toUpperCase().padStart(4, '0')}`);
+                const itemtype = this.dataset.type;
+                const newAddr = prompt(`Enter new MODBUS address for entry ${index}:`, `0x0${(currentAddr & 0xF).toString(16).toUpperCase().padStart(1, '0')}`);
                 if (newAddr !== null) {
                     const addr = parseInt(newAddr);
-                    if (!isNaN(addr) && addr >= 0 && addr <= 0xFFFF) {
-                        await updateModbusAddress(index, addr);
+                    if (!isNaN(addr) && addr >= 0 && addr <= 0x0F) {
+//                        if (itemtype === 'Sensor') {
+                            await updateModbusAddress(index, addr);
+//                        } else {
+//                            await updateModbusAddress(index, addr + 0x10);
+//                        }
                     } else {
-                        alert('Invalid address. Enter a value between 0 and 65535.');
+                        alert('Invalid address. Enter a value between 0 and 15.');
                     }
                 }
             });
@@ -250,29 +255,29 @@ async function updateModbusAddress(index, address) {
 async function resetModbusMap() {
     if (!confirm('Reset MODBUS map to defaults?')) return;
     const defaults = [
-        { index: 0, address: 0x0000, type: 'Sensor', description: 'EC', access: 'RO' },
-        { index: 1, address: 0x0001, type: 'Sensor', description: 'pH', access: 'RO' },
-        { index: 2, address: 0x0002, type: 'Sensor', description: 'Potassium', access: 'RO' },
-        { index: 3, address: 0x0003, type: 'Sensor', description: 'Magnesium', access: 'RO' },
-        { index: 4, address: 0x0004, type: 'Sensor', description: 'Iron', access: 'RO' },
-        { index: 5, address: 0x0005, type: 'Sensor', description: 'Phosphorus', access: 'RO' },
-        { index: 6, address: 0x0008, type: 'Sensor', description: 'Temperature', access: 'RO' },
-        { index: 7, address: 0x0009, type: 'Sensor', description: 'Humidity', access: 'RO' },
-        { index: 8, address: 0x0100, type: 'Relay', description: 'Relay 0', access: 'RW' },
-        { index: 9, address: 0x0101, type: 'Relay', description: 'Relay 1', access: 'RW' },
-        { index: 10, address: 0x0102, type: 'Relay', description: 'Relay 2', access: 'RW' },
-        { index: 11, address: 0x0103, type: 'Relay', description: 'Relay 3', access: 'RW' },
-        { index: 12, address: 0x0104, type: 'Relay', description: 'Relay 4', access: 'RW' },
-        { index: 13, address: 0x0105, type: 'Relay', description: 'Relay 5', access: 'RW' },
-        { index: 14, address: 0x0106, type: 'Relay', description: 'Relay 6', access: 'RW' },
-        { index: 15, address: 0x0107, type: 'Relay', description: 'Relay 7', access: 'RW' },
-        { index: 16, address: 0x0108, type: 'Relay', description: 'Relay 8', access: 'RW' },
-        { index: 17, address: 0x0109, type: 'Relay', description: 'Relay 9', access: 'RW' }
+        { index: 0, address: 0x00, type: 'Sensor', description: 'EC', access: 'RO' },
+        { index: 1, address: 0x01, type: 'Sensor', description: 'pH', access: 'RO' },
+        { index: 2, address: 0x02, type: 'Sensor', description: 'Potassium', access: 'RO' },
+        { index: 3, address: 0x03, type: 'Sensor', description: 'Magnesium', access: 'RO' },
+        { index: 4, address: 0x04, type: 'Sensor', description: 'Iron', access: 'RO' },
+        { index: 5, address: 0x05, type: 'Sensor', description: 'Phosphorus', access: 'RO' },
+        { index: 6, address: 0x06, type: 'Sensor', description: 'Temperature', access: 'RO' },
+        { index: 7, address: 0x07, type: 'Sensor', description: 'Humidity', access: 'RO' },
+        { index: 8, address: 0x00, type: 'Relay', description: 'Relay 0', access: 'RW' },
+        { index: 9, address: 0x01, type: 'Relay', description: 'Relay 1', access: 'RW' },
+        { index: 10, address: 0x02, type: 'Relay', description: 'Relay 2', access: 'RW' },
+        { index: 11, address: 0x03, type: 'Relay', description: 'Relay 3', access: 'RW' },
+        { index: 12, address: 0x04, type: 'Relay', description: 'Relay 4', access: 'RW' },
+        { index: 13, address: 0x05, type: 'Relay', description: 'Relay 5', access: 'RW' },
+        { index: 14, address: 0x06, type: 'Relay', description: 'Relay 6', access: 'RW' },
+        { index: 15, address: 0x07, type: 'Relay', description: 'Relay 7', access: 'RW' },
+        { index: 16, address: 0x08, type: 'Relay', description: 'Relay 8', access: 'RW' },
+        { index: 17, address: 0x09, type: 'Relay', description: 'Relay 9', access: 'RW' }
     ];
     try {
         const result = await api.post('/api/modbus/map', { entries: defaults });
         if (result.success) {
-            alert('✅ MODBUS map reset');
+            alert('✅MODBUS map reset');
             await loadModbusMap();
         }
     } catch (e) {
@@ -336,42 +341,42 @@ async function loadLogFiles() {
         // MODAL EVENT LISTENERS
         // ============================================================
 
-		// Close modal with close button
-		const closeBtn = document.getElementById('log-viewer-close');
-		if (closeBtn) {
-			closeBtn.addEventListener('click', closeLogViewer);
-		}
+        // Close modal with close button
+        const closeBtn = document.getElementById('log-viewer-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeLogViewer);
+        }
 
-		// Close modal with bottom close button
-		const closeBtn2 = document.getElementById('log-viewer-close-btn');
-		if (closeBtn2) {
-			closeBtn2.addEventListener('click', closeLogViewer);
-		}
-		
-		// Close modal by clicking outside
-		const modal = document.getElementById('log-viewer-modal');
-		if (modal) {
-			modal.addEventListener('click', function(e) {
-				if (e.target === this) {
-					closeLogViewer();
-				}
-			});
-		}
-		
-		// Download viewed log button
-		const downloadBtn = document.getElementById('log-viewer-download');
-		if (downloadBtn) {
-			downloadBtn.addEventListener('click', downloadViewedLog);
-		}
-		
-		// Keyboard shortcut: Escape to close
-		document.addEventListener('keydown', function(e) {
-			if (e.key === 'Escape') {
-				const modal = document.getElementById('log-viewer-modal');
-				if (modal && modal.style.display === 'flex') {
-					closeLogViewer();
-				}
-			}
+        // Close modal with bottom close button
+        const closeBtn2 = document.getElementById('log-viewer-close-btn');
+        if (closeBtn2) {
+            closeBtn2.addEventListener('click', closeLogViewer);
+        }
+        
+        // Close modal by clicking outside
+        const modal = document.getElementById('log-viewer-modal');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeLogViewer();
+                }
+            });
+        }
+        
+        // Download viewed log button
+        const downloadBtn = document.getElementById('log-viewer-download');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', downloadViewedLog);
+        }
+        
+        // Keyboard shortcut: Escape to close
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('log-viewer-modal');
+                if (modal && modal.style.display === 'flex') {
+                    closeLogViewer();
+                }
+            }
         });
     } catch (e) {
         console.warn('Log files load failed:', e);

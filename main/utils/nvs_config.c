@@ -21,7 +21,7 @@
 // ============================================================
 const char *default_relay_names[] = { "Pump 1", "Valve 1", "Pump 2", "Valve 2", "Pump 3", "Valve 3", "Pump 4", "Valve 4", "Pump 5", "Valve 5"};
 const uint8_t default_relay_gpios[] = {4, 5, 18, 19, 21, 22, 23, 25, 26, 27};
-const uint16_t default_relay_modbus[] = {0x0100, 0x0101, 0x0102, 0x0103, 0x0104, 0x0105, 0x0106, 0x0107, 0x0108, 0x0109};
+const uint16_t default_relay_modbus[] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9};
 
 // ============================================================
 // Default SENSOR Definitions
@@ -29,7 +29,7 @@ const uint16_t default_relay_modbus[] = {0x0100, 0x0101, 0x0102, 0x0103, 0x0104,
 const char *default_sensor_names[] = {"Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8"};
 const uint8_t default_sensor_gpios[] = {36, 39, 34, 35, 32, 33, GPIO_DHT11, GPIO_DHT11};
 const uint8_t default_sensor_adc[] = {0, 3, 4, 5, 6, 7, 255, 255};
-const uint16_t default_sensor_modbus[] = {0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007};
+const uint16_t default_sensor_modbus[] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7};
 const float default_sensor_min[] = {0, 0, 0, 0, 0, 0, -10, 0};
 const float default_sensor_max[] = {1000, 1000, 1000, 1000, 1000, 1000, 60, 100};
 
@@ -284,22 +284,26 @@ void nvs_set_automation_interval(uint32_t sec) {
 
 void nvs_load_modbus_map(modbus_map_entry_t *map, int count) {
     // First load defaults
+    sensor_config_t sconfigs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(sconfigs, TOTAL_SENSOR_COUNT);
     int entry_index = 0;
     
     // Add sensors
     for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
-        default_modbus_map[entry_index].address = default_sensor_modbus[i];
+        default_modbus_map[entry_index].address = sconfigs[i].modbus_register;
         strcpy(default_modbus_map[entry_index].type, "Sensor");
-        strcpy(default_modbus_map[entry_index].description, default_sensor_names[i]);
+        strcpy(default_modbus_map[entry_index].description, sconfigs[i].name);
         strcpy(default_modbus_map[entry_index].access, "RO");
         entry_index++;
     }
     
+    relay_config_t rconfigs[RELAY_COUNT];
+    nvs_load_relay_config(rconfigs, RELAY_COUNT);
     // Add relays
     for (int i = 0; i < RELAY_COUNT; i++) {
-        default_modbus_map[entry_index].address = default_relay_modbus[i];
+        default_modbus_map[entry_index].address = rconfigs[i].modbus_register;
         strcpy(default_modbus_map[entry_index].type, "Relay");
-        strcpy(default_modbus_map[entry_index].description, default_relay_names[i]);
+        strcpy(default_modbus_map[entry_index].description, rconfigs[i].name);
         strcpy(default_modbus_map[entry_index].access, "RW");
         entry_index++;
     }
@@ -357,15 +361,15 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
         if (nvs_get_u8(handle, key, &val) == ESP_OK) {
             config[i].enabled = val;
         }
-        
+
         snprintf(key, sizeof(key), "%s%d_cal", NVS_KEY_SENSOR_PREFIX, i);
         uint16_t cal = 1000;
         if (nvs_get_u16(handle, key, &cal) == ESP_OK) {
             config[i].calibration_factor = cal;
         }
-        
+
         snprintf(key, sizeof(key), "%s%d_mb", NVS_KEY_SENSOR_PREFIX, i);
-        uint16_t mb = 0x0000 + i;
+        uint16_t mb = default_sensor_modbus[i];
         if (nvs_get_u16(handle, key, &mb) == ESP_OK) {
             config[i].modbus_register = mb;
         }
@@ -398,7 +402,7 @@ void nvs_save_sensor_config(sensor_config_t *config, int count) {
         
         snprintf(key, sizeof(key), "%s%d_cal", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u16(handle, key, config[i].calibration_factor);
-        
+
         snprintf(key, sizeof(key), "%s%d_mb", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u16(handle, key, config[i].modbus_register);
 
@@ -428,23 +432,29 @@ void nvs_load_relay_config(relay_config_t *config, int count) {
         snprintf(key, sizeof(key), "%s%d_name", NVS_KEY_RELAY_PREFIX, i);
         size_t len = sizeof(config[i].name);
         nvs_get_str(handle, key, config[i].name, &len);
-        
+
         snprintf(key, sizeof(key), "%s%d_en", NVS_KEY_RELAY_PREFIX, i);
         uint8_t val = 0;
         if (nvs_get_u8(handle, key, &val) == ESP_OK) {
             config[i].enabled = val;
         }
-        
+
         snprintf(key, sizeof(key), "%s%d_dur", NVS_KEY_RELAY_PREFIX, i);
         uint16_t dur = RELAY_DEFAULT_DURATION_MS;
         if (nvs_get_u16(handle, key, &dur) == ESP_OK) {
             config[i].activity_duration = dur;
         }
-        
+
         snprintf(key, sizeof(key), "%s%d_off", NVS_KEY_RELAY_PREFIX, i);
         uint16_t off = RELAY_DEFAULT_OFFDELAY_MS;
         if (nvs_get_u16(handle, key, &off) == ESP_OK) {
             config[i].off_delay = off;
+        }
+
+        snprintf(key, sizeof(key), "%s%d_mb", NVS_KEY_RELAY_PREFIX, i);
+        uint16_t mb = default_relay_modbus[i];
+        if (nvs_get_u16(handle, key, &mb) == ESP_OK) {
+            config[i].modbus_register = mb;
         }
     }
     nvs_close(handle);
@@ -471,6 +481,10 @@ void nvs_save_relay_config(relay_config_t *config, int count) {
         
         snprintf(key, sizeof(key), "%s%d_off", NVS_KEY_RELAY_PREFIX, i);
         nvs_set_u16(handle, key, config[i].off_delay);
+
+        snprintf(key, sizeof(key), "%s%d_mb", NVS_KEY_RELAY_PREFIX, i);
+        nvs_set_u16(handle, key, config[i].modbus_register);
+
     }
     
     nvs_commit(handle);

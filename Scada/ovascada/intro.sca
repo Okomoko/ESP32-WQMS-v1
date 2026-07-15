@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ScadaFile>
+    <ItemList>
+        <Item>
+            <ItemType>GaugeItem</ItemType>
+            <Geometry X="50" Y="30" W="396" H="310" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="Gauge" GroupId="0" LayerId="0"/>
+            <Foreground>#ffffff</Foreground>
+            <LedColor>#ffffff</LedColor>
+            <LedGlowColor>#0000ff</LedGlowColor>
+            <Background1>#787878</Background1>
+            <Background2>#040404</Background2>
+            <GaugeStyle>0</GaugeStyle>
+            <ThresholdEnabled>1</ThresholdEnabled>
+            <MaxValue>5</MaxValue>
+            <MinValue>0</MinValue>
+            <NumericIndicatorEnabled>1</NumericIndicatorEnabled>
+            <Precision>0</Precision>
+            <PrecisionNumeric>2</PrecisionNumeric>
+            <Steps>5</Steps>
+            <Threshold>4</Threshold>
+            <Units>µS/cm</Units>
+            <Label>EC</Label>
+            <EndAngle>-45</EndAngle>
+            <StartAngle>225</StartAngle>
+            <TagId>1</TagId>
+            <Tooltip></Tooltip>
+        </Item>
+    </ItemList>
+    <PageProperties>
+        <pageName>Page</pageName>
+        <fileName>C:/water_quality_monitor/Scada/ovascada/intro.sca</fileName>
+        <relativePath>/intro.sca</relativePath>
+        <pageID>0</pageID>
+        <pageType>0</pageType>
+        <geoView>0</geoView>
+        <geoData></geoData>
+        <markerCategories></markerCategories>
+        <geoCenterPos>51.5,0,10</geoCenterPos>
+        <customPageSize>0</customPageSize>
+        <addScrollingText>0</addScrollingText>
+        <scaleToWindow>0</scaleToWindow>
+        <pageBgImage></pageBgImage>
+        <pageIcon></pageIcon>
+        <pageAccessRights>0</pageAccessRights>
+        <pageAccessRights2>0</pageAccessRights2>
+        <layerOrder>0,New Layer,1,-1,-1;</layerOrder>
+        <pageGeometry W="250" H="150"/>
+        <ScrollTags/>
+    </PageProperties>
+</ScadaFile>
