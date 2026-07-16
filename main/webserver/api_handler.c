@@ -14,6 +14,10 @@
 #include "esp_netif.h"
 #include "esp_log.h"
 #include "cJSON.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "soc/sens_reg.h"       // Required for TSENS register definitions
+#include "hal/adc_types.h"      // Required for register helpers
 
 #include "api_handler.h"
 #include "api_config.h"
@@ -33,7 +37,17 @@
 #include "rule_manager.h"
 #include "automation_engine.h"
 
-#define TAG "API"
+#ifdef __cplusplus
+extern "C" {
+#endif
+uint8_t temprsens_rd();
+#ifdef __cplusplus
+}
+#endif
+
+// Stream the file in chunks
+#define CHUNK_SIZE 50
+
 // ============================================================
 // Helper: Send JSON response
 // ============================================================
@@ -43,6 +57,127 @@ static void send_json_response(httpd_req_t *req, cJSON *json) {
     httpd_resp_send(req, response, strlen(response));
     free(response);
     cJSON_Delete(json);
+}
+
+static uint32_t prev_idle_time_core[2] = {0, 0};
+static uint32_t prev_total_time_core[2] = {0, 0};
+static int first_call_core[2] = {1, 1};
+
+// Get CPU usage per core
+void get_cpu_usage_per_core(float *core0_usage, float *core1_usage) {
+    TaskStatus_t *task_array;
+    UBaseType_t task_count = uxTaskGetNumberOfTasks();
+    uint32_t total_time = 0;
+    uint32_t idle_time_core[2] = {0, 0};
+    
+    task_array = (TaskStatus_t *)pvPortMalloc(task_count * sizeof(TaskStatus_t));
+    if (!task_array) {
+        *core0_usage = -1.0f;
+        *core1_usage = -1.0f;
+        return;
+    }
+    
+    task_count = uxTaskGetSystemState(task_array, task_count, &total_time);
+    
+    // Collect idle times per core by checking task names
+    for (int i = 0; i < task_count; i++) {
+        const char *name = task_array[i].pcTaskName;
+        
+        // Check for IDLE0 (Core 0)
+        if (strcmp(name, "IDLE0") == 0 || strcmp(name, "IDLE") == 0) {
+            idle_time_core[0] = task_array[i].ulRunTimeCounter;
+        }
+        // Check for IDLE1 (Core 1)
+        else if (strcmp(name, "IDLE1") == 0) {
+            idle_time_core[1] = task_array[i].ulRunTimeCounter;
+        }
+    }
+    
+    // Calculate per-core usage
+    for (int core = 0; core < 2; core++) {
+        if (!first_call_core[core]) {
+            uint32_t idle_diff = idle_time_core[core] - prev_idle_time_core[core];
+            uint32_t total_diff = total_time - prev_total_time_core[core];
+            
+            if (total_diff > 0 && idle_diff <= total_diff) {
+                float usage = 100.0f - (100.0f * idle_diff / total_diff);
+                
+                // Clamp to valid range
+                if (usage < 0.0f) usage = 0.0f;
+                if (usage > 100.0f) usage = 100.0f;
+                
+                if (core == 0) *core0_usage = usage;
+                else *core1_usage = usage;
+            } else {
+                if (core == 0) *core0_usage = 0.0f;
+                else *core1_usage = 0.0f;
+            }
+        } else {
+            if (core == 0) *core0_usage = 0.0f;
+            else *core1_usage = 0.0f;
+            first_call_core[core] = 0;
+        }
+        
+        prev_idle_time_core[core] = idle_time_core[core];
+        prev_total_time_core[core] = total_time;
+    }
+    
+    vPortFree(task_array);
+}
+
+// Get overall average CPU usage (what your original function intended)
+float get_overall_cpu_usage(void) {
+    float core0, core1;
+    get_cpu_usage_per_core(&core0, &core1);
+    
+    if (core0 < 0 || core1 < 0) {
+        return -1.0f;
+    }
+    
+    // Average of both cores (0-100% overall)
+    return (core0 + core1) / 2.0f;
+}
+
+// Get total CPU capacity usage (0-200% for dual-core)
+float get_total_cpu_usage(void) {
+    float core0, core1;
+    get_cpu_usage_per_core(&core0, &core1);
+    
+    if (core0 < 0 || core1 < 0) {
+        return -1.0f;
+    }
+    
+    // Total usage across both cores (0-200%)
+    return core0 + core1;
+}
+
+float get_cpu_temperature(void) {
+// 1. Clear power down and dump bits to initialize state
+    REG_CLR_BIT(SENS_SAR_SLAVE_ADDR3_REG, SENS_TSENS_POWER_UP);
+    REG_CLR_BIT(SENS_SAR_SLAVE_ADDR3_REG, SENS_TSENS_DUMP_OUT);
+
+    // 2. Set clock divider (default is typically 6, higher = more stable)
+    REG_SET_FIELD(SENS_SAR_SLAVE_ADDR3_REG, SENS_TSENS_CLK_DIV, 10);
+
+    // 3. Power up the sensor
+    REG_SET_BIT(SENS_SAR_SLAVE_ADDR3_REG, SENS_TSENS_POWER_UP_FORCE);
+    REG_SET_BIT(SENS_SAR_SLAVE_ADDR3_REG, SENS_TSENS_POWER_UP);
+
+    // 4. Trigger a measurement
+    vTaskDelay(pdMS_TO_TICKS(1)); // Small delay for the analog circuitry to settle
+    REG_SET_BIT(SENS_SAR_SLAVE_ADDR3_REG, SENS_TSENS_DUMP_OUT);
+
+    // 5. Wait for the reading to be ready (~100 microseconds)
+    vTaskDelay(pdMS_TO_TICKS(1)); // Small delay for the analog circuitry to settle
+
+    // 6. Read the raw 8-bit value from the register
+    uint8_t raw_val = REG_GET_FIELD(SENS_SAR_SLAVE_ADDR3_REG, SENS_TSENS_OUT);
+
+    // 7. Power down the sensor to save energy and prevent self-heating
+    REG_CLR_BIT(SENS_SAR_SLAVE_ADDR3_REG, SENS_TSENS_POWER_UP);
+    REG_CLR_BIT(SENS_SAR_SLAVE_ADDR3_REG, SENS_TSENS_DUMP_OUT);
+
+    return ((raw_val-32)*5/9-20);
 }
 
 // ============================================================
@@ -75,8 +210,14 @@ esp_err_t status_get_handler(httpd_req_t *req) {
     
     cJSON_AddNumberToObject(root, "free_heap_bytes", esp_get_free_heap_size());
     cJSON_AddNumberToObject(root, "free_heap_kb", esp_get_free_heap_size() / 1024);
-    cJSON_AddNumberToObject(root, "cpu_temp_c", 45.0);
-    
+
+//    cJSON_AddNumberToObject(root, "cpu_temp_c",  (int) get_cpu_temperature());
+
+    float core0, core1;
+    get_cpu_usage_per_core(&core0, &core1);
+    cJSON_AddNumberToObject(root, "cpu0_load", (int)core0);
+    cJSON_AddNumberToObject(root, "cpu1_load", (int)core1);
+
     cJSON_AddBoolToObject(root, "ntp_synced", ntp_is_synced());
     cJSON_AddStringToObject(root, "timezone", ntp_get_timezone());
     
@@ -225,7 +366,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
                     configs[idx].calibration_factor = cal->valueint;
                 }
                 if (unit && cJSON_IsNumber(unit)) {
-                    APP_LOG_I("Sensor: %d, Unit: %d", id->valueint, unit->valueint);
+                    API_LOG_I("Sensor: %d, Unit: %d", id->valueint, unit->valueint);
                     configs[idx].unit = unit->valueint;
                 }
             }
@@ -1219,7 +1360,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         }
     }
     
-    // Case 1: Download specific log file
+    // Case 1: Download specific log file (STREAMING VERSION)
     if (has_name && strlen(name) > 0) {
         API_LOG_I("Downloading log: %s", name);
         
@@ -1233,27 +1374,65 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
             return ESP_FAIL;
         }
         
+        // Get file size for Content-Length header
         fseek(f, 0, SEEK_END);
-        long size = ftell(f);
+        long file_size = ftell(f);
         fseek(f, 0, SEEK_SET);
         
-        char *buffer = malloc(size);
+        // Set response headers
+        httpd_resp_set_type(req, "text/plain");
+        char header[128];
+        snprintf(header, sizeof(header), "attachment; filename=\"%s\"", name);
+        httpd_resp_set_hdr(req, "Content-Disposition", header);
+        
+        // Add Content-Length if available
+        if (file_size > 0) {
+            char content_len[32];
+            snprintf(content_len, sizeof(content_len), "%ld", file_size);
+            httpd_resp_set_hdr(req, "Content-Length", content_len);
+        }
+        
+        char *buffer = malloc(CHUNK_SIZE);
         if (!buffer) {
             fclose(f);
             httpd_resp_send_500(req);
             return ESP_FAIL;
         }
-        fread(buffer, 1, size, f);
+        
+        size_t bytes_read;
+        size_t total_sent = 0;
+        esp_err_t err = ESP_OK;
+        
+        // Start chunked response
+        httpd_resp_set_status(req, "200 OK");
+        
+        while ((bytes_read = fread(buffer, 1, CHUNK_SIZE, f)) > 0) {
+            err = httpd_resp_send_chunk(req, buffer, bytes_read);
+            if (err != ESP_OK) {
+                API_LOG_E("Failed to send chunk: %d", err);
+                break;
+            }
+            total_sent += bytes_read;
+            
+            // Allow other tasks to run
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
+        
+        // Send final empty chunk to signal end of response
+        if (err == ESP_OK) {
+            err = httpd_resp_send_chunk(req, NULL, 0);
+        }
+        
+        free(buffer);
         fclose(f);
         
-        httpd_resp_set_type(req, "text/plain");
-        char header[128];
-        snprintf(header, sizeof(header), "attachment; filename=\"%s\"", name);
-        httpd_resp_set_hdr(req, "Content-Disposition", header);
-        httpd_resp_send(req, buffer, size);
-        free(buffer);
+        if (err == ESP_OK) {
+            API_LOG_I("Log streamed successfully: %s (%ld bytes sent)", name, total_sent);
+        } else {
+            API_LOG_E("Failed to stream log: %s", name);
+            return ESP_FAIL;
+        }
         
-        API_LOG_I("Log downloaded: %s (%ld bytes)", name, size);
         return ESP_OK;
     }
     
@@ -2005,8 +2184,6 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
         start_ts = newest_ts - time_range;
         end_ts = newest_ts + 1;
     }
-
-    #define CHUNK_SIZE 50  // Read 50 records at a time
     
     // Start JSON response
     httpd_resp_set_type(req, "application/json");

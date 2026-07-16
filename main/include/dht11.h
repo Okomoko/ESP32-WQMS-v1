@@ -29,4 +29,6 @@ int dht11_read(dht11_data_t *data);
 // Check if DHT11 is present
 int dht11_present(void);
 
+void dht11_power_up(void);
+
 #endif // DHT11_H

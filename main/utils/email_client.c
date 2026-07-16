@@ -383,7 +383,7 @@ after_starttls:
     strncpy(to_copy, g_config.to_emails, sizeof(to_copy)-1);
     to_copy[sizeof(to_copy)-1] = '\0';
     char *token = strtok(to_copy, ",");
-    int rcpt_count = 0;
+//    int rcpt_count = 0;
     while (token) {
         while (*token == ' ') token++;
         snprintf(to, sizeof(to), "RCPT TO:<%s>", token);

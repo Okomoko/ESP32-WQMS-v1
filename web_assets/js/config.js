@@ -310,74 +310,38 @@ async function loadLogFiles() {
                     <td>${date}</td>
                     <td>
                         <button onclick="viewLogFile('${log.name}')" class="btn btn-info" style="padding:2px 10px; font-size:0.7rem;">👁️ View</button>
-                        <button class="btn btn-primary download-log" data-name="${log.name}" style="padding:2px 12px; font-size:0.7rem;">📥 Download</button>
-                        <button class="btn btn-danger erase-log" data-name="${log.name}" style="padding:2px 12px; font-size:0.7rem;">🗑️ Erase</button>
+                        <button class="btn btn-primary download-log" data-name="${log.name}" style="padding:2px 10px; font-size:0.7rem;">📥 Download</button>
+                        <button class="btn btn-danger erase-log" data-name="${log.name}" style="padding:2px 10px; font-size:0.7rem;">🗑️ Erase</button>
                     </td>
                 </tr>
             `;
         }).join('');
         
-        body.addEventListener('click', function(e) {
-            const downloadBtn = e.target.closest('.download-log');
-            if (downloadBtn) {
-                const name = downloadBtn.dataset.name;
-                window.location.href = `/api/logs?name=${name}`;
-                return;
-            }
-            
-            const eraseBtn = e.target.closest('.erase-log');
-            if (eraseBtn) {
-                const name = eraseBtn.dataset.name;
-                if (!confirm(`⚠️ Erase ${name}?`)) return;
-                api.del(`/api/logs?name=${name}`).then(result => {
-                    alert(result.message || '✅ Log file deleted');
-                    loadLogFiles();
-                }).catch(err => {
-                    alert('❌ Failed to erase: ' + err.message);
-                });
-            }
-        });
-         // ============================================================
-        // MODAL EVENT LISTENERS
-        // ============================================================
-
-        // Close modal with close button
-        const closeBtn = document.getElementById('log-viewer-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', closeLogViewer);
-        }
-
-        // Close modal with bottom close button
-        const closeBtn2 = document.getElementById('log-viewer-close-btn');
-        if (closeBtn2) {
-            closeBtn2.addEventListener('click', closeLogViewer);
-        }
+        // ✅ Use direct onclick attributes instead of event listeners
+        // The download buttons already use window.location.href
+        // For erase, we can add onclick directly in the HTML
         
-        // Close modal by clicking outside
-        const modal = document.getElementById('log-viewer-modal');
-        if (modal) {
-            modal.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeLogViewer();
-                }
-            });
-        }
+        // Rebuild with inline onclick
+        body.innerHTML = logs.map(log => {
+            const date = new Date(log.modified * 1000).toLocaleString();
+            const size = formatFileSize(log.size);
+            return `
+                <tr>
+                    <td>${log.name}</td>
+                    <td>${size}</td>
+                    <td>${date}</td>
+                    <td>
+                        <button onclick="viewLogFile('${log.name}')" class="btn btn-info" style="padding:2px 10px; font-size:0.7rem;">👁️ View</button>
+                        <button onclick="downloadLogFile('${log.name}')" class="btn btn-primary" style="padding:2px 10px; font-size:0.7rem;">📥 Download</button>
+                        <button onclick="eraseLogFile('${log.name}')" class="btn btn-danger" style="padding:2px 10px; font-size:0.7rem;">🗑️ Erase</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
         
-        // Download viewed log button
-        const downloadBtn = document.getElementById('log-viewer-download');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', downloadViewedLog);
-        }
+        // Modal setup (only once)
+        setupModalListeners();
         
-        // Keyboard shortcut: Escape to close
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                const modal = document.getElementById('log-viewer-modal');
-                if (modal && modal.style.display === 'flex') {
-                    closeLogViewer();
-                }
-            }
-        });
     } catch (e) {
         console.warn('Log files load failed:', e);
         const body = document.getElementById('log-file-body');
@@ -385,6 +349,66 @@ async function loadLogFiles() {
             body.innerHTML = '<tr><td colspan="4" style="color:#d32f2f;">❌ Failed to load logs</td></tr>';
         }
     }
+}
+
+// Add global functions for inline onclick handlers
+window.downloadLogFile = function(name) {
+    window.location.href = `/api/logs?name=${name}`;
+};
+
+window.eraseLogFile = function(name) {
+    if (!confirm(`⚠️ Erase ${name}?`)) return;
+    api.del(`/api/logs?name=${name}`).then(result => {
+        alert(result.message || '✅ Log file deleted');
+        loadLogFiles();
+    }).catch(err => {
+        alert('❌ Failed to erase: ' + err.message);
+    });
+};
+
+// Create a separate function for modal setup
+function setupModalListeners() {
+    // Only set these up once
+    if (window._modalListenersSetup) return;
+    window._modalListenersSetup = true;
+    
+    // Close modal with close button
+    const closeBtn = document.getElementById('log-viewer-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeLogViewer);
+    }
+
+    // Close modal with bottom close button
+    const closeBtn2 = document.getElementById('log-viewer-close-btn');
+    if (closeBtn2) {
+        closeBtn2.addEventListener('click', closeLogViewer);
+    }
+    
+    // Close modal by clicking outside
+    const modal = document.getElementById('log-viewer-modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeLogViewer();
+            }
+        });
+    }
+    
+    // Download viewed log button
+    const downloadBtn = document.getElementById('log-viewer-download');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', downloadViewedLog);
+    }
+    
+    // Keyboard shortcut: Escape to close
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('log-viewer-modal');
+            if (modal && modal.style.display === 'flex') {
+                closeLogViewer();
+            }
+        }
+    });
 }
 
 async function eraseAllLogs() {

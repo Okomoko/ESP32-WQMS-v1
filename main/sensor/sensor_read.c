@@ -181,6 +181,16 @@ void sensor_init(void) {
     }
     
     dht11_init(GPIO_DHT11);
+    dht11_power_up();
+    
+    vTaskDelay(pdMS_TO_TICKS(100));
+    
+    // Test read
+    dht11_data_t data;
+    if (dht11_read(&data) == 0) {
+        SENSOR_LOG_I("DHT11 ready: Temp=%.1f, Humid=%.1f", data.temperature, data.humidity);
+    }
+
     sensor_history_init();
     
     xTaskCreate(sensor_poll_task, "sensor", STACK_SIZE_SENSOR, NULL, PRIORITY_SENSOR, NULL);

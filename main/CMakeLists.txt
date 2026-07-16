@@ -91,6 +91,7 @@ set(COMPONENT_REQUIRES
     esp_wifi
     esp_base64
     esp_tls
+    esp_driver_tsens
     nvs_flash
     spi_flash
     spiffs
