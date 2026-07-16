@@ -293,6 +293,7 @@ static int process_request(uint8_t *request, int len, uint8_t *response) {
     
     switch (func_code) {
         case MB_FC_READ_HOLDING_REGISTERS:   // 0x03
+        case MB_FC_READ_INPUT_REGISTERS:     // 0x04
 
             if (len < 12) {
                 APP_LOG_E("MODBUS: Read request too short");
@@ -300,7 +301,7 @@ static int process_request(uint8_t *request, int len, uint8_t *response) {
             }
             uint16_t start_addr = (request[8] << 8) | request[9];
             uint16_t count = (request[10] << 8) | request[11];
-            APP_LOG_I("MODBUS: Read Holding: addr=%d, count=%d", start_addr, count);
+            APP_LOG_I("MODBUS: Read %s Registers: addr=%d, count=%d", func_code == MB_FC_READ_HOLDING_REGISTERS ? "Holding" : "Input", start_addr, count);
             
             // DEBUG: Show current register values before read
 //            if (modbus_mutex && xSemaphoreTake(modbus_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
@@ -315,19 +316,6 @@ static int process_request(uint8_t *request, int len, uint8_t *response) {
             response_len = handle_read_registers(request, len, response);
             break;
 
-        case MB_FC_READ_INPUT_REGISTERS:     // 0x04
-
-            if (len < 12) {
-                APP_LOG_E("MODBUS: Read request too short");
-                return -1;
-            }
-            uint16_t start_addr = (request[8] << 8) | request[9];
-            uint16_t count = (request[10] << 8) | request[11];
-            APP_LOG_I("MODBUS: Read Input Registers: addr=%d, count=%d", start_addr, count);
-            
-            response_len = handle_read_registers(request, len, response);
-            break;
-            
         case MB_FC_WRITE_SINGLE_REGISTER:    // 0x06
             uint16_t addr = (request[8] << 8) | request[9];
             uint16_t value = (request[10] << 8) | request[11];
@@ -563,7 +551,7 @@ void modbus_update_register(uint16_t addr, uint16_t value) {
     if (addr >= MAX_REGISTERS) return;
     
     if (modbus_mutex && xSemaphoreTake(modbus_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-        registers[addr] = value;
+        registers[addr] = value * 100;
         xSemaphoreGive(modbus_mutex);
     }
 }
