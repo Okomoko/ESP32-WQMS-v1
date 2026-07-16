@@ -19,17 +19,15 @@
 static const char *LOG_BASE_PATH = "/spiffs/logs/";
 static const char *LOG_FILE_NAMES[WQMS_LOG_TYPE_MAX] = {
     "system_",      // system_0.log, system_1.log, ...
-    "application_", // application_0.log, ...
-    "automation_",   // automation_0.log, ...
-    "application_", // application_0.log, ...
-    "application_", // application_0.log, ...
-    "application_", // application_0.log, ...
-    "application_", // application_0.log, ...
-    "application_" // application_0.log, ...
+    "system_",      // application_0.log, ...
+    "system_",      // automation_0.log, ...
+    "system_",      // notification_0.log, ...
+    "system_",      // integration_0.log, ...
+    "system_",      // sensor_0.log, ...
+    "system_",      // relay_0.log, ...
+    "system_"       // api_0.log, ...
 };
 static const char *LOG_FILE_EXT = ".log";
-
-static int current_index[WQMS_LOG_TYPE_MAX] = {0, 0, 0};
 
 // ============================================================
 // Internal Functions
@@ -70,46 +68,46 @@ FILE* log_rotate_open(wqms_log_type_t type) {
     mkdir("/spiffs/logs", 0777);
     
     // 2. Find the next file to write (circular)
-    int index = 0;
     char path[64];
-    long smallest_size = -1;
-    int smallest_index = 0;
-    
-    // Find smallest file (oldest) to overwrite
+    long size = -1;
+
+    // Find the file to append
     for (int i = 0; i < LOG_MAX_FILES; i++) {
         build_file_path(type, i, path, sizeof(path));
-        long size = get_file_size(path);
-        if (size == -1) {
-            // File doesn't exist - use this one
-            index = i;
-            break;
+        size = get_file_size(path);
+        if (size < LOG_FILE_SIZE) {
+            if ((i+1) < LOG_MAX_FILES){
+                build_file_path(type, i + 1, path, sizeof(path));
+                if (get_file_size(path) == -1) {
+                    build_file_path(type, i, path, sizeof(path));
+                    break;
+                }
+            }
         }
-        if (smallest_size == -1 || size < smallest_size) {
-            smallest_size = size;
-            smallest_index = i;
-        }
-    }
-    
-    if (smallest_size != 0 && smallest_index == 0) {
-        smallest_index = 1;
     }
 
-    // If all files exist, overwrite the smallest (oldest)
-    index = smallest_index;
-    current_index[type] = index;
-    
-    // 3. Open file (overwrite if exists)
-    build_file_path(type, index, path, sizeof(path));
-    FILE *file = fopen(path, "w");
+    if (size >= LOG_FILE_SIZE) {
+        build_file_path(type, 0, path, sizeof(path));
+        unlink(path);
+        for (int i = 1; i < LOG_MAX_FILES; i++) {
+            char newpath[64];
+            build_file_path(type, i, path, sizeof(path));
+            build_file_path(type, i - 1, newpath, sizeof(newpath));
+            rename(path, newpath);
+        }
+    }
+
+    // 3. Open file
+    FILE *file = fopen(path, "a");
     if (file == NULL) {
         WQMS_LOG_E("Failed to open log file: %s", path);
         return NULL;
     }
-    
+
     // 4. Write header
     fprintf(file, "--- Log started at %s ---\n", "");
     fflush(file);
-    
+
     WQMS_LOG_D("Opened log file: %s", path);
     return file;
 }

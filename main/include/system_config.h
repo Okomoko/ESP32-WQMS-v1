@@ -98,10 +98,9 @@ GND     38         -    Power    Ground
 // ============================================================
 // Logging Configuration
 // ============================================================
-#define LOG_MAX_FILES          5
-#define LOG_FILE_SIZE          307200
-#define LOG_RETENTION_DAYS     3
-#define CONFIG_RS232_CONSOLE_ENABLE 1
+#define LOG_MAX_FILES                      2
+#define LOG_FILE_SIZE                 524288
+#define CONFIG_RS232_CONSOLE_ENABLE        0
 
 // ============================================================
 // Automation Configuration
@@ -120,8 +119,8 @@ GND     38         -    Power    Ground
 #define MODBUS_HEARTBEAT_REG   0x0300
 #define MODBUS_COMMAND_REG     0x0310
 #define MODBUS_SENSOR_BASE     0x0000
-#define MODBUS_CALIB_BASE      0x0010
-#define MODBUS_RELAY_BASE      0x0100
+#define MODBUS_RELAY_BASE      0x0010
+#define MODBUS_CALIB_BASE      0x0100
 #define MODBUS_DURATION_BASE   0x0110
 #define MODBUS_OFFDELAY_BASE   0x0120
 #define MODBUS_SYSTEM_BASE     0x0200
@@ -130,27 +129,27 @@ GND     38         -    Power    Ground
 // ============================================================
 // WiFi Configuration
 // ============================================================
-#define WIFI_AP_SSID_PREFIX    "WQMS-"
-#define WIFI_AP_PASSWORD       "WQMSwqms"
-#define WIFI_MAX_RETRIES       5
-#define WIFI_RETRY_DELAY_MS    2000
-#define WIFI_SCAN_MAX_NETWORKS 20
+#define WIFI_AP_SSID_PREFIX        "WQMS-"
+#define WIFI_AP_PASSWORD           "WQMSwqms"
+#define WIFI_MAX_RETRIES           5
+#define WIFI_RETRY_DELAY_MS        2000
+#define WIFI_SCAN_MAX_NETWORKS     20
 
 // ============================================================
 // NTP Configuration
 // ============================================================
-#define NTP_FAST_SYNC_INTERVAL_MS   2000
-#define NTP_FAST_SYNC_MAX_ATTEMPTS  10
+#define NTP_FAST_SYNC_INTERVAL_MS    2000
+#define NTP_FAST_SYNC_MAX_ATTEMPTS   10
 #define NTP_NORMAL_SYNC_INTERVAL_SEC 3600
-#define NTP_BACKOFF_BASE_SEC        60
-#define NTP_BACKOFF_MAX_SEC         3600
-#define NTP_DEFAULT_TIMEZONE        "EET-3"
+#define NTP_BACKOFF_BASE_SEC         60
+#define NTP_BACKOFF_MAX_SEC          3600
+#define NTP_DEFAULT_TIMEZONE         "EET-3"
 
 // ============================================================
 // Integration Configuration
 // ============================================================
-#define INTEGRATION_BUFFER_MAX_ITEMS 100
-#define INTEGRATION_WEB_TIMEOUT_MS   5000
+#define INTEGRATION_BUFFER_MAX_ITEMS     100
+#define INTEGRATION_WEB_TIMEOUT_MS       5000
 #define DEFAULT_INTEGRATION_INTERVAL_SEC 60
 
 // ============================================================

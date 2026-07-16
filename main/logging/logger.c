@@ -40,7 +40,7 @@ static const char *log_level_names[] = {
 };
 
 // Current log file handles
-static FILE *log_files[WQMS_LOG_TYPE_MAX] = {NULL, NULL, NULL};
+static FILE *log_files[WQMS_LOG_TYPE_MAX] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 // ============================================================
 // Internal Functions
