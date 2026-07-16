@@ -547,11 +547,11 @@ void modbus_stop(void) {
     modbus_running = 0;
 }
 
-void modbus_update_register(uint16_t addr, uint16_t value) {
+void modbus_update_register(uint16_t addr, float value) {
     if (addr >= MAX_REGISTERS) return;
     
     if (modbus_mutex && xSemaphoreTake(modbus_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-        registers[addr] = value * 100;
+        registers[addr] = (uint16_t) (value * 100.0f);
         xSemaphoreGive(modbus_mutex);
     }
 }

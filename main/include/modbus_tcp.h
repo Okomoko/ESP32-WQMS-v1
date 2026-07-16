@@ -22,7 +22,7 @@ void modbus_start(void);
 void modbus_stop(void);
 
 // Update a register value (called by sensors/relays)
-void modbus_update_register(uint16_t addr, uint16_t value);
+void modbus_update_register(uint16_t addr, float value);
 
 // Read a register value
 uint16_t modbus_read_register(uint16_t addr);
