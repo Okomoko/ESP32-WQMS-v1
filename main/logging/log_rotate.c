@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+//#include <time.h>
 #include "esp_vfs.h"
 #include "esp_spiffs.h"
 
@@ -12,7 +13,7 @@
 #include "project_defs.h"
 #include "system_config.h"
 #include "log_levels.h"
-#include "ntp_client.h"
+//#include "ntp_client.h"
 
 // ============================================================
 // Static Variables
@@ -106,12 +107,12 @@ FILE* log_rotate_open(wqms_log_type_t type) {
     }
 
     // 4. Write header
-    char ts_str[32];
-    time_t ts = ntp_get_time();
-    struct tm *tm_info = localtime(&ts);
-    strftime(ts_str, sizeof(ts_str), "%Y-%m-%d %H:%M:%S", tm_info);
-    fprintf(file, "--- Log started at %s ---\n", ts_str);
-    fflush(file);
+//    char ts_str[32];
+//    time_t ts = ntp_get_time();
+//    struct tm *tm_info = localtime(&ts);
+//    strftime(ts_str, sizeof(ts_str), "%Y-%m-%d %H:%M:%S", tm_info);
+//    fprintf(file, "--- Log started at %s ---\n", ts_str);
+//    fflush(file);
 
     WQMS_LOG_D("Opened log file: %s", path);
     return file;
