@@ -47,7 +47,7 @@ static void poll_analog_sensors(void) {
     for (int i = 0; i < ANALOGUE_SENSOR_COUNT; i++) {
 //        int sensor_id = adc_to_sensor[i];
         int sensor_id = i;
-//        SENSOR_LOG_I("Sensor %d, name %s, channel %d, pin %d", i, sensor_config[sensor_id].name, sensor_config[sensor_id].adc_channel, sensor_config[sensor_id].gpio_pin);
+//        SENSOR_LOG_D("Sensor %d, name %s, channel %d, pin %d", i, sensor_config[sensor_id].name, sensor_config[sensor_id].adc_channel, sensor_config[sensor_id].gpio_pin);
         if (!sensor_config[sensor_id].enabled) continue;
         
         uint16_t raw = wqms_adc_dma_get_raw(sensor_config[i].adc_channel);
@@ -128,7 +128,7 @@ static void poll_dht11(void) {
 // Sensor Polling Task
 // ============================================================
 static void sensor_poll_task(void *pvParameters) {
-    SENSOR_LOG_I("Sensor polling task started");
+    SENSOR_LOG_D("Sensor polling task started");
     
     while (1) {
         uint32_t start_time = esp_timer_get_time() / 1000;
@@ -234,7 +234,7 @@ float sensor_convert_value(uint8_t sensor_id, uint16_t raw_adc) {
 
 void sensor_reload_config(void) {
     nvs_load_sensor_config(sensor_config, TOTAL_SENSOR_COUNT);
-    SENSOR_LOG_I("Sensor config reloaded");
+    SENSOR_LOG_D("Sensor config reloaded");
 }
 
 int sensor_poll_now(uint8_t sensor_id) {
@@ -263,7 +263,7 @@ void sensor_set_enabled(uint8_t sensor_id, uint8_t enabled) {
         xSemaphoreGive(sensor_mutex);
     }
     
-    SENSOR_LOG_I("Sensor %d %s", sensor_id, enabled ? "enabled" : "disabled");
+    SENSOR_LOG_D("Sensor %d %s", sensor_id, enabled ? "enabled" : "disabled");
 }
 
 const char* sensor_get_name(uint8_t sensor_id) {

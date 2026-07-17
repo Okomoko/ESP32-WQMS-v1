@@ -1374,7 +1374,7 @@ async function loadRuleToCanvas(ruleId) {
         // Layout parameters
         const canvasWidth = 600;
         const leftX = 20;
-        const rightX = canvasWidth - 160;
+        const rightX = canvasWidth - 180;
         const centerX = (leftX + rightX) / 2;
         const startY = 20;
         const nodeSpacing = 100;

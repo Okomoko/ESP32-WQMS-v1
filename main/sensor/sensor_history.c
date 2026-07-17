@@ -13,6 +13,7 @@
 #include "log_levels.h"
 #include "system_config.h"
 #include "nvs_config.h"
+#include "ntp_client.h"
 
 // ============================================================
 // Data Structures
@@ -75,8 +76,7 @@ static int history_read_index(void) {
         return 0;
     }
     
-    SENSOR_LOG_D("History index loaded: %lu records, newest=%lu",
-          sensor_idx.record_count, sensor_idx.last_timestamp);
+    SENSOR_LOG_D("History index loaded: %lu records, newest=%lu", sensor_idx.record_count, sensor_idx.last_timestamp);
     return 0;
 }
 
@@ -118,7 +118,7 @@ static int history_create_file(void) {
     fputc(0, f);
     fclose(f);
     
-    SENSOR_LOG_I("History file created: %lu bytes", HISTORY_FILE_SIZE);
+    SENSOR_LOG_D("History file created: %lu bytes", HISTORY_FILE_SIZE);
     return 0;
 }
 
@@ -139,13 +139,29 @@ void sensor_history_init(void) {
     }
     
     history_initialized = 1;
-    SENSOR_LOG_I("Sensor history initialized: %lu records (%lu max)",
-          sensor_idx .record_count, sensor_idx .max_records);
+    SENSOR_LOG_D("Sensor history initialized: %lu records (%lu max)", sensor_idx .record_count, sensor_idx .max_records);
 }
 
 void sensor_history_add(void) {
     if (!history_initialized) return;
-    
+
+    // Get the latest timestamp from the history file if time is not accurate.
+    SENSOR_LOG_D("Date/Time accuracy check...");
+    uint32_t now = ntp_get_time();
+    if (now < 946684800) {
+        sensor_record_t last_record;
+        if (sensor_history_get_latest(&last_record) != -1) {
+            SENSOR_LOG_D("Last Record Timestamp %d", last_record.timestamp);
+            now = ntp_get_time(); //Check time once more before set it manually.
+            if (now < 946684800) {
+                ntp_set_manual_time (last_record.timestamp + 60);
+            };
+        } else {
+            SENSOR_LOG_E("Unable to get the last record for acquiring timestamp.");
+        };
+    }
+    SENSOR_LOG_D("Reading the sensors...");
+            
     // 1. Get current readings
     sensor_reading_t *readings = sensor_get_all_readings();
     if (!readings) return;
@@ -240,7 +256,7 @@ int sensor_history_get_latest(sensor_record_t *record) {
     if (!f) return -1;
     
     // Read the last written record (at write_offset - sizeof(record))
-    uint32_t offset = sensor_idx .write_offset - sizeof(record);
+    uint32_t offset = (sensor_idx .record_count-1) * sizeof(sensor_record_t);
     if (offset >= HISTORY_FILE_SIZE) {
         offset = 0;
     }
@@ -248,6 +264,7 @@ int sensor_history_get_latest(sensor_record_t *record) {
     fseek(f, offset, SEEK_SET);
     size_t read = fread(record, 1, sizeof(sensor_record_t), f);
     fclose(f);
+    SENSOR_LOG_D("Sensor History read size...%d", read);
     
     return (read == sizeof(sensor_record_t)) ? 0 : -1;
 }

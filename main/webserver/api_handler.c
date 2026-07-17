@@ -36,6 +36,7 @@
 #include "email_client.h"
 #include "rule_manager.h"
 #include "automation_engine.h"
+#include "spiffs_manager.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,7 +47,7 @@ uint8_t temprsens_rd();
 #endif
 
 // Stream the file in chunks
-#define CHUNK_SIZE 50
+#define CHUNK_SIZE 100
 
 // ============================================================
 // Helper: Send JSON response
@@ -366,7 +367,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
                     configs[idx].calibration_factor = cal->valueint;
                 }
                 if (unit && cJSON_IsNumber(unit)) {
-                    API_LOG_I("Sensor: %d, Unit: %d", id->valueint, unit->valueint);
+                    API_LOG_D("Sensor: %d, Unit: %d", id->valueint, unit->valueint);
                     configs[idx].unit = unit->valueint;
                 }
             }
@@ -663,48 +664,48 @@ esp_err_t config_post_handler(httpd_req_t *req) {
     item = cJSON_GetObjectItem(json, "system_name");
     if (item && cJSON_IsString(item)) {
         nvs_set_system_name(item->valuestring);
-        API_LOG_I("System name updated to: %s", item->valuestring);
+        API_LOG_D("System name updated to: %s", item->valuestring);
     }
     
     item = cJSON_GetObjectItem(json, "system_location");
     if (item && cJSON_IsString(item)) {
         nvs_set_system_location(item->valuestring);
-        API_LOG_I("System location updated to: %s", item->valuestring);
+        API_LOG_D("System location updated to: %s", item->valuestring);
     }
     
     item = cJSON_GetObjectItem(json, "sample_interval_ms");
     if (item && cJSON_IsNumber(item)) {
         nvs_set_sample_interval(item->valueint);
-        API_LOG_I("Sample interval updated to: %d ms", item->valueint);
+        API_LOG_D("Sample interval updated to: %d ms", item->valueint);
     }
     
     item = cJSON_GetObjectItem(json, "modbus_interval_ms");
     if (item && cJSON_IsNumber(item)) {
         nvs_set_modbus_interval(item->valueint);
-        API_LOG_I("MODBUS interval updated to: %d ms", item->valueint);
+        API_LOG_D("MODBUS interval updated to: %d ms", item->valueint);
     }
     
     item = cJSON_GetObjectItem(json, "integration_url");
     if (item && cJSON_IsString(item)) {
         nvs_set_integration_url(item->valuestring);
-        API_LOG_I("Integration URL updated to: %s", item->valuestring);
+        API_LOG_D("Integration URL updated to: %s", item->valuestring);
     }
     
     item = cJSON_GetObjectItem(json, "integration_interval_sec");
     if (item && cJSON_IsNumber(item)) {
         nvs_set_integration_interval(item->valueint);
-        API_LOG_I("Integration interval updated to: %d sec", item->valueint);
+        API_LOG_D("Integration interval updated to: %d sec", item->valueint);
     }
     
     item = cJSON_GetObjectItem(json, "automation_interval_sec");
     if (item && cJSON_IsNumber(item)) {
         nvs_set_automation_interval(item->valueint);
-        API_LOG_I("Automation interval updated to: %d sec", item->valueint);
+        API_LOG_D("Automation interval updated to: %d sec", item->valueint);
     }
     
     item = cJSON_GetObjectItem(json, "ntp_servers");
     if (item && cJSON_IsString(item)) {
-        API_LOG_I("Updating NTP servers: %s", item->valuestring);
+        API_LOG_D("Updating NTP servers: %s", item->valuestring);
         ntp_set_servers(item->valuestring);
     }
     
@@ -721,7 +722,7 @@ esp_err_t config_post_handler(httpd_req_t *req) {
 // GET /api/wifi/scan
 // ============================================================
 esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
-    API_LOG_I("WiFi scan request received");
+    API_LOG_D("WiFi scan request received");
     
     cJSON *root = cJSON_CreateObject();
     cJSON *networks = cJSON_CreateArray();
@@ -737,7 +738,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
     }
     
     if (current_mode == WIFI_MODE_AP || current_mode == WIFI_MODE_NULL) {
-        API_LOG_I("WiFi in AP mode, enabling STA for scan");
+        API_LOG_D("WiFi in AP mode, enabling STA for scan");
         err = esp_wifi_set_mode(WIFI_MODE_STA);
         if (err != ESP_OK) {
             API_LOG_E("Failed to set STA mode for scan: %s", esp_err_to_name(err));
@@ -788,7 +789,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
         return ESP_OK;
     }
     
-    API_LOG_I("WiFi scan found %d networks", ap_count);
+    API_LOG_D("WiFi scan found %d networks", ap_count);
     
     if (ap_count == 0) {
         cJSON_AddItemToObject(root, "networks", networks);
@@ -861,7 +862,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
     cJSON_AddNumberToObject(root, "total", ap_count);
     send_json_response(req, root);
     
-    API_LOG_I("WiFi scan completed: %d networks returned", ap_count);
+    API_LOG_D("WiFi scan completed: %d networks returned", ap_count);
     
     if (current_mode == WIFI_MODE_AP) {
         esp_wifi_set_mode(WIFI_MODE_AP);
@@ -870,7 +871,7 @@ esp_err_t wifi_scan_get_handler(httpd_req_t *req) {
             esp_wifi_set_config(WIFI_IF_AP, &ap_config);
         }
         esp_wifi_start();
-        API_LOG_I("Restored AP mode after scan");
+        API_LOG_D("Restored AP mode after scan");
     }
     
     return ESP_OK;
@@ -1134,7 +1135,7 @@ esp_err_t calibrate_apply_handler(httpd_req_t *req) {
         float factor = cal_calculate_factor();
         cJSON_AddBoolToObject(root, "success", true);
         cJSON_AddNumberToObject(root, "factor", factor);
-        API_LOG_I("Coef: %f", factor);
+        API_LOG_D("Coef: %f", factor);
         cJSON_AddStringToObject(root, "message", "Calibration applied successfully");
     } else {
         cJSON_AddBoolToObject(root, "success", false);
@@ -1362,7 +1363,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
     
     // Case 1: Download specific log file (STREAMING VERSION)
     if (has_name && strlen(name) > 0) {
-        API_LOG_I("Downloading log: %s", name);
+        API_LOG_D("Downloading log: %s", name);
         
         char path[128];
         snprintf(path, sizeof(path), "/spiffs/logs/%.100s", name);
@@ -1392,7 +1393,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
             httpd_resp_set_hdr(req, "Content-Length", content_len);
         }
         
-        char *buffer = malloc(CHUNK_SIZE);
+        char *buffer = malloc(CHUNK_SIZE * 10);
         if (!buffer) {
             fclose(f);
             httpd_resp_send_500(req);
@@ -1406,7 +1407,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         // Start chunked response
         httpd_resp_set_status(req, "200 OK");
         
-        while ((bytes_read = fread(buffer, 1, CHUNK_SIZE, f)) > 0) {
+        while ((bytes_read = fread(buffer, 1, CHUNK_SIZE * 10, f)) > 0) {
             err = httpd_resp_send_chunk(req, buffer, bytes_read);
             if (err != ESP_OK) {
                 API_LOG_E("Failed to send chunk: %d", err);
@@ -1427,7 +1428,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         fclose(f);
         
         if (err == ESP_OK) {
-            API_LOG_I("Log streamed successfully: %s (%ld bytes sent)", name, total_sent);
+            API_LOG_D("Log streamed successfully: %s (%ld bytes sent)", name, total_sent);
         } else {
             API_LOG_E("Failed to stream log: %s", name);
             return ESP_FAIL;
@@ -1698,7 +1699,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
     }
     buffer[ret] = '\0';
     
-    API_LOG_I("POST /api/rules - Received: %s", buffer);
+    API_LOG_D("POST /api/rules - Received: %s", buffer);
     
     cJSON *json = cJSON_Parse(buffer);
     if (!json) {
@@ -1717,26 +1718,26 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
     if (item && cJSON_IsString(item)) {
         strncpy(rule.name, item->valuestring, sizeof(rule.name) - 1);
         rule.name[sizeof(rule.name) - 1] = '\0';
-        API_LOG_I("  Name: %s", rule.name);
+        API_LOG_D("  Name: %s", rule.name);
     }
     
     item = cJSON_GetObjectItem(json, "enabled");
     if (item) {
         rule.enabled = item->valueint;
-        API_LOG_I("  Enabled: %d", rule.enabled);
+        API_LOG_D("  Enabled: %d", rule.enabled);
     }
     
     item = cJSON_GetObjectItem(json, "logic_type");
     if (item) {
         rule.logic_type = item->valueint;
-        API_LOG_I("  Logic type: %d", rule.logic_type);
+        API_LOG_D("  Logic type: %d", rule.logic_type);
     }
     
     item = cJSON_GetObjectItem(json, "cooldown_seconds");
     if (item) {
         rule.cooldown_seconds = item->valueint;
         rule.cooldown_enabled = (rule.cooldown_seconds > 0);
-        API_LOG_I("  Cooldown: %d", rule.cooldown_seconds);
+        API_LOG_D("  Cooldown: %d", rule.cooldown_seconds);
     }
     
     item = cJSON_GetObjectItem(json, "email_recipient");
@@ -1765,7 +1766,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
             max_cond = MAX_CONDITIONS;
         #endif
         rule.condition_count = (cond_count > max_cond) ? max_cond : cond_count;
-        API_LOG_I("  Conditions: %d", rule.condition_count);
+        API_LOG_D("  Conditions: %d", rule.condition_count);
         
         for (int i = 0; i < rule.condition_count; i++) {
             cJSON *cond = cJSON_GetArrayItem(conditions, i);
@@ -1776,7 +1777,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
                 
                 if (sensor_id) {
                     rule.conditions[i].sensor_id = sensor_id->valueint;
-                    API_LOG_I("    Cond %d: sensor_id=%d", i, rule.conditions[i].sensor_id);
+                    API_LOG_D("    Cond %d: sensor_id=%d", i, rule.conditions[i].sensor_id);
                 }
                 if (comparator) {
                     rule.conditions[i].comparator = comparator->valueint;
@@ -1787,7 +1788,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
             }
         }
     } else {
-        API_LOG_I("  No conditions found");
+        API_LOG_W("  No conditions found");
     }
 
     cJSON *outputs = cJSON_GetObjectItem(json, "outputs");
@@ -1801,7 +1802,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
             max_out = MAX_OUTPUTS;
         #endif
         rule.output_count = (out_count > max_out) ? max_out : out_count;
-        API_LOG_I("  Outputs: %d", rule.output_count);
+        API_LOG_D("  Outputs: %d", rule.output_count);
         
         for (int i = 0; i < rule.output_count; i++) {
             cJSON *out = cJSON_GetArrayItem(outputs, i);
@@ -1812,11 +1813,11 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
                 
                 if (type) {
                     rule.outputs[i].type = type->valueint;
-                    API_LOG_I("    Out %d: type=%d", i, rule.outputs[i].type);
+                    API_LOG_D("    Out %d: type=%d", i, rule.outputs[i].type);
                 }
                 if (id) {
                     rule.outputs[i].id = id->valueint;
-                    API_LOG_I("    Out %d: id=%d", i, rule.outputs[i].id);
+                    API_LOG_D("    Out %d: id=%d", i, rule.outputs[i].id);
                 }
                 if (duration) {
                     rule.outputs[i].custom_duration = duration->valueint;
@@ -1824,7 +1825,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
             }
         }
     } else {
-        API_LOG_I("  No outputs found");
+        API_LOG_W("  No outputs found");
     }
     
     // ============================================================
@@ -1837,12 +1838,12 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
         // Update existing rule
         result = rule_update(rule_id, &rule);
         new_rule_id = rule_id;
-        API_LOG_I("  Updating rule %d", rule_id);
+        API_LOG_D("  Updating rule %d", rule_id);
     } else {
         // Create new rule
         result = rule_create(&rule);
         new_rule_id = result;
-        API_LOG_I("  Creating new rule, result: %d", result);
+        API_LOG_D("  Creating new rule, result: %d", result);
     }
     
     cJSON_Delete(json);
@@ -1854,7 +1855,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
                  new_rule_id, (rule_id >= 0) ? "updated" : "created");
         httpd_resp_set_type(req, "application/json");
         httpd_resp_send(req, response, strlen(response));
-        API_LOG_I("  Rule saved successfully: %d", new_rule_id);
+        API_LOG_D("  Rule saved successfully: %d", new_rule_id);
         return ESP_OK;
     } else {
         API_LOG_E("  Failed to save rule, result: %d", result);
@@ -1878,7 +1879,7 @@ esp_err_t api_rules_delete_handler(httpd_req_t *req) {
         }
     }
     
-    API_LOG_I("DELETE /api/rules/delete - ID: %d", rule_id);
+    API_LOG_D("DELETE /api/rules/delete - ID: %d", rule_id);
     
     if (rule_id < 0 || rule_id >= MAX_RULES) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing or invalid rule ID");
@@ -2121,31 +2122,31 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
     // Get query string
     char query[128] = {0};
     size_t query_len = httpd_req_get_url_query_len(req);
-    API_LOG_I("Query length: %d", query_len);
+    API_LOG_D("Query length: %d", query_len);
     
     if (query_len > 0) {
         if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
-            API_LOG_I("Full query string: %s", query);
+            API_LOG_D("Full query string: %s", query);
             
             // Parse parameters with better error checking
             if (httpd_query_key_value(query, "limit", limit_str, sizeof(limit_str)) == ESP_OK) {
-                API_LOG_I("Parsed limit: %s", limit_str);
+                API_LOG_D("Parsed limit: %s", limit_str);
             } else {
-                API_LOG_I("No limit parameter found, using default: 60");
+                API_LOG_D("No limit parameter found, using default: 60");
             }
             
             httpd_query_key_value(query, "start", start_str, sizeof(start_str));
             httpd_query_key_value(query, "end", end_str, sizeof(end_str));
         }
     } else {
-        API_LOG_I("No query string, using defaults");
+        API_LOG_D("No query string, using defaults");
     }
     
     int limit = atoi(limit_str);
     if (limit < 1) limit = 1;
     if (limit > 4320) limit = 4320;
     
-    API_LOG_I("Final limit: %d", limit);  // Debug
+//    API_LOG_I("Final limit: %d", limit);  // Debug
     
     uint32_t start_ts = atoi(start_str);
     uint32_t end_ts = atoi(end_str);
@@ -2155,6 +2156,8 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
 
         // Get the newest records by reading backwards from end
         uint32_t total_records = sensor_history_get_record_count();
+
+        API_LOG_D("History # of records %d", total_records);
         if (total_records == 0) {
             httpd_resp_set_type(req, "application/json");
             httpd_resp_send(req, "{\"entries\":[]}", -1);
@@ -2166,6 +2169,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
         uint32_t newest_ts = sensor_history_get_newest_ts();
         uint32_t oldest_ts = sensor_history_get_oldest_ts();
 
+        API_LOG_D("Newest - Oldest Timestamps : %d - %d", newest_ts, oldest_ts);
         if (newest_ts == 0) {
             httpd_resp_set_type(req, "application/json");
             httpd_resp_send(req, "{\"entries\":[]}", -1);
@@ -2203,6 +2207,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
     
     // Keep reading in chunks until we have enough records
     while (records_remaining > 0) {
+        API_LOG_D("Records remaining %d", records_remaining);
         int batch_size = (records_remaining < CHUNK_SIZE) ? records_remaining : CHUNK_SIZE;
         
         // Read a batch of records
@@ -2290,7 +2295,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
         API_LOG_E("Failed to send final chunk: %d", err);
     }
     
-    API_LOG_I("Returned %d history records in chunks", total_sent);
+    API_LOG_D("Returned %d history records in chunks", total_sent);
     return ESP_OK;
 }
 
@@ -2475,7 +2480,7 @@ esp_err_t api_export_csv_handler(httpd_req_t *req)
     free(records);
     httpd_resp_send_chunk(req, NULL, 0);  // End chunked response
     
-    API_LOG_I("Exported %d records as CSV", count);
+    API_LOG_D("Exported %d records as CSV", count);
     return ESP_OK;
 }
 
@@ -2694,6 +2699,38 @@ esp_err_t api_sensor_gpio_info_get_handler(httpd_req_t *req) {
     
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, response, strlen(response));
+    return ESP_OK;
+}
+
+// ============================================================
+// DELETE /api/partition/logs - Delete logs partition
+// ============================================================
+esp_err_t api_partition_logs_delete_handler(httpd_req_t *req) {
+    spiffs_unmount("/spiffs/logs");
+    spiffs_unmount("/spiffs/sensors");
+    format_spiffs("logs");
+    vTaskDelay(pdMS_TO_TICKS(10000));
+    spiffs_init();
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddBoolToObject(root, "success", true);
+    cJSON_AddStringToObject(root, "message", "Logs partition is deleted");
+    send_json_response(req, root);
+    return ESP_OK;
+}
+
+// ============================================================
+// DELETE /api/partition/sensors - Delete sensors partition
+// ============================================================
+esp_err_t api_partition_sensors_delete_handler(httpd_req_t *req) {
+    spiffs_unmount("/spiffs/logs");
+    spiffs_unmount("/spiffs/sensors");
+    format_spiffs("sensors");
+    vTaskDelay(pdMS_TO_TICKS(10000));
+    spiffs_init();
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddBoolToObject(root, "success", true);
+    cJSON_AddStringToObject(root, "message", "Sensors partition is deleted");
+    send_json_response(req, root);
     return ESP_OK;
 }
 
@@ -3066,5 +3103,21 @@ void register_api_endpoints(httpd_handle_t server) {
     };
     httpd_register_uri_handler(server, &api_sensor_gpio_info_uri);
 
-   API_LOG_I("All API endpoints registered");
+    httpd_uri_t partition_logs_delete_uri = {
+        .uri       = "/api/partition/logs",
+        .method    = HTTP_DELETE,
+        .handler   = api_partition_logs_delete_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &partition_logs_delete_uri);
+
+    httpd_uri_t partition_sensors_delete_uri = {
+        .uri       = "/api/partition/sensors",
+        .method    = HTTP_DELETE,
+        .handler   = api_partition_sensors_delete_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &partition_sensors_delete_uri);
+
+    API_LOG_I("All API endpoints registered");
 }

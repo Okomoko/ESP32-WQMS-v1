@@ -277,7 +277,7 @@ async function resetModbusMap() {
     try {
         const result = await api.post('/api/modbus/map', { entries: defaults });
         if (result.success) {
-            alert('✅MODBUS map reset');
+            alert('✅ MODBUS map reset');
             await loadModbusMap();
         }
     } catch (e) {
@@ -360,6 +360,16 @@ window.eraseLogFile = function(name) {
     if (!confirm(`⚠️ Erase ${name}?`)) return;
     api.del(`/api/logs?name=${name}`).then(result => {
         alert(result.message || '✅ Log file deleted');
+        loadLogFiles();
+    }).catch(err => {
+        alert('❌ Failed to erase: ' + err.message);
+    });
+};
+
+window.erasePartition = function(name) {
+    if (!confirm(`⚠️ Erase ${name} partition?`)) return;
+    api.del(`/api/partition/${name}`).then(result => {
+        alert(result.message || `✅ ${name} partition deleted`);
         loadLogFiles();
     }).catch(err => {
         alert('❌ Failed to erase: ' + err.message);

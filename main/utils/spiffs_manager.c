@@ -45,11 +45,15 @@ static esp_err_t mount_spiffs(const char *partition, const char *mount_point, in
     size_t total = 0, used = 0;
     ret = esp_spiffs_info(partition, &total, &used);
     if (ret == ESP_OK) {
-        WQMS_LOG_I("SPIFFS %s mounted: total=%lu, used=%lu", partition, total, used);
+        WQMS_LOG_D("SPIFFS %s mounted: total=%lu, used=%lu", partition, total, used);
         *mounted_flag = 1;
     }
     
     return ret;
+}
+
+esp_err_t format_spiffs(const char *partition_label) {
+    return esp_spiffs_format(partition_label);
 }
 
 // ============================================================
@@ -66,11 +70,11 @@ void spiffs_init(void) {
     // Create directories if needed
     if (spiffs_logs_mounted) {
         mkdir("/spiffs/logs", 0777);
-        WQMS_LOG_I("Logs directory ready");
+        WQMS_LOG_D("Logs directory ready");
     }
     if (spiffs_sensors_mounted) {
         mkdir("/spiffs/sensors", 0777);
-        WQMS_LOG_I("Sensors directory ready");
+        WQMS_LOG_D("Sensors directory ready");
     }
     
     WQMS_LOG_I("SPIFFS initialized (logs + sensors)");

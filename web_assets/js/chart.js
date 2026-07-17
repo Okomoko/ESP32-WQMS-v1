@@ -65,25 +65,6 @@ class LightChart {
         this.render();
     }
 
-    addDataPoint(label, values) {
-        this.labelsArray.push(label);
-        if (this.labelsArray.length > this.maxDataPoints) {
-            this.labelsArray.shift();
-        }
-        
-        Object.keys(values).forEach(key => {
-            if (!this.datasets[key]) {
-                this.datasets[key] = [];
-            }
-            this.datasets[key].push(values[key]);
-            if (this.datasets[key].length > this.maxDataPoints) {
-                this.datasets[key].shift();
-            }
-        });
-        
-        this.render();
-    }
-
     setVisible(datasetKey, visible) {
         if (visible) {
             this.visibleDatasets.add(datasetKey);

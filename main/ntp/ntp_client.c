@@ -54,7 +54,7 @@ static void load_ntp_servers_from_nvs(void) {
     if (nvs_open("wqms", NVS_READONLY, &handle) == ESP_OK) {
         size_t len = sizeof(server_list);
         if (nvs_get_str(handle, "ntp_servers", server_list, &len) == ESP_OK) {
-            WQMS_LOG_I("Loaded NTP servers from NVS: %s", server_list);
+            WQMS_LOG_D("Loaded NTP servers from NVS: %s", server_list);
         }
         nvs_close(handle);
     }
@@ -66,7 +66,7 @@ static void load_timezone_from_nvs(void) {
     if (nvs_open("wqms", NVS_READONLY, &handle) == ESP_OK) {
         size_t len = sizeof(timezone_str);
         if (nvs_get_str(handle, "timezone", timezone_str, &len) == ESP_OK) {
-            WQMS_LOG_I("Loaded timezone from NVS: %s", timezone_str);
+            WQMS_LOG_D("Loaded timezone from NVS: %s", timezone_str);
         }
         nvs_close(handle);
     }
@@ -79,13 +79,13 @@ static void save_ntp_servers_to_nvs(const char *servers) {
         nvs_set_str(handle, "ntp_servers", servers);
         nvs_commit(handle);
         nvs_close(handle);
-        WQMS_LOG_I("NTP servers saved to NVS: %s", servers);
+        WQMS_LOG_D("NTP servers saved to NVS: %s", servers);
     }
 }
 
 // Restart NTP client with current server list
 static void restart_ntp_client(void) {
-    WQMS_LOG_I("Restarting NTP client with servers: %s", server_list);
+    WQMS_LOG_D("Restarting NTP client with servers: %s", server_list);
     
     esp_sntp_stop();
     
@@ -116,7 +116,7 @@ static void restart_ntp_client(void) {
     backoff_sec = NTP_BACKOFF_BASE_SEC;
     ntp_synced = 0;
     
-    WQMS_LOG_I("NTP client restarted (fast sync mode)");
+    WQMS_LOG_D("NTP client restarted (fast sync mode)");
 }
 
 // ============================================================
@@ -124,7 +124,7 @@ static void restart_ntp_client(void) {
 // ============================================================
 static void ntp_sync_task(void *pvParameters) {
     ntp_task_handle = xTaskGetCurrentTaskHandle();
-    WQMS_LOG_I("NTP sync task started");
+    WQMS_LOG_D("NTP sync task started");
     
     while (1) {
         uint32_t delay_ms = 0;
@@ -137,7 +137,7 @@ static void ntp_sync_task(void *pvParameters) {
             delay_ms = backoff_sec * 1000;
         }
         
-        // ✅ Wait for the calculated delay
+        // Wait for the calculated delay
         vTaskDelay(pdMS_TO_TICKS(delay_ms));
         
         // Skip if manual time is set
@@ -145,7 +145,7 @@ static void ntp_sync_task(void *pvParameters) {
             continue;
         }
         
-        // ✅ Only sync if we're in FAST or BACKOFF mode, or if NTP is not synced
+        // Only sync if we're in FAST or BACKOFF mode, or if NTP is not synced
         if (sync_mode == NTP_MODE_FAST || sync_mode == NTP_MODE_BACKOFF || !ntp_synced) {
             esp_sntp_sync_time(NULL);
         } else {
@@ -202,7 +202,7 @@ static void sntp_callback(struct timeval *tv) {
     uint32_t now = get_time_from_ntp();
     if (now > 946684800) {
         ntp_synced = 1;
-        WQMS_LOG_I("NTP sync callback: time = %lu", now);
+        WQMS_LOG_D("NTP sync callback: time = %lu", now);
     }
 }
 
@@ -215,10 +215,10 @@ void ntp_start(void) {
     load_timezone_from_nvs();
     apply_timezone();
     
-    // ✅ Set operating mode
+    // Set operating mode
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
     
-    // ✅ Set sync interval to 1 hour (3600 seconds)
+    // Set sync interval to 1 hour (3600 seconds)
     esp_sntp_set_sync_interval(3600 * 1000);  // 1 hour in milliseconds
     
     // Parse server list
@@ -254,7 +254,7 @@ int ntp_force_sync(void) {
     sync_mode = NTP_MODE_FAST;
     sync_attempts = 0;
     esp_sntp_restart();
-    WQMS_LOG_I("NTP force sync initiated");
+    WQMS_LOG_D("NTP force sync initiated");
     return 0;
 }
 
@@ -302,17 +302,17 @@ void ntp_set_servers(const char *servers) {
     // Restart NTP client immediately with new servers
     restart_ntp_client();
     
-    WQMS_LOG_I("NTP servers updated and client restarted");
+    WQMS_LOG_D("NTP servers updated and client restarted");
 }
 
 void ntp_set_manual_time(uint32_t timestamp) {
     manual_time = timestamp;
     manual_time_set = 1;
     ntp_synced = 0;
-    
+
     struct timeval tv = { .tv_sec = timestamp, .tv_usec = 0 };
     settimeofday(&tv, NULL);
-    
+
     nvs_handle_t handle;
     if (nvs_open("wqms", NVS_READWRITE, &handle) == ESP_OK) {
         nvs_set_u32(handle, "manual_time", timestamp);
@@ -320,7 +320,7 @@ void ntp_set_manual_time(uint32_t timestamp) {
         nvs_commit(handle);
         nvs_close(handle);
     }
-    
+
     WQMS_LOG_I("Manual time set: %lu", timestamp);
 }
 

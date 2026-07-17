@@ -38,4 +38,7 @@ uint32_t spiffs_free_space(const char *mount_point);
 // Get total space on a mount point
 uint32_t spiffs_total_space(const char *mount_point);
 
+// Format a specific SPIFFS partition
+esp_err_t format_spiffs(const char *partition_label);
+
 #endif // SPIFFS_MANAGER_H

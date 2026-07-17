@@ -1,5 +1,4 @@
 // js/dashboard.js
-// Dashboard page - loaded only when needed
 // ============================================================
 // DASHBOARD MANAGER
 // ============================================================
@@ -100,7 +99,7 @@ class DashboardManager {
                 this.sensorKeyMap = {};
                 this.sensorLabels = {};
                 this.colors = {};
-				this.sensorUnit = {}
+                this.sensorUnit = {}
                 this.selectedSensors = new Set();
                 
                 this.sensorConfig.forEach(sensor => {
@@ -108,7 +107,7 @@ class DashboardManager {
                     const name = sensor.name || 'Sensor ' + (id + 1);
                     const color = sensor.color || this.defaultColors[id % this.defaultColors.length];
                     const key = name.replace(/ /g, '_');
-					const unit = sensor.unit;
+                    const unit = sensor.unit;
                     
                     this.sensorMap[id] = { name, color, key };
                     this.sensorNameMap[id] = name;
@@ -117,7 +116,7 @@ class DashboardManager {
                     this.sensorLabels[key] = name;
                     this.colors[key] = color;
                     this.selectedSensors.add(key);
-					this.sensorUnit[key] = unit;
+                    this.sensorUnit[key] = unit;
                 });
             }
         } catch (error) {
@@ -136,15 +135,15 @@ class DashboardManager {
         this.sensorKeyMap = {};
         this.sensorLabels = {};
         this.colors = {};
-		this.sensorUnit = {};
+        this.sensorUnit = {};
         this.selectedSensors = new Set();
         
         for (let i = 0; i < 8; i++) {
             const id = i;
-            const name = defaultNames[i] || 'Sensor ' + (i + 1);
+            const name = defaultNames[i];
             const color = this.defaultColors[i % this.defaultColors.length];
             const key = name.replace(/ /g, '_');
-			const unit = 0;
+            const unit = 0;
             
             this.sensorMap[id] = { name, color, key };
             this.sensorNameMap[id] = name;
@@ -153,7 +152,7 @@ class DashboardManager {
             this.sensorLabels[key] = name;
             this.colors[key] = color;
             this.selectedSensors.add(key);
-			this.sensorUnit[key] = unit;
+            this.sensorUnit[key] = unit;
         }
     }
 
@@ -198,10 +197,10 @@ class DashboardManager {
         
         this.sensorConfig.forEach(sensor => {
             const id = sensor.id;
-            const name = sensor.name || 'Sensor ' + (id + 1);
+            const name = sensor.name;
             const color = sensor.color || this.defaultColors[id % this.defaultColors.length];
             const key = name.replace(/ /g, '_');
-			const unit = sensor.unit;
+            const unit = sensor.unit;
             
             const label = document.createElement('label');
             label.style.cssText = `
@@ -286,9 +285,11 @@ class DashboardManager {
                     Object.keys(entry).forEach(key => {
                         if (key !== 'timestamp' && key !== 'sensor_mask') {
                             mapped[key] = entry[key];
+                            this.showNoDataMessage('Record %d', key);
                         }
                     });
                     
+                   this.showNoDataMessage('');
                     return mapped;
                 });
                 
@@ -541,7 +542,7 @@ async function loadSensors() {
                 raw_adc: reading ? reading.raw_adc : 0,
                 status: reading ? reading.status : 0,
                 quality: reading ? reading.quality : 0,
-				unit: cfg.unit || 0
+                unit: cfg.unit || 0
             };
         });
         
@@ -572,7 +573,7 @@ async function loadSensorSelectors() {
                 raw_adc: reading ? reading.raw_adc : 0,
                 status: reading ? reading.status : 0,
                 quality: reading ? reading.quality : 0,
-				unit: cfg.unit || 0
+                unit: cfg.unit || 0
             };
         });
         

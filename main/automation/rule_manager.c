@@ -75,8 +75,8 @@ void rule_manager_init(void) {
             rules[i].rule_id = -1;
         }
     }
-    
-    AUTO_LOG_I("Rule manager initialized: %d rules loaded", rule_count);
+
+    AUTO_LOG_I("Rule manager initialized: %d rule%s loaded", rule_count, rule_count <= 1 ? "" : "s");
 }
 
 automation_rule_t* rule_get_all(void) {

@@ -76,8 +76,7 @@ static void fire_rule_outputs(automation_rule_t *rule) {
         snprintf(message, sizeof(message), 
                  "Rule #%d '%s': Email notification to %s", rule->rule_id, rule->name, rule->email_recipient);
         AUTO_LOG_I(message);
-        email_send_notification("Automation Alert", 
-                                message);
+        email_send_notification("Automation Alert", message);
         }
     }
 }
