@@ -20,85 +20,48 @@
 
 // -------- Sensor Helpers --------
 static uint16_t get_sensor_calibration(int sensor_id) {
-    sensor_config_t configs[TOTAL_SENSOR_COUNT];
-    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
-        return configs[sensor_id].calibration_factor;
-    }
-    return 1000;
+    return sensor_get_calibration(sensor_id);
 }
 
 static uint8_t get_sensor_gpio(int sensor_id) {
-    sensor_config_t configs[TOTAL_SENSOR_COUNT];
-    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
-        return configs[sensor_id].gpio_pin;
-    }
-    return 0;
+    return sensor_get_gpio(sensor_id);
 }
 
 static uint16_t get_sensor_modbus(int sensor_id) {
-    sensor_config_t configs[TOTAL_SENSOR_COUNT];
-    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
-        return configs[sensor_id].modbus_register;
-    }
-    return 0;
+    return sensor_get_modbus(sensor_id);
 }
 
 static float get_sensor_min(int sensor_id) {
-    sensor_config_t configs[TOTAL_SENSOR_COUNT];
-    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
-        return configs[sensor_id].min_value;
-    }
-    return 0.0f;
+    return sensor_get_min(sensor_id);
 }
 
 static float get_sensor_max(int sensor_id) {
-    sensor_config_t configs[TOTAL_SENSOR_COUNT];
-    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
-    if (sensor_id >= 0 && sensor_id < TOTAL_SENSOR_COUNT) {
-        return configs[sensor_id].max_value;
-    }
-    return 100.0f;
+    return sensor_get_max(sensor_id);
 }
 
 // -------- Relay Helpers --------
 static uint8_t get_relay_gpio(int relay_id) {
-    relay_config_t configs[RELAY_COUNT];
-    nvs_load_relay_config(configs, RELAY_COUNT);
-    if (relay_id >= 0 && relay_id < RELAY_COUNT) {
-        return configs[relay_id].gpio_pin;
-    }
-    return 0;
+    relay_config_t *r_config;
+	r_config = relay_get_config(relay_id);
+	return r_config->gpio_pin;
 }
 
 static uint16_t get_relay_modbus(int relay_id) {
-    relay_config_t configs[RELAY_COUNT];
-    nvs_load_relay_config(configs, RELAY_COUNT);
-    if (relay_id >= 0 && relay_id < RELAY_COUNT) {
-        return configs[relay_id].modbus_register;
-    }
-    return 0;
+    relay_config_t *r_config;
+	r_config = relay_get_config(relay_id);
+    return r_config->modbus_register;
 }
 
 static uint16_t get_relay_duration(int relay_id) {
-    relay_config_t configs[RELAY_COUNT];
-    nvs_load_relay_config(configs, RELAY_COUNT);
-    if (relay_id >= 0 && relay_id < RELAY_COUNT) {
-        return configs[relay_id].activity_duration;
-    }
-    return RELAY_DEFAULT_DURATION_MS;
+    relay_config_t *r_config;
+	r_config = relay_get_config(relay_id);
+    return r_config->activity_duration;
 }
 
 static uint16_t get_relay_off_delay(int relay_id) {
-    relay_config_t configs[RELAY_COUNT];
-    nvs_load_relay_config(configs, RELAY_COUNT);
-    if (relay_id >= 0 && relay_id < RELAY_COUNT) {
-        return configs[relay_id].off_delay;
-    }
-    return RELAY_DEFAULT_OFFDELAY_MS;
+    relay_config_t *r_config;
+	r_config = relay_get_config(relay_id);
+    return r_config->off_delay;
 }
 
 // ============================================================

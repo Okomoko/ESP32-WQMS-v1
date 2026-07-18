@@ -247,10 +247,10 @@ function Minify-HTML {
         # Remove spaces after opening tags and before closing tags
         $content = $content -replace '\s+>', '>'
         $content = $content -replace '<\s+', '<'
-        
+
         # Additional cleanup
         $content = $content -replace ';[\s\r\n]*\}', '}'
-        
+
         # Write with UTF-8 encoding
         Write-FileUTF8 -FilePath $OutputPath -Content $content
         
@@ -311,16 +311,23 @@ function Minify-JS {
         $content = Read-FileWithEncoding -FilePath $FilePath
         
         # Remove single-line comments (preserve important ones)
-        $content = $content -replace '(?m)^\s*//.*?$', ''
+        $content = $content -replace "(?m)(?<!:)//[^\r\n]*", ""  # "(?m)^\s*//.*?$", ""
         
         # Remove multi-line comments
-        $content = $content -replace '/\*.*?\*/', ''
+        $content = $content -replace "/\*.*?\*/", ""
         
         # Remove empty lines
-        $content = $content -replace '(`r?`n){3,}', '`r`n`r`n'
+        $content = $content -replace "(`r?`n){3,}", "`r`n`r`n"
 
         # Remove trailing spaces of each line
-        $content = $content -replace '(?m)^\s+', ''
+        $content = $content -replace "(?m)^\s+", ""
+
+        # Additional cleanup
+        $content = ($content -split "`r`n" -join "`n")
+        $content = ($content -replace "{ ", "{")
+        $content = ($content -replace " {`n", " {")
+        $content = ($content -replace " }", "}")
+        $content = ($content -replace "`n}`n", "}`n")
 
          # Remove whitespace
 #        $content = $content -replace '\s+', ' '

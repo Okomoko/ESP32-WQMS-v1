@@ -1,4 +1,4 @@
-// dht11.c - Improved version with better stability
+// dht11.c
 
 #include <string.h>
 #include "driver/gpio.h"
@@ -11,11 +11,11 @@
 #include "dht11.h"
 #include "log_levels.h"
 #include "logger.h"
+#include "system_config.h"
 
 // ============================================================
 // Static Variables
 // ============================================================
-static int dht11_pin = 13;
 static int dht11_initialized = 0;
 static int dht11_powered = 0;
 static portMUX_TYPE dht11_mux = portMUX_INITIALIZER_UNLOCKED;
@@ -24,27 +24,26 @@ static portMUX_TYPE dht11_mux = portMUX_INITIALIZER_UNLOCKED;
 // Internal Functions - NO LOGGING INSIDE
 // ============================================================
 static void dht11_set_output(void) {
-    gpio_set_direction(dht11_pin, GPIO_MODE_OUTPUT);
+    gpio_set_direction(GPIO_DHT11, GPIO_MODE_OUTPUT);
 }
 
 static void dht11_set_input(void) {
-    gpio_set_direction(dht11_pin, GPIO_MODE_INPUT);
-    gpio_set_pull_mode(dht11_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(GPIO_DHT11, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(GPIO_DHT11, GPIO_PULLUP_ONLY);
 }
 
 static void dht11_write(uint8_t value) {
-    gpio_set_level(dht11_pin, value);
+    gpio_set_level(GPIO_DHT11, value);
 }
 
 static uint8_t dht11_read_pin(void) {
-    return gpio_get_level(dht11_pin);
+    return gpio_get_level(GPIO_DHT11);
 }
 
 static void dht11_delay_us(uint32_t us) {
     esp_rom_delay_us(us);
 }
 
-// Improved with shorter timeout and retry capability
 static uint8_t dht11_wait_for_level(uint8_t level, uint32_t timeout_us) {
     uint32_t start = esp_timer_get_time();
     uint32_t elapsed;
@@ -105,7 +104,7 @@ static int dht11_read_raw(dht11_data_t *data) {
     
     // Start signal
     dht11_write(0);
-    dht11_delay_us(18000);  // Minimum 18ms, DHT11 needs at least 18ms
+    dht11_delay_us(20000);  // Minimum 18ms, DHT11 needs at least 18ms, 20ms would be safer
     dht11_write(1);
     dht11_delay_us(40);    // 20-40us
     dht11_set_input();
@@ -160,11 +159,10 @@ static int dht11_read_raw(dht11_data_t *data) {
 // ============================================================
 
 void dht11_init(int gpio_pin) {
-    dht11_pin = gpio_pin;
     
     // Configure pin with pull-up enabled
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << dht11_pin),
+        .pin_bit_mask = (1ULL << gpio_pin),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -173,7 +171,7 @@ void dht11_init(int gpio_pin) {
     gpio_config(&io_conf);
     
     // Initial high state
-    gpio_set_level(dht11_pin, 1);
+    gpio_set_level(gpio_pin, 1);
     
     dht11_powered = 0;
     dht11_initialized = 1;
@@ -187,7 +185,7 @@ void dht11_power_up(void) {
     
     dht11_set_output();
     dht11_write(1);
-    vTaskDelay(pdMS_TO_TICKS(2000));  // Wait 2 seconds for stabilization
+    vTaskDelay(pdMS_TO_TICKS(5000));  // Wait 5 seconds for stabilization
     dht11_powered = 1;
     SENSOR_LOG_D("DHT11 powered up and stable");
 }
@@ -215,19 +213,18 @@ int dht11_read(dht11_data_t *data) {
     taskENTER_CRITICAL(&dht11_mux);
     ret = dht11_read_raw(data);
     taskEXIT_CRITICAL(&dht11_mux);
-    
+
     // Retry with delay if failed
     for (int attempt = 1; attempt < attempts && ret != 0; attempt++) {
-        vTaskDelay(pdMS_TO_TICKS(200));  // DHT11 needs 200ms between reads
+        vTaskDelay(pdMS_TO_TICKS(300));  // DHT11 needs 200ms between reads, but I prefer to wait some more.
         taskENTER_CRITICAL(&dht11_mux);
         ret = dht11_read_raw(data);
         taskEXIT_CRITICAL(&dht11_mux);
     }
-    
+
     // All logging outside critical section
     if (ret == 0) {
-        SENSOR_LOG_D("DHT11: Temp=%.1f°C, Humid=%.1f%%", 
-                     data->temperature, data->humidity);
+        SENSOR_LOG_D("DHT11: Temp=%.1f°C, Humid=%.1f%%", data->temperature, data->humidity);
     } else {
         switch(ret) {
             case -1:

@@ -35,7 +35,22 @@ int sensor_poll_now(uint8_t sensor_id);
 void sensor_set_enabled(uint8_t sensor_id, uint8_t enabled);
 
 // Get sensor name
-const char* sensor_get_name(uint8_t sensor_id);
+char* sensor_get_name(uint8_t sensor_id);
+
+// Get sensor calibration coefficient
+uint16_t sensor_get_calibration(uint8_t sensor_id);
+
+// Get sensor GPIO pin
+uint8_t sensor_get_gpio(int sensor_id);
+
+// Get sensor MODBUS id
+uint8_t sensor_get_modbus(int sensor_id);
+
+// Get sensor min value
+uint8_t sensor_get_min(int sensor_id);
+
+// Get sensor max value
+uint8_t sensor_get_max(int sensor_id);
 
 /**
  * @brief Get GPIO pin number for a specific ADC channel using ESP-IDF function

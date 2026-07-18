@@ -266,9 +266,34 @@ void sensor_set_enabled(uint8_t sensor_id, uint8_t enabled) {
     SENSOR_LOG_D("Sensor %d %s", sensor_id, enabled ? "enabled" : "disabled");
 }
 
-const char* sensor_get_name(uint8_t sensor_id) {
+char* sensor_get_name(uint8_t sensor_id) {
     if (sensor_id >= TOTAL_SENSOR_COUNT) return "Unknown";
     return sensor_config[sensor_id].name;
+}
+
+uint16_t sensor_get_calibration(uint8_t sensor_id) {
+    if (sensor_id >= TOTAL_SENSOR_COUNT) return -1;
+    return sensor_config[sensor_id].calibration_factor;
+}
+
+uint8_t sensor_get_gpio(int sensor_id) {
+    if (sensor_id >= TOTAL_SENSOR_COUNT) return -1;
+    return sensor_config[sensor_id].gpio_pin;
+}
+
+uint8_t sensor_get_modbus(int sensor_id) {
+    if (sensor_id >= TOTAL_SENSOR_COUNT) return -1;
+    return sensor_config[sensor_id].modbus_register;
+
+}
+uint8_t sensor_get_min(int sensor_id) {
+    if (sensor_id >= TOTAL_SENSOR_COUNT) return -1;
+    return sensor_config[sensor_id].min_value;
+}
+
+uint8_t sensor_get_max(int sensor_id) {
+    if (sensor_id >= TOTAL_SENSOR_COUNT) return -1;
+    return sensor_config[sensor_id].max_value;
 }
 
 /**

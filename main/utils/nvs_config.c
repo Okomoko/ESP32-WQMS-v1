@@ -7,6 +7,7 @@
 #include "esp_mac.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "esp_adc/adc_continuous.h"
 
 //#include "wifi_manager.h"
 #include "nvs_config.h"
@@ -20,15 +21,14 @@
 // Default RELAY Definitions
 // ============================================================
 const char *default_relay_names[] = { "Pump 1", "Valve 1", "Pump 2", "Valve 2", "Pump 3", "Valve 3", "Pump 4", "Valve 4", "Pump 5", "Valve 5"};
-const uint8_t default_relay_gpios[] = {4, 5, 18, 19, 21, 22, 23, 25, 26, 27};
+const uint8_t default_relay_gpios[] = {GPIO_RELAY1, GPIO_RELAY2, GPIO_RELAY3, GPIO_RELAY4, GPIO_RELAY5, GPIO_RELAY6, GPIO_RELAY7, GPIO_RELAY8, GPIO_RELAY9, GPIO_RELAY10};
 const uint16_t default_relay_modbus[] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9};
 
 // ============================================================
 // Default SENSOR Definitions
 // ============================================================
 const char *default_sensor_names[] = {"Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8"};
-const uint8_t default_sensor_gpios[] = {36, 39, 34, 35, 32, 33, GPIO_DHT11, GPIO_DHT11};
-const uint8_t default_sensor_adc[] = {0, 3, 4, 5, 6, 7, 255, 255};
+const uint8_t default_sensor_gpios[] = {GPIO_SENSOR1, GPIO_SENSOR2, GPIO_SENSOR3, GPIO_SENSOR4, GPIO_SENSOR5, GPIO_SENSOR6, GPIO_DHT11, GPIO_DHT11};
 const uint16_t default_sensor_modbus[] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7};
 const float default_sensor_min[] = {0, 0, 0, 0, 0, 0, -10, 0};
 const float default_sensor_max[] = {1000, 1000, 1000, 1000, 1000, 1000, 60, 100};
@@ -40,17 +40,30 @@ static modbus_map_entry_t default_modbus_map[MODBUS_MAP_ENTRY_COUNT];
 // Default Sensor Configurations
 // ============================================================
 static void load_default_sensor_configs(sensor_config_t *config, int count) {
+    adc_unit_t adc_unit;
+    adc_channel_t adc_channel;
+	esp_err_t ret;
     for (int i = 0; i < count && i < TOTAL_SENSOR_COUNT; i++) {
         strncpy(config[i].name, default_sensor_names[i], sizeof(config[i].name) - 1);
         config[i].name[sizeof(config[i].name) - 1] = '\0';
         config[i].enabled = 0;
         config[i].gpio_pin = default_sensor_gpios[i];
-        config[i].adc_channel = default_sensor_adc[i];
+		if (config[i].gpio_pin != GPIO_DHT11) {
+			ret = adc_continuous_io_to_channel(config[i].gpio_pin, &adc_unit, &adc_channel);
+			if (ret == ESP_OK) {
+				config[i].adc_channel = adc_channel;
+				WQMS_LOG_D("Sensor %d, GPIO %d, ADC Unit %d Channel %d", i, config[i].gpio_pin, adc_unit, adc_channel);
+			} else {
+				WQMS_LOG_E("Sensor %d, GPIO %d, ADC Channels cannot be optained, error code is %d.", i, config[i].gpio_pin, ret);
+			}
+		} else {
+			config[i].adc_channel = 255;
+			WQMS_LOG_D("DHT11 ADC Channel is set to 255");
+		}
         config[i].modbus_register = default_sensor_modbus[i];
         config[i].calibration_factor = 1000;
         config[i].min_value = default_sensor_min[i];
         config[i].max_value = default_sensor_max[i];
-        config[i].unit = 0; //blank
     }
 }
 

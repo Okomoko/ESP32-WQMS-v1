@@ -18,7 +18,7 @@
 
 // Default to INFO if not defined
 #ifndef CONFIG_WQMS_LOG_LEVEL
-    #define CONFIG_WQMS_LOG_LEVEL WQMS_LOG_LEVEL_INFO
+    #define CONFIG_WQMS_LOG_LEVEL WQMS_LOG_LEVEL_DEBUG
 #endif
 
 // ============================================================

@@ -36,9 +36,9 @@ static esp_err_t http_event_handler(esp_http_client_event_t *evt) {
         case HTTP_EVENT_HEADER_SENT:
             INTEGRATION_LOG_D("HTTP header sent");
             break;
-        case HTTP_EVENT_ON_HEADER:
-            INTEGRATION_LOG_D("HTTP header: %.*s", evt->header_len, (char*)evt->header);
-            break;
+//        case HTTP_EVENT_ON_HEADER:
+//            INTEGRATION_LOG_D("HTTP header: %.*s", evt->header_len, (char*)evt->header);
+//            break;
         case HTTP_EVENT_ON_DATA:
             INTEGRATION_LOG_D("HTTP data: %.*s", evt->data_len, (char*)evt->data);
             break;
@@ -49,6 +49,7 @@ static esp_err_t http_event_handler(esp_http_client_event_t *evt) {
             INTEGRATION_LOG_D("HTTP disconnected");
             break;
         default:
+            INTEGRATION_LOG_D("Unhandled error in HTTP Event Handler : %d", evt->event_id);
             break;
     }
     return ESP_OK;

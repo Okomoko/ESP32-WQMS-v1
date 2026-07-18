@@ -2200,11 +2200,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
     uint32_t current_start_ts = start_ts;
     uint32_t current_end_ts = end_ts;
     int records_remaining = limit;
-    
-    // Load sensor configs once (for name mapping)
-    sensor_config_t sensor_config[TOTAL_SENSOR_COUNT];
-    nvs_load_sensor_config(sensor_config, TOTAL_SENSOR_COUNT);
-    
+
     // Keep reading in chunks until we have enough records
     while (records_remaining > 0) {
         API_LOG_D("Records remaining %d", records_remaining);
@@ -2238,7 +2234,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
             // Add each sensor value using configured names
             for (int j = 0; j < TOTAL_SENSOR_COUNT; j++) {
                 // Use configured name if available, otherwise default
-                const char *name = sensor_config[j].name;
+                const char *name = sensor_get_name(j);
                 if (!name || name[0] == '\0' || name[0] == 0xFF) {
                     name = default_sensor_names[j];
                 }
@@ -2345,14 +2341,11 @@ esp_err_t api_get_sensor_config_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
-    sensor_config_t configs[TOTAL_SENSOR_COUNT];
-    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
-
     for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         cJSON *sensor_obj = cJSON_CreateObject();
         if (!sensor_obj) continue;
         
-        const char *name = configs[i].name;
+        const char *name = sensor_get_name(i);
         
         cJSON_AddNumberToObject(sensor_obj, "id", i);
         cJSON_AddStringToObject(sensor_obj, "name", name);
@@ -2439,16 +2432,13 @@ esp_err_t api_export_csv_handler(httpd_req_t *req)
     
     int count = sensor_history_get_range(start_ts, end_ts, records, limit);
     
-    sensor_config_t sensor_config[TOTAL_SENSOR_COUNT];
-    nvs_load_sensor_config(sensor_config, TOTAL_SENSOR_COUNT);
-
-    char *result = malloc((sizeof(sensor_config[0].name)+2)*TOTAL_SENSOR_COUNT); //+2 for comma&space for each entry and null terminator at the end.
+    char *result = malloc((sizeof(sensor_get_name(0))+2)*TOTAL_SENSOR_COUNT); //+2 for comma&space for each entry and null terminator at the end.
     if (!result) return 1;
     
     // Build the string
     char *ptr = result;
     for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
-        ptr += sprintf(ptr, "%s", sensor_config[i].name);
+        ptr += sprintf(ptr, "%s", sensor_get_name(i));
         // Add separator
         if (i < (TOTAL_SENSOR_COUNT - 1)) ptr += sprintf(ptr, ", ");
     }

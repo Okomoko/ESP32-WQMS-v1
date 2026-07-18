@@ -70,10 +70,30 @@ GND     38         -    Power    Ground
 
 */
 
-//check pin configuration in nvs_config.c
+// ============================================================
+// Sensor GPIO Configuration
+// ============================================================
+#define GPIO_SENSOR1           36 // Analogue sensors input pins
+#define GPIO_SENSOR2           39
+#define GPIO_SENSOR3           34
+#define GPIO_SENSOR4           35
+#define GPIO_SENSOR5           32
+#define GPIO_SENSOR6           33
+#define GPIO_DHT11             13 //Digital temperature and humidity sensor connection I/O pin
 
-// Digital temperature and humidity sensor connection
-#define GPIO_DHT11             13 //Digital sensor I/O pin
+// ============================================================
+// Relay GPIO Configuration
+// ============================================================
+#define GPIO_RELAY1             4 // Relay output pins
+#define GPIO_RELAY2             5
+#define GPIO_RELAY3            18
+#define GPIO_RELAY4            19
+#define GPIO_RELAY5            21
+#define GPIO_RELAY6            22
+#define GPIO_RELAY7            23
+#define GPIO_RELAY8            25
+#define GPIO_RELAY9            26
+#define GPIO_RELAY10           27
 
 // ============================================================
 // Relay Configuration
