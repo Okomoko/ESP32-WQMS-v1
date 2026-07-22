@@ -265,8 +265,8 @@ void wifi_init(void) {
             wifi_mode = 1;
         } else {
             WQMS_LOG_W("STA connection failed, starting to AP+STA mode");
-			wqms_start_ap_sta_mode();
-			WQMS_LOG_I("Switched to AP+STA mode");
+            wqms_start_ap_sta_mode();
+            WQMS_LOG_I("Switched to AP+STA mode");
         }
     } else {
         WQMS_LOG_I("No STA credentials found, starting AP+STA mode");

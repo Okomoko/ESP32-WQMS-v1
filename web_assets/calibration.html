@@ -38,7 +38,7 @@
 
         <main id="calibration">
             <h2>Calibration Wizard</h2>
-            <p style="color:#7a8aae; margin-bottom:20px;">
+            <p style="color:#7a9bbf; margin-bottom:20px; font-size:0.95rem;">
                 Calibrate sensors using standard solutions with known values.
                 Collect at least 2 samples to calculate the calibration factor.
             </p>
@@ -46,56 +46,117 @@
             <div id="calibration-container">
                 <!-- Step 1: Select Sensor -->
                 <div id="cal-step-1" class="cal-step active">
-                    <h3>Step 1: Select Sensor</h3>
-                    <div class="config-group">
-                        <label>Sensor</label>
-                        <select id="cal-sensor-select"></select>
+                    <div class="sensor-card" style="max-width:100%;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">
+                                🔬 Step 1: Select Sensor
+                                <span class="badge">Required</span>
+                            </div>
+                            <div class="sensor-card-meta">
+                                <span id="cal-current1" style="font-weight:500; color:#2b7be4;">--</span>
+                            </div>
+                        </div>
+                        
+                        <div class="sensor-card-body" style="grid-template-columns: 1fr;">
+                            <div class="field-group" style="grid-column: 1 / -1;">
+                                <label>Select Sensor</label>
+                                <select id="cal-sensor-select" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid #dde6ef; background:#fff; font-size:0.9rem;">
+                                </select>
+                            </div>
+                            
+                            <div class="field-group" style="grid-column: 1 / -1; background:#f8fafd; border-radius:10px; padding:12px 16px; border:1px solid #e6edf6;">
+                                <label style="color:#1f4a7a; font-weight:500;">Current Value</label>
+                                <div style="font-size:1.2rem; font-weight:500; color:#0a2744; padding:4px 0;">
+                                    <span id="cal-current1-value">--</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="sensor-card-footer">
+                            <button id="cal-start" class="btn btn-primary">▶️ Start Calibration</button>
+                        </div>
                     </div>
-                    <div id="cal-sensor-info">
-                        Current Value: <span id="cal-current1">--</span>
-                    </div>
-                    <button id="cal-start" class="btn btn-primary">Start Calibration</button>
                 </div>
 
                 <!-- Step 2: Add Samples -->
                 <div id="cal-step-2" class="cal-step">
-                    <h3 id="sensor-name"></h3>
-                    <div id="cal-sensor-info">
-                        Current Value: <span id="cal-current2">--</span>
-                    </div>
-                    <h3>Step 2: Add Reference Samples</h3>
-                    <p style="color:#7a8aae; font-size:0.9rem; margin-bottom:15px;">
-                        Place sensor in a standard solution and enter the known value.
-                        Add at least 2 samples with different known values.
-                    </p>
-                    <div class="config-group">
-                        <label>Known Value</label>
-                        <input type="number" id="cal-known-value" step="0.01" placeholder="Enter reference value" disabled>
-                    </div>
-                    <button id="cal-add-sample" class="btn btn-primary" disabled>Add Sample</button>
-                    
-                    <div id="cal-sample-list">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Known Value</th>
-                                    <th>ADC Reading</th>
-                                    <th>Voltage</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cal-sample-body"></tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="cal-actions">
-                        <button id="cal-apply" class="btn btn-success" disabled>Apply Calibration</button>
-                        <button id="cal-cancel" class="btn btn-danger">Cancel</button>
-                    </div>
-                    
-                    <div id="cal-result">
-                        <h4>Calibration Factor: <span id="cal-factor">--</span></h4>
-                        <p>Based on <span id="cal-sample-count">0</span> samples</p>
+                    <div class="sensor-card" style="max-width:100%;">
+                        <div class="sensor-card-header">
+                            <div class="sensor-card-title">
+                                📊 Step 2: Add Reference Samples
+                                <span class="badge" id="cal-sample-count-badge">0 samples</span>
+                            </div>
+                            <div class="sensor-card-meta">
+                                <span id="cal-current2" style="font-weight:500; color:#2b7be4;">--</span>
+                            </div>
+                        </div>
+                        
+                        <div class="sensor-card-body">
+                            <div class="field-group" style="grid-column: 1 / -1;">
+                                <label style="color:#1f4a7a; font-weight:500;">Sensor: <span id="sensor-name" style="color:#0a2744;"></span></label>
+                            </div>
+                            
+                            <div class="field-group" style="grid-column: 1 / -1; background:#f8fafd; border-radius:10px; padding:12px 16px; border:1px solid #e6edf6;">
+                                <label style="color:#1f4a7a; font-weight:500;">Current Reading</label>
+                                <div style="font-size:1.2rem; font-weight:500; color:#0a2744; padding:4px 0;">
+                                    <span id="cal-current2-value">--</span>
+                                </div>
+                            </div>
+                            
+                            <div class="field-group" style="grid-column: 1 / -1;">
+                                <label>Known Reference Value</label>
+                                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                    <input type="number" id="cal-known-value" step="0.01" placeholder="Enter reference value" 
+                                           style="flex:1; min-width:150px; padding:8px 12px; border-radius:8px; border:1px solid #dde6ef; font-size:0.9rem;" disabled>
+                                    <button id="cal-add-sample" class="btn btn-primary" disabled style="white-space:nowrap;">➕ Add Sample</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="cal-sample-list" style="margin:8px 0 12px 0; padding:0 12px;">
+                            <div style="overflow-x:auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px;">#</th>
+                                            <th>Known Value</th>
+                                            <th>ADC Reading</th>
+                                            <th>Voltage</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cal-sample-body"></tbody>
+                                </table>
+                            </div>
+                            <div id="cal-sample-empty" style="text-align:center; color:#7a9bbf; padding:20px; font-size:0.9rem;">
+                                No samples added yet. Add at least 2 samples to calculate calibration.
+                            </div>
+                        </div>
+                        
+                        <div id="cal-result" style="display:none; margin:8px 12px 12px 12px; padding:16px 20px; background:#e8f5e9; border-radius:10px; border:1px solid #43a047;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <div>
+                                    <h4 style="color:#1b5e20; margin:0; font-size:1rem;">✅ Calibration Factor</h4>
+                                    <p style="color:#2e7d32; margin:4px 0 0 0; font-size:0.9rem;">
+                                        Based on <span id="cal-sample-count">0</span> samples
+                                    </p>
+                                </div>
+                                <div style="font-size:1.4rem; font-weight:600; color:#1b5e20;">
+                                    <span id="cal-factor">--</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="sensor-card-footer">
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; width:100%; justify-content:space-between;">
+                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                    <button id="cal-apply" class="btn btn-success" disabled>✅ Apply Calibration</button>
+                                    <button id="cal-cancel" class="btn btn-danger">❌ Cancel</button>
+                                </div>
+                                <div>
+                                    <button id="cal-clear-samples" class="btn btn-warning" style="display:none;">🗑️ Clear Samples</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

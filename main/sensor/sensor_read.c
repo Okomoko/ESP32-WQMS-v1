@@ -159,6 +159,7 @@ static void sensor_poll_task(void *pvParameters) {
 // ============================================================
 
 void sensor_init(void) {
+    SENSOR_LOG_D("sensor_init() is called...");
     if (sensor_init_called) {
         SENSOR_LOG_W("sensor_init() called twice - ignoring second call");
         return;
@@ -170,16 +171,19 @@ void sensor_init(void) {
         SENSOR_LOG_E("Failed to create sensor mutex");
         return;
     }
-    
+
+    SENSOR_LOG_D("nvs_load_sensor_config is about to be called...");
     // Load sensor configuration from NVS
     nvs_load_sensor_config(sensor_config, TOTAL_SENSOR_COUNT);
     
     if (wqms_adc_dma_init() != 0) {
         SENSOR_LOG_E("ADC DMA init failed - sensors will not work");
     } else {
+        SENSOR_LOG_D("ADC DMA is initialized, reading is about to be started...");
         wqms_adc_dma_start();
     }
     
+    SENSOR_LOG_D("dht11_init is about to be called...");
     dht11_init(GPIO_DHT11);
     dht11_power_up();
     
@@ -188,7 +192,7 @@ void sensor_init(void) {
     // Test read
     dht11_data_t data;
     if (dht11_read(&data) == 0) {
-        SENSOR_LOG_I("DHT11 ready: Temp=%.1f, Humid=%.1f", data.temperature, data.humidity);
+        SENSOR_LOG_D("DHT11 ready: Temp=%.1f, Humid=%.1f", data.temperature, data.humidity);
     }
 
     sensor_history_init();
@@ -307,11 +311,11 @@ int adc_channel_to_gpio(adc_unit_t unit, adc_channel_t channel) {
     esp_err_t err = adc_continuous_channel_to_io(unit, channel, &gpio_num);
     
     if (err != ESP_OK) {
-        SENSOR_LOG_E("Failed to get GPIO for ADC unit %d channel %d: %s", 
-                 unit, channel, esp_err_to_name(err));
+        SENSOR_LOG_E("Failed to get GPIO for ADC unit %d channel %d: %s", unit, channel, esp_err_to_name(err));
         return -1;
     }
     
+    SENSOR_LOG_D("GPIO for ADC unit %d channel %d is %d", unit, channel, gpio_num);
     return gpio_num;
 }
 
@@ -340,53 +344,6 @@ const char* adc_get_pin_mapping_json(void) {
     
     strcat(json_buffer, "}");
     return json_buffer;
-}
-
-/**
- * @brief Get sensor-specific GPIO pin info using the ESP-IDF function
- * @param sensor_name Name of the sensor (e.g., "pH", "ORP", "TDS", "TEMP")
- * @return String with GPIO info (e.g., "GPIO32")
- */
-const char* sensor_get_gpio_info(const char *sensor_name) {
-    static char info_buffer[32];
-    info_buffer[0] = '\0';
-    
-    if (!sensor_name) return "N/A";
-    
-    // Map sensor names to ADC channels
-    // Adjust this based on your actual sensor configuration
-    adc_channel_t channel = -1;
-    
-    if (strcasecmp(sensor_name, "pH") == 0 || strstr(sensor_name, "pH") != NULL) {
-        channel = ADC_CHANNEL_4;
-    } else if (strcasecmp(sensor_name, "ORP") == 0 || strstr(sensor_name, "ORP") != NULL) {
-        channel = ADC_CHANNEL_5;
-    } else if (strcasecmp(sensor_name, "TDS") == 0 || strstr(sensor_name, "TDS") != NULL) {
-        channel = ADC_CHANNEL_6;
-    } else if (strcasecmp(sensor_name, "TEMP") == 0 || strstr(sensor_name, "TEMP") != NULL) {
-        channel = ADC_CHANNEL_7;
-    } else {
-        // Try to parse as ADC number (e.g., "ADC4")
-        if (strstr(sensor_name, "ADC") != NULL) {
-            int adc_num = atoi(sensor_name + 3);
-            if (adc_num >= 0 && adc_num <= 7) {
-                channel = adc_num;
-            }
-        }
-    }
-    
-    if (channel >= 0 && channel <= 7) {
-        int gpio = adc_channel_to_gpio(ADC_UNIT_1, channel);
-        if (gpio > 0) {
-            snprintf(info_buffer, sizeof(info_buffer), "GPIO%d", gpio);
-        } else {
-            snprintf(info_buffer, sizeof(info_buffer), "N/A");
-        }
-    } else {
-        snprintf(info_buffer, sizeof(info_buffer), "N/A");
-    }
-    
-    return info_buffer;
 }
 
 /**

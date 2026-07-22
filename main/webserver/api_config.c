@@ -42,25 +42,25 @@ static float get_sensor_max(int sensor_id) {
 // -------- Relay Helpers --------
 static uint8_t get_relay_gpio(int relay_id) {
     relay_config_t *r_config;
-	r_config = relay_get_config(relay_id);
-	return r_config->gpio_pin;
+    r_config = relay_get_config(relay_id);
+    return r_config->gpio_pin;
 }
 
 static uint16_t get_relay_modbus(int relay_id) {
     relay_config_t *r_config;
-	r_config = relay_get_config(relay_id);
+    r_config = relay_get_config(relay_id);
     return r_config->modbus_register;
 }
 
 static uint16_t get_relay_duration(int relay_id) {
     relay_config_t *r_config;
-	r_config = relay_get_config(relay_id);
+    r_config = relay_get_config(relay_id);
     return r_config->activity_duration;
 }
 
 static uint16_t get_relay_off_delay(int relay_id) {
     relay_config_t *r_config;
-	r_config = relay_get_config(relay_id);
+    r_config = relay_get_config(relay_id);
     return r_config->off_delay;
 }
 
@@ -250,7 +250,7 @@ esp_err_t relays_config_post_handler(httpd_req_t *req) {
                 if (name && cJSON_IsString(name)) {
                     strncpy(configs[idx].name, name->valuestring, sizeof(configs[idx].name) - 1);
                     configs[idx].name[sizeof(configs[idx].name) - 1] = '\0';
-					WQMS_LOG_I("Relay name : %s", configs[idx].name);
+                    WQMS_LOG_I("Relay name : %s", configs[idx].name);
                 }
                 if (enabled && cJSON_IsBool(enabled)) {
                     configs[idx].enabled = enabled->valueint;

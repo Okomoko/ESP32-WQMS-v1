@@ -1494,6 +1494,7 @@ esp_err_t logs_delete_handler(httpd_req_t *req) {
         cJSON_AddNumberToObject(root, "deleted", deleted);
         cJSON_AddStringToObject(root, "message", "Logs deleted");
         send_json_response(req, root);
+        log_init();
         return ESP_OK;
     }
     
@@ -1518,11 +1519,88 @@ esp_err_t logs_delete_handler(httpd_req_t *req) {
         cJSON_AddBoolToObject(root, "success", true);
         cJSON_AddStringToObject(root, "message", "Log deleted");
         send_json_response(req, root);
+        log_init();
         return ESP_OK;
     } else {
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File not found");
         return ESP_FAIL;
     }
+}
+
+
+// Helper function to build JSON for a single rule
+void build_rule_json(automation_rule_t *rule, char *buffer, size_t buffer_size) {
+    // Use a local buffer for conditions and outputs
+    char conditions_str[256] = "";
+    char outputs_str[256] = "";
+    
+    // Build conditions (reusing same approach but with smaller buffers)
+    int cond_pos = 0;
+    int cond_count = (rule->condition_count <= 4) ? rule->condition_count : 4;
+    for (int j = 0; j < cond_count; j++) {
+        if (j > 0) {
+            cond_pos += snprintf(conditions_str + cond_pos, sizeof(conditions_str) - cond_pos, ",");
+        }
+        cond_pos += snprintf(conditions_str + cond_pos, sizeof(conditions_str) - cond_pos,
+            "{\"sensor_id\":%d,\"comparator\":%d,\"threshold\":%.2f}",
+            rule->conditions[j].sensor_id,
+            rule->conditions[j].comparator,
+            rule->conditions[j].threshold
+        );
+    }
+    
+    // Build outputs
+    int out_pos = 0;
+    int out_count = (rule->output_count <= 4) ? rule->output_count : 4;
+    for (int j = 0; j < out_count; j++) {
+        if (j > 0) {
+            out_pos += snprintf(outputs_str + out_pos, sizeof(outputs_str) - out_pos, ",");
+        }
+        out_pos += snprintf(outputs_str + out_pos, sizeof(outputs_str) - out_pos,
+            "{\"type\":%d,\"id\":%d,\"duration\":%d}",
+            rule->outputs[j].type,
+            rule->outputs[j].id,
+            rule->outputs[j].custom_duration
+        );
+    }
+    
+    // Build final rule JSON
+    snprintf(buffer, buffer_size,
+        "{"
+        "\"id\":%d,"
+        "\"name\":\"%s\","
+        "\"enabled\":%d,"
+        "\"logic_type\":%d,"
+        "\"condition_count\":%d,"
+        "\"conditions\":[%s],"
+        "\"output_count\":%d,"
+        "\"outputs\":[%s],"
+        "\"cooldown_enabled\":%d,"
+        "\"cooldown_seconds\":%d,"
+        "\"trigger_count\":%lu,"
+        "\"last_triggered\":%lu,"
+        "\"created_timestamp\":%ld,"
+        "\"last_modified_timestamp\":%ld,"
+        "\"email_recipient\":\"%s\","
+        "\"email_subject\":\"%s\""
+        "}",
+		rule->rule_id,
+		rule->name,
+		rule->enabled ? 1 : 0,
+		rule->logic_type,
+		rule->condition_count,
+		conditions_str,
+		out_count,
+		outputs_str,
+		(rule->cooldown_seconds > 0) ? 1 : 0,
+		rule->cooldown_seconds,
+		(unsigned long)rule->trigger_count,
+		(unsigned long)rule->last_triggered,
+		(long)rule->created_timestamp,
+		(long)rule->last_modified_timestamp,
+		rule->email_recipient,
+		rule->email_subject
+    );
 }
 
 // ============================================================
@@ -1535,157 +1613,61 @@ esp_err_t api_rules_get_handler(httpd_req_t *req) {
     // Step 1: Get rules count safely
     int count = rule_get_count();
     
+    // Set response type
+    httpd_resp_set_type(req, "application/json");
+    
+    // Handle export header
+    const char *uri = req->uri;
+    if (strcmp(uri, "/api/rules/export") == 0) {
+        httpd_resp_set_hdr(req, "Content-Disposition", "attachment; filename=\"rules_export.json\"");
+    }
+    
     // If no rules, return empty array immediately
     if (count <= 0) {
-        httpd_resp_set_type(req, "application/json");
         httpd_resp_send(req, "{\"rules\":[],\"count\":0}", -1);
         return ESP_OK;
     }
     
-    // Step 2: Get rules pointer
+    // Get rules pointer
     automation_rule_t *rules = rule_get_all();
-    
-    // Safety check: if rules is NULL, return empty
     if (rules == NULL) {
-        httpd_resp_set_type(req, "application/json");
         httpd_resp_send(req, "{\"rules\":[],\"count\":0}", -1);
         return ESP_OK;
     }
     
-    // Step 3: Build response with FULL data
-    char response[8192] = "{ \"rules\": [";
-    int pos = strlen(response);
+    // Start JSON response with chunked sending
+    httpd_resp_send_chunk(req, "{\"rules\":[", -1);
+    
     int found = 0;
-    
     int max_rules = MAX_RULES;
-    if (max_rules > 32) max_rules = 32;
+    char chunk[512]; // Small stack buffer
     
-    for (int i = 0; i < max_rules && pos < (int)sizeof(response) - 500; i++) {
+    for (int i = 0; i < max_rules; i++) {
         // Check if this rule slot is actually used
-        int is_valid = 0;
-        if (rules[i].name[0] != '\0' && rules[i].name[0] != 0xFF) {
-            int name_len = 0;
-            int valid_chars = 1;
-            for (int j = 0; j < 64 && rules[i].name[j] != '\0'; j++) {
-                name_len++;
-                if (rules[i].name[j] < 32 || rules[i].name[j] > 126) {
-                    valid_chars = 0;
-                    break;
-                }
-            }
-            if (name_len > 0 && name_len < 64 && valid_chars) {
-                is_valid = 1;
-            }
-        }
-        
-        if (!is_valid) {
+        if (rules[i].name[0] == '\0' || rules[i].name[0] == 0xFF) {
             continue;
         }
         
+        // Add comma separator
         if (found > 0) {
-            pos += snprintf(response + pos, sizeof(response) - pos, ",");
+            httpd_resp_send_chunk(req, ",", -1);
         }
         found++;
         
-        // Safe strings
-        char safe_name[64] = "Unnamed";
-        strncpy(safe_name, rules[i].name, 63);
-        safe_name[63] = '\0';
+        // Build individual rule JSON in small buffer
+        build_rule_json(&rules[i], chunk, sizeof(chunk));
         
-        char safe_recipient[64] = "";
-        if (rules[i].email_recipient[0] != '\0' && rules[i].email_recipient[0] != 0xFF) {
-            strncpy(safe_recipient, rules[i].email_recipient, 63);
-            safe_recipient[63] = '\0';
-        }
-        
-        char safe_subject[128] = "";
-        if (rules[i].email_subject[0] != '\0' && rules[i].email_subject[0] != 0xFF) {
-            strncpy(safe_subject, rules[i].email_subject, 127);
-            safe_subject[127] = '\0';
-        }
-        
-        // ============================================================
-        // FIX: Build conditions JSON array
-        // ============================================================
-        char conditions_str[512] = "";
-        int cond_pos = 0;
-        int cond_count = (rules[i].condition_count <= 4) ? rules[i].condition_count : 4;
-        for (int j = 0; j < cond_count; j++) {
-            if (j > 0) {
-                cond_pos += snprintf(conditions_str + cond_pos, sizeof(conditions_str) - cond_pos, ",");
-            }
-            cond_pos += snprintf(conditions_str + cond_pos, sizeof(conditions_str) - cond_pos,
-                "{\"sensor_id\":%d,\"comparator\":%d,\"threshold\":%.2f}",
-                rules[i].conditions[j].sensor_id,
-                rules[i].conditions[j].comparator,
-                rules[i].conditions[j].threshold
-            );
-        }
-        
-        // ============================================================
-        // FIX: Build outputs JSON array
-        // ============================================================
-        char outputs_str[512] = "";
-        int out_pos = 0;
-        int out_count = (rules[i].output_count <= 4) ? rules[i].output_count : 4;
-        for (int j = 0; j < out_count; j++) {
-            if (j > 0) {
-                out_pos += snprintf(outputs_str + out_pos, sizeof(outputs_str) - out_pos, ",");
-            }
-            out_pos += snprintf(outputs_str + out_pos, sizeof(outputs_str) - out_pos,
-                "{\"type\":%d,\"id\":%d,\"duration\":%d}",
-                rules[i].outputs[j].type,
-                rules[i].outputs[j].id,
-                rules[i].outputs[j].custom_duration
-            );
-        }
-        
-        // ============================================================
-        // Build the full rule JSON with conditions and outputs
-        // ============================================================
-        pos += snprintf(response + pos, sizeof(response) - pos,
-            "{"
-            "\"id\":%d,"
-            "\"name\":\"%s\","
-            "\"enabled\":%d,"
-            "\"logic_type\":%d,"
-            "\"condition_count\":%d,"
-            "\"conditions\":[%s],"
-            "\"output_count\":%d,"
-            "\"outputs\":[%s],"
-            "\"cooldown_enabled\":%d,"
-            "\"cooldown_seconds\":%d,"
-            "\"trigger_count\":%lu,"
-            "\"last_triggered\":%lu,"
-            "\"created_timestamp\":%ld,"
-            "\"last_modified_timestamp\":%ld,"
-            "\"email_recipient\":\"%s\","
-            "\"email_subject\":\"%s\""
-            "}",
-            i,
-            safe_name,
-            rules[i].enabled ? 1 : 0,
-            rules[i].logic_type,
-            cond_count,
-            conditions_str,
-            out_count,
-            outputs_str,
-            (rules[i].cooldown_seconds > 0) ? 1 : 0,
-            rules[i].cooldown_seconds,
-            (unsigned long)rules[i].trigger_count,
-            (unsigned long)rules[i].last_triggered,
-            (long)rules[i].created_timestamp,
-            (long)rules[i].last_modified_timestamp,
-            safe_recipient,
-            safe_subject
-        );
+        // Send the rule
+        httpd_resp_send_chunk(req, chunk, -1);
     }
     
     // Close JSON
-    snprintf(response + pos, sizeof(response) - pos, "], \"count\": %d }", found);
+    snprintf(chunk, sizeof(chunk), "],\"count\":%d}", found);
+    httpd_resp_send_chunk(req, chunk, -1);
     
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, response, strlen(response));
+    // End chunked response
+    httpd_resp_send_chunk(req, NULL, 0);
+    
     return ESP_OK;
 }
 
@@ -1898,89 +1880,6 @@ esp_err_t api_rules_delete_handler(httpd_req_t *req) {
 }
 
 // ============================================================
-// GET /api/rules/export - Export rules as JSON
-// ============================================================
-esp_err_t api_rules_export_handler(httpd_req_t *req) {
-    char response[8192];
-    int pos = 0;
-    automation_rule_t *rules = rule_get_all();
-//    int count = rule_get_count();
-    int found = 0;
-    
-    pos += snprintf(response + pos, sizeof(response) - pos, "{\"rules\":[");
-    
-    for (int i = 0; i < MAX_RULES && pos < (int)sizeof(response) - 200; i++) {
-        if (rules[i].name[0] == '\0') continue;
-        if (rules[i].name[0] == 0xFF) continue;
-        
-        if (found > 0) {
-            pos += snprintf(response + pos, sizeof(response) - pos, ",");
-        }
-        found++;
-        
-        // Build conditions JSON
-        char conditions_str[512] = "";
-        int cond_pos = 0;
-        for (int j = 0; j < rules[i].condition_count && j < 4; j++) {
-            if (j > 0) cond_pos += snprintf(conditions_str + cond_pos, sizeof(conditions_str) - cond_pos, ",");
-            cond_pos += snprintf(conditions_str + cond_pos, sizeof(conditions_str) - cond_pos,
-                "{\"sensor_id\":%d,\"comparator\":%d,\"threshold\":%.2f}",
-                rules[i].conditions[j].sensor_id,
-                rules[i].conditions[j].comparator,
-                rules[i].conditions[j].threshold
-            );
-        }
-        
-        // Build outputs JSON
-        char outputs_str[512] = "";
-        int out_pos = 0;
-        for (int j = 0; j < rules[i].output_count && j < 4; j++) {
-            if (j > 0) out_pos += snprintf(outputs_str + out_pos, sizeof(outputs_str) - out_pos, ",");
-            out_pos += snprintf(outputs_str + out_pos, sizeof(outputs_str) - out_pos,
-                "{\"type\":%d,\"id\":%d,\"duration\":%d}",
-                rules[i].outputs[j].type,
-                rules[i].outputs[j].id,
-                rules[i].outputs[j].custom_duration
-            );
-        }
-        
-        pos += snprintf(response + pos, sizeof(response) - pos,
-            "{"
-            "\"id\":%d,"
-            "\"name\":\"%s\","
-            "\"enabled\":%d,"
-            "\"logic_type\":%d,"
-            "\"condition_count\":%d,"
-            "\"conditions\":[%s],"
-            "\"output_count\":%d,"
-            "\"outputs\":[%s],"
-            "\"cooldown_seconds\":%d,"
-            "\"email_recipient\":\"%s\","
-            "\"email_subject\":\"%s\""
-            "}",
-            rules[i].rule_id,
-            rules[i].name,
-            rules[i].enabled,
-            rules[i].logic_type,
-            rules[i].condition_count,
-            conditions_str,
-            rules[i].output_count,
-            outputs_str,
-            rules[i].cooldown_seconds,
-            rules[i].email_recipient,
-            rules[i].email_subject
-        );
-    }
-    
-    snprintf(response + pos, sizeof(response) - pos, "],\"count\":%d}", found);
-    
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_set_hdr(req, "Content-Disposition", "attachment; filename=\"rules_export.json\"");
-    httpd_resp_send(req, response, strlen(response));
-    return ESP_OK;
-}
-
-// ============================================================
 // POST /api/rules/import - Import rules from JSON
 // ============================================================
 esp_err_t api_rules_import_handler(httpd_req_t *req) {
@@ -2115,8 +2014,6 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
     
     // Get parameters
     char limit_str[8];
-    char start_str[16] = "0";
-    char end_str[16] = "0";
     
     snprintf(limit_str, sizeof(limit_str), "%d", HISTORY_MAX_RECORDS_PER_PAGE);
     // Get query string
@@ -2134,88 +2031,49 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
             } else {
                 API_LOG_D("No limit parameter found, using default: 60");
             }
-            
-            httpd_query_key_value(query, "start", start_str, sizeof(start_str));
-            httpd_query_key_value(query, "end", end_str, sizeof(end_str));
         }
     } else {
         API_LOG_D("No query string, using defaults");
     }
     
-    int limit = atoi(limit_str);
+    // Get the newest records by reading backwards from end
+    uint32_t total_records = sensor_history_get_record_count();
+
+    API_LOG_D("Record count %d", total_records);
+
+    uint16_t limit = atoi(limit_str);
     if (limit < 1) limit = 1;
     if (limit > 4320) limit = 4320;
-    
-//    API_LOG_I("Final limit: %d", limit);  // Debug
-    
-    uint32_t start_ts = atoi(start_str);
-    uint32_t end_ts = atoi(end_str);
-    
-    // If no time range specified, get latest records
-    if (start_ts == 0 && end_ts == 0) {
+    if (limit > total_records) limit = total_records;
 
-        // Get the newest records by reading backwards from end
-        uint32_t total_records = sensor_history_get_record_count();
+    API_LOG_D("Final limit: %d", limit);
 
-        API_LOG_D("History # of records %d", total_records);
-        if (total_records == 0) {
-            httpd_resp_set_type(req, "application/json");
-            httpd_resp_send(req, "{\"entries\":[]}", -1);
-            return ESP_OK;
-        }
-
-        // We need to get the most recent 'limit' records
-        // Since we can only get by timestamp range, we need to get the newest timestamp
-        uint32_t newest_ts = sensor_history_get_newest_ts();
-        uint32_t oldest_ts = sensor_history_get_oldest_ts();
-
-        API_LOG_D("Newest - Oldest Timestamps : %d - %d", newest_ts, oldest_ts);
-        if (newest_ts == 0) {
-            httpd_resp_set_type(req, "application/json");
-            httpd_resp_send(req, "{\"entries\":[]}", -1);
-            return ESP_OK;
-        }
-
-        // Estimate time range to get enough records
-        // If we have enough records, go back estimated time
-        uint32_t time_range = HISTORY_MAX_RECORDS_PER_PAGE;
-        if (total_records > 1 && newest_ts > oldest_ts) {
-            uint32_t avg_interval = (newest_ts - oldest_ts) / (total_records - 1);
-            time_range = avg_interval * limit * 2;
-            if (time_range < HISTORY_MAX_RECORDS_PER_PAGE) time_range = HISTORY_MAX_RECORDS_PER_PAGE;
-        }
-
-        start_ts = newest_ts - time_range;
-        end_ts = newest_ts + 1;
-    }
-    
     // Start JSON response
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send_chunk(req, "{\"entries\":[", -1);
     
     // Variables for chunked reading
     sensor_record_t records[CHUNK_SIZE];
-    int total_sent = 0;
+    uint16_t total_sent = 0;
     int first_chunk = 1;
-    uint32_t current_start_ts = start_ts;
-    uint32_t current_end_ts = end_ts;
-    int records_remaining = limit;
+    uint16_t records_remaining = limit;
 
     // Keep reading in chunks until we have enough records
     while (records_remaining > 0) {
         API_LOG_D("Records remaining %d", records_remaining);
-        int batch_size = (records_remaining < CHUNK_SIZE) ? records_remaining : CHUNK_SIZE;
+        uint16_t batch_size = (records_remaining < CHUNK_SIZE) ? records_remaining : CHUNK_SIZE;
         
         // Read a batch of records
-        int count = sensor_history_get_range(current_start_ts, current_end_ts, records, batch_size);
+//        int count = sensor_history_get_range(current_start_ts, current_end_ts, records, batch_size);
+        int count = sensor_history_get_records(total_records - limit + total_sent, records, batch_size);
         
-        if (count == 0) {
+        if (count <= 0) {
             // No more records available
             break;
         }
         
         // Send each record in the batch
-        for (int i = 0; i < count && total_sent < limit; i++) {
+        for (uint16_t i = 0; i < count && total_sent < limit; i++) {
             char record_str[512];
             int pos = 0;
             
@@ -2265,17 +2123,9 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
             total_sent++;
             records_remaining--;
         }
-        
-        // Update time range for next batch
-        if (count > 0) {
-            // Move start_ts forward to the last timestamp we read
-            current_start_ts = records[count - 1].timestamp + 1;
-        } else {
-            break;
-        }
-        
+
         // Small delay to allow other tasks to run
-        vTaskDelay(pdMS_TO_TICKS(1));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
     
     // Send closing bracket
@@ -2646,52 +2496,6 @@ esp_err_t api_adc_pin_mapping_get_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
-/**
- * @brief Handler for /api/sensor/gpio - Get GPIO info for a sensor
- */
-esp_err_t api_sensor_gpio_info_get_handler(httpd_req_t *req) {
-    char query[128] = {0};
-    char sensor_name[64] = {0};
-    const char *gpio_info = "N/A";
-    
-    // Get the query string - returns esp_err_t, not a pointer
-    esp_err_t err = httpd_req_get_url_query_str(req, query, sizeof(query));
-    if (err == ESP_OK && query[0] != '\0') {
-        // Parse the sensor parameter manually
-        char *param = strstr(query, "sensor=");
-        if (param) {
-            param += 7;  // Skip "sensor="
-            char *end = strchr(param, '&');
-            if (end) {
-                int len = end - param;
-                if (len < (int)sizeof(sensor_name)) {
-                    strncpy(sensor_name, param, len);
-                    sensor_name[len] = '\0';
-                }
-            } else {
-                strncpy(sensor_name, param, sizeof(sensor_name) - 1);
-                sensor_name[sizeof(sensor_name) - 1] = '\0';
-            }
-            
-            // URL decode: replace + with space
-            for (int i = 0; sensor_name[i]; i++) {
-                if (sensor_name[i] == '+') sensor_name[i] = ' ';
-            }
-            
-            gpio_info = sensor_get_gpio_info(sensor_name);
-        }
-    }
-    
-    // Build JSON response
-    char response[128];
-    snprintf(response, sizeof(response), "{\"sensor\":\"%s\",\"gpio\":\"%s\"}", 
-             sensor_name[0] ? sensor_name : "unknown", gpio_info);
-    
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, response, strlen(response));
-    return ESP_OK;
-}
-
 // ============================================================
 // DELETE /api/partition/logs - Delete logs partition
 // ============================================================
@@ -3014,11 +2818,11 @@ void register_api_endpoints(httpd_handle_t server) {
     };
     httpd_register_uri_handler(server, &rules_post_uri);
 
-    // GET /api/rules/export
+    // GET /api/rules/export -- same handler with GET /api/rules 
     httpd_uri_t rules_export_uri = {
         .uri       = "/api/rules/export",
         .method    = HTTP_GET,
-        .handler   = api_rules_export_handler,
+        .handler   = api_rules_get_handler,
         .user_ctx  = NULL
     };
     httpd_register_uri_handler(server, &rules_export_uri);
@@ -3084,14 +2888,6 @@ void register_api_endpoints(httpd_handle_t server) {
         .user_ctx  = NULL
     };
     httpd_register_uri_handler(server, &api_adc_pin_mapping_uri);
-
-     httpd_uri_t api_sensor_gpio_info_uri = {
-        .uri       = "/api/sensor/gpio",
-        .method    = HTTP_GET,
-        .handler   = api_sensor_gpio_info_get_handler,
-        .user_ctx  = NULL
-    };
-    httpd_register_uri_handler(server, &api_sensor_gpio_info_uri);
 
     httpd_uri_t partition_logs_delete_uri = {
         .uri       = "/api/partition/logs",

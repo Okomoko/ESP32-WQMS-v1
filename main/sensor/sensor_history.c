@@ -44,6 +44,7 @@ static int history_initialized = 0;
 static int history_read_index(void) {
     FILE *f = fopen(INDEX_FILE, "rb");
     if (!f) {
+        SENSOR_LOG_D("History index does not exist, creating a new one.");
         // File doesn't exist - create defaults
         sensor_idx.magic = 0x53454E53;
         sensor_idx.version = 1;
@@ -75,7 +76,7 @@ static int history_read_index(void) {
         sensor_idx.sample_interval = 60;
         return 0;
     }
-    
+
     SENSOR_LOG_D("History index loaded: %lu records, newest=%lu", sensor_idx.record_count, sensor_idx.last_timestamp);
     return 0;
 }
@@ -94,6 +95,7 @@ static int history_write_sensor_idx (void) {
         SENSOR_LOG_E("Failed to write index file");
         return -1;
     }
+    SENSOR_LOG_D("History index is written succesfully.");
     return 0;
 }
 
@@ -137,7 +139,7 @@ void sensor_history_init(void) {
             return;
         }
     }
-    
+
     history_initialized = 1;
     SENSOR_LOG_D("Sensor history initialized: %lu records (%lu max)", sensor_idx .record_count, sensor_idx .max_records);
 }
@@ -164,8 +166,11 @@ void sensor_history_add(void) {
             
     // 1. Get current readings
     sensor_reading_t *readings = sensor_get_all_readings();
-    if (!readings) return;
-    
+    if (!readings){
+        SENSOR_LOG_D("sensor_get_all_readings failed.");
+        return;
+    }
+
     // 2. Build record
     sensor_record_t record = {0};
     record.timestamp = time(NULL);
@@ -212,28 +217,85 @@ void sensor_history_add(void) {
     
     // 6. Save index
     history_write_sensor_idx();
+    SENSOR_LOG_D("New sensor data is appended to history file succesfully.");
 }
 
-int sensor_history_get_range(uint32_t start_ts, uint32_t end_ts,
-                             sensor_record_t *buffer, int max_records) {
-    if (!history_initialized) return 0;
-    if (sensor_idx .record_count == 0) return 0;
+int sensor_history_get_records(uint32_t starting_offset, sensor_record_t *buffer, uint32_t number_of_records) {
+    if (!history_initialized) {
+        SENSOR_LOG_D("History service is not initialized!");
+        return -1;
+    }
+    if (sensor_idx .record_count == 0) {
+        SENSOR_LOG_D("Index says there is no record.");
+        return -1;
+    }
     
     // Open file
     FILE *f = fopen(HISTORY_FILE, "rb");
-    if (!f) return 0;
+    if (!f) {
+        SENSOR_LOG_E("Failed to open history file for reading");
+        return -1;
+    }
+    
+    int found = 0;
+    uint32_t offset = (starting_offset - 1) * sizeof(sensor_record_t);
+    
+    // Scan through the file
+	SENSOR_LOG_D("Sensor history record offset - number of records: %u - %u", starting_offset, number_of_records);
+    for (uint32_t i = 0; i < sensor_idx .record_count && found < number_of_records; i++) {
+        sensor_record_t record;
+        fseek(f, offset, SEEK_SET);
+        if (fread(&record, 1, sizeof(record), f) != sizeof(record)) {
+			SENSOR_LOG_E("Sensor history record cannot be read!");
+            break;
+        }
+
+		memcpy(&buffer[found], &record, sizeof(record));
+		found++;
+
+        offset += sizeof(record);
+        if (offset >= HISTORY_FILE_SIZE) {
+			SENSOR_LOG_E("End of Sensor history file reached!");
+            break;
+        }
+    }
+    
+    fclose(f);
+    SENSOR_LOG_D("%d records found.", found);
+    return found;
+}
+	
+int sensor_history_get_range(uint32_t start_ts, uint32_t end_ts,
+                             sensor_record_t *buffer, int max_records) {
+    if (!history_initialized) {
+        SENSOR_LOG_D("History service is not initialized!");
+        return -1;
+    }
+    if (sensor_idx .record_count == 0) {
+        SENSOR_LOG_D("Index says there is no record.");
+        return -1;
+    }
+    
+    // Open file
+    FILE *f = fopen(HISTORY_FILE, "rb");
+    if (!f) {
+        SENSOR_LOG_E("Failed to open history file for reading");
+        return -1;
+    }
     
     int found = 0;
     uint32_t offset = 0;
     
     // Scan through the file
+	SENSOR_LOG_D("Sensor history record timestamp range: %d - %d", start_ts, end_ts);
     for (uint32_t i = 0; i < sensor_idx .record_count && found < max_records; i++) {
         sensor_record_t record;
         fseek(f, offset, SEEK_SET);
         if (fread(&record, 1, sizeof(record), f) != sizeof(record)) {
+			SENSOR_LOG_E("Sensor history record cannot be read!");
             break;
         }
-        
+		SENSOR_LOG_D("Sensor history record timestamp:%d", record.timestamp);
         if (record.timestamp >= start_ts && record.timestamp <= end_ts) {
             memcpy(&buffer[found], &record, sizeof(record));
             found++;
@@ -246,6 +308,7 @@ int sensor_history_get_range(uint32_t start_ts, uint32_t end_ts,
     }
     
     fclose(f);
+    SENSOR_LOG_D("%d records found.", found);
     return found;
 }
 
@@ -253,7 +316,10 @@ int sensor_history_get_latest(sensor_record_t *record) {
     if (!history_initialized || sensor_idx .record_count == 0) return -1;
     
     FILE *f = fopen(HISTORY_FILE, "rb");
-    if (!f) return -1;
+    if (!f) {
+        SENSOR_LOG_E("Failed to open history file for reading");
+        return -1;
+    }
     
     // Read the last written record (at write_offset - sizeof(record))
     uint32_t offset = (sensor_idx .record_count-1) * sizeof(sensor_record_t);
@@ -288,8 +354,8 @@ int sensor_history_export_csv(uint32_t start_ts, uint32_t end_ts,
     // Get records
     sensor_record_t records[100];
     int count = sensor_history_get_range(start_ts, end_ts, records, 100);
-    if (count == 0) return 0;
-    
+    if (count <= 0) return count;
+
     // Write header
     write_callback("Timestamp,pH,EC,Potassium,Magnesium,Iron,Phosphorus,Calcium,Nitrogen,Temperature,Humidity\n");
     

@@ -18,7 +18,7 @@
 
 // Default to INFO if not defined
 #ifndef CONFIG_WQMS_LOG_LEVEL
-    #define CONFIG_WQMS_LOG_LEVEL WQMS_LOG_LEVEL_DEBUG
+    #define CONFIG_WQMS_LOG_LEVEL WQMS_LOG_LEVEL_INFO
 #endif
 
 // ============================================================
@@ -49,13 +49,13 @@ typedef enum {
 // ============================================================
 #if CONFIG_WQMS_LOG_LEVEL >= WQMS_LOG_LEVEL_ERROR
     #define WQMS_LOG_E(format, ...)  wqms_log_write(WQMS_LOG_TYPE_SYSTEM, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
-	#define APP_LOG_E(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
-	#define AUTO_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
-	#define NOTIFICATION_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
-	#define API_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
-	#define SENSOR_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
-	#define RELAY_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
-	#define INTEGRATION_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
+    #define APP_LOG_E(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
+    #define AUTO_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
+    #define NOTIFICATION_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
+    #define API_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
+    #define SENSOR_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
+    #define RELAY_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
+    #define INTEGRATION_LOG_E(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_ERROR, format, ##__VA_ARGS__)
 #else
     #define WQMS_LOG_E(format, ...)  ((void)0)
     #define APP_LOG_E(format, ...)  ((void)0)
@@ -69,13 +69,13 @@ typedef enum {
 
 #if CONFIG_WQMS_LOG_LEVEL >= WQMS_LOG_LEVEL_WARN
     #define WQMS_LOG_W(format, ...)  wqms_log_write(WQMS_LOG_TYPE_SYSTEM, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
-	#define APP_LOG_W(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
-	#define AUTO_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
-	#define NOTIFICATION_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
-	#define API_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
-	#define SENSOR_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
-	#define RELAY_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
-	#define INTEGRATION_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
+    #define APP_LOG_W(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
+    #define AUTO_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
+    #define NOTIFICATION_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
+    #define API_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
+    #define SENSOR_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
+    #define RELAY_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
+    #define INTEGRATION_LOG_W(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_WARN, format, ##__VA_ARGS__)
 #else
     #define WQMS_LOG_W(format, ...)  ((void)0)
     #define APP_LOG_W(format, ...)  ((void)0)
@@ -89,13 +89,13 @@ typedef enum {
 
 #if CONFIG_WQMS_LOG_LEVEL >= WQMS_LOG_LEVEL_INFO
     #define WQMS_LOG_I(format, ...)  wqms_log_write(WQMS_LOG_TYPE_SYSTEM, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
-	#define APP_LOG_I(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
-	#define AUTO_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
-	#define NOTIFICATION_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
-	#define API_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
-	#define SENSOR_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
-	#define RELAY_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
-	#define INTEGRATION_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
+    #define APP_LOG_I(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
+    #define AUTO_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
+    #define NOTIFICATION_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
+    #define API_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
+    #define SENSOR_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
+    #define RELAY_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
+    #define INTEGRATION_LOG_I(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_INFO, format, ##__VA_ARGS__)
 #else
     #define WQMS_LOG_I(format, ...)  ((void)0)
     #define APP_LOG_I(format, ...)  ((void)0)
@@ -109,13 +109,13 @@ typedef enum {
 
 #if CONFIG_WQMS_LOG_LEVEL >= WQMS_LOG_LEVEL_DEBUG
     #define WQMS_LOG_D(format, ...)  wqms_log_write(WQMS_LOG_TYPE_SYSTEM, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
-	#define APP_LOG_D(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
-	#define AUTO_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
-	#define NOTIFICATION_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
-	#define API_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
-	#define SENSOR_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
-	#define RELAY_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
-	#define INTEGRATION_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
+    #define APP_LOG_D(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
+    #define AUTO_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
+    #define NOTIFICATION_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
+    #define API_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
+    #define SENSOR_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
+    #define RELAY_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
+    #define INTEGRATION_LOG_D(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_DEBUG, format, ##__VA_ARGS__)
 #else
     #define WQMS_LOG_D(format, ...)  ((void)0)
     #define APP_LOG_D(format, ...)  ((void)0)
@@ -129,13 +129,13 @@ typedef enum {
 
 #if CONFIG_WQMS_LOG_LEVEL >= WQMS_LOG_LEVEL_VERBOSE
     #define WQMS_LOG_V(format, ...)  wqms_log_write(WQMS_LOG_TYPE_SYSTEM, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
-	#define APP_LOG_V(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
-	#define AUTO_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
-	#define NOTIFICATION_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
-	#define API_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
-	#define SENSOR_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
-	#define RELAY_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
-	#define INTEGRATION_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
+    #define APP_LOG_V(format, ...)  wqms_log_write(WQMS_LOG_TYPE_APPLICATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
+    #define AUTO_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_AUTOMATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
+    #define NOTIFICATION_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_NOTIFICATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
+    #define API_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_API, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
+    #define SENSOR_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_SENSOR, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
+    #define RELAY_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_RELAY, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
+    #define INTEGRATION_LOG_V(format, ...) wqms_log_write(WQMS_LOG_TYPE_INTEGRATION, WQMS_LOG_LEVEL_ENUM_VERBOSE, format, ##__VA_ARGS__)
 #else
     #define WQMS_LOG_V(format, ...)  ((void)0)
     #define APP_LOG_V(format, ...)  ((void)0)

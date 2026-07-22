@@ -314,6 +314,7 @@ function Minify-JS {
         $content = $content -replace "(?m)(?<!:)//[^\r\n]*", ""  # "(?m)^\s*//.*?$", ""
         
         # Remove multi-line comments
+        $content = $content -replace '(?s)/\*.*?\*/', ''
         $content = $content -replace "/\*.*?\*/", ""
         
         # Remove empty lines

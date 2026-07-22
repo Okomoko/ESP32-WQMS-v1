@@ -2,20 +2,72 @@
 <ScadaFile>
     <ItemList>
         <Item>
+            <ItemType>RTChartItem</ItemType>
+            <Geometry X="30" Y="290" W="489" H="309" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="RTChart" GroupId="0" LayerId="0"/>
+            <TagIDs>
+                <TagData Tag="1" LineStyle="0" LineColor="#85d875"/>
+            </TagIDs>
+            <BgColor>#343434</BgColor>
+            <TxtColor>#ebebeb</TxtColor>
+            <PaColor>#424242</PaColor>
+            <ShowLegend>1</ShowLegend>
+            <FollowLastVal>1</FollowLastVal>
+            <ShowDescription>0</ShowDescription>
+            <RescaleValAxis>1</RescaleValAxis>
+            <ShowLastSeconds>360</ShowLastSeconds>
+            <UpperLimit>0</UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ChartViewType>0</ChartViewType>
+            <ChartType>0</ChartType>
+            <ChartTitle></ChartTitle>
+            <IsAnimated>1</IsAnimated>
+            <LegendAlignment>2</LegendAlignment>
+            <ChartOrientation>0</ChartOrientation>
+            <LegendFontSize>8</LegendFontSize>
+            <AxisFontSize>8</AxisFontSize>
+        </Item>
+        <Item>
+            <ItemType>RTChartItem</ItemType>
+            <Geometry X="570" Y="290" W="483" H="316" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="RTChart" GroupId="0" LayerId="0"/>
+            <TagIDs>
+                <TagData Tag="2" LineStyle="0" LineColor="#85d875"/>
+            </TagIDs>
+            <BgColor>#343434</BgColor>
+            <TxtColor>#ebebeb</TxtColor>
+            <PaColor>#424242</PaColor>
+            <ShowLegend>1</ShowLegend>
+            <FollowLastVal>1</FollowLastVal>
+            <ShowDescription>0</ShowDescription>
+            <RescaleValAxis>1</RescaleValAxis>
+            <ShowLastSeconds>360</ShowLastSeconds>
+            <UpperLimit>0</UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ChartViewType>0</ChartViewType>
+            <ChartType>0</ChartType>
+            <ChartTitle></ChartTitle>
+            <IsAnimated>0</IsAnimated>
+            <LegendAlignment>2</LegendAlignment>
+            <ChartOrientation>0</ChartOrientation>
+            <LegendFontSize>8</LegendFontSize>
+            <AxisFontSize>8</AxisFontSize>
+        </Item>
+        <Item>
             <ItemType>GaugeItem</ItemType>
-            <Geometry X="50" Y="30" W="396" H="310" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Geometry X="50" Y="20" W="370" H="246" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
             <Properties Name="Gauge" GroupId="0" LayerId="0"/>
             <Foreground>#ffffff</Foreground>
             <LedColor>#ffffff</LedColor>
             <LedGlowColor>#0000ff</LedGlowColor>
             <Background1>#787878</Background1>
             <Background2>#040404</Background2>
-            <GaugeStyle>0</GaugeStyle>
+            <GaugeStyle>2</GaugeStyle>
             <ThresholdEnabled>1</ThresholdEnabled>
             <MaxValue>5</MaxValue>
             <MinValue>0</MinValue>
             <NumericIndicatorEnabled>1</NumericIndicatorEnabled>
-            <Precision>0</Precision>
+            <Precision>2</Precision>
             <PrecisionNumeric>2</PrecisionNumeric>
             <Steps>5</Steps>
             <Threshold>4</Threshold>
@@ -24,6 +76,181 @@
             <EndAngle>-45</EndAngle>
             <StartAngle>225</StartAngle>
             <TagId>1</TagId>
+            <Tooltip></Tooltip>
+        </Item>
+        <Item>
+            <ItemType>GaugeItem</ItemType>
+            <Geometry X="580" Y="20" W="359" H="246" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="Gauge" GroupId="0" LayerId="0"/>
+            <Foreground>#ffffff</Foreground>
+            <LedColor>#ffffff</LedColor>
+            <LedGlowColor>#0000ff</LedGlowColor>
+            <Background1>#787878</Background1>
+            <Background2>#040404</Background2>
+            <GaugeStyle>2</GaugeStyle>
+            <ThresholdEnabled>1</ThresholdEnabled>
+            <MaxValue>14</MaxValue>
+            <MinValue>0</MinValue>
+            <NumericIndicatorEnabled>1</NumericIndicatorEnabled>
+            <Precision>2</Precision>
+            <PrecisionNumeric>2</PrecisionNumeric>
+            <Steps>5</Steps>
+            <Threshold>7</Threshold>
+            <Units></Units>
+            <Label>pH</Label>
+            <EndAngle>-45</EndAngle>
+            <StartAngle>225</StartAngle>
+            <TagId>2</TagId>
+            <Tooltip></Tooltip>
+        </Item>
+        <Item>
+            <ItemType>GaugeItem</ItemType>
+            <Geometry X="320" Y="80" W="211" H="169" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="Gauge" GroupId="0" LayerId="0"/>
+            <Foreground>#ffffff</Foreground>
+            <LedColor>#ff0000</LedColor>
+            <LedGlowColor>#000000</LedGlowColor>
+            <Background1>#787878</Background1>
+            <Background2>#040404</Background2>
+            <GaugeStyle>0</GaugeStyle>
+            <ThresholdEnabled>0</ThresholdEnabled>
+            <MaxValue>60</MaxValue>
+            <MinValue>10</MinValue>
+            <NumericIndicatorEnabled>1</NumericIndicatorEnabled>
+            <Precision>0</Precision>
+            <PrecisionNumeric>1</PrecisionNumeric>
+            <Steps>10</Steps>
+            <Threshold>20</Threshold>
+            <Units>Celsius</Units>
+            <Label>Temperature</Label>
+            <EndAngle>-45</EndAngle>
+            <StartAngle>225</StartAngle>
+            <TagId>3</TagId>
+            <Tooltip></Tooltip>
+        </Item>
+        <Item>
+            <ItemType>GaugeItem</ItemType>
+            <Geometry X="850" Y="90" W="206" H="173" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="Gauge" GroupId="0" LayerId="0"/>
+            <Foreground>#ffffff</Foreground>
+            <LedColor>#ff0000</LedColor>
+            <LedGlowColor>#000000</LedGlowColor>
+            <Background1>#787878</Background1>
+            <Background2>#040404</Background2>
+            <GaugeStyle>0</GaugeStyle>
+            <ThresholdEnabled>0</ThresholdEnabled>
+            <MaxValue>100</MaxValue>
+            <MinValue>0</MinValue>
+            <NumericIndicatorEnabled>1</NumericIndicatorEnabled>
+            <Precision>0</Precision>
+            <PrecisionNumeric>1</PrecisionNumeric>
+            <Steps>10</Steps>
+            <Threshold>30</Threshold>
+            <Units>   %   </Units>
+            <Label>Rel. Humidity</Label>
+            <EndAngle>-45</EndAngle>
+            <StartAngle>225</StartAngle>
+            <TagId>4</TagId>
+            <Tooltip></Tooltip>
+        </Item>
+        <Item>
+            <ItemType>GaugeItem</ItemType>
+            <Geometry X="40" Y="600" W="107" H="170" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="Gauge" GroupId="0" LayerId="0"/>
+            <Foreground>#ffffff</Foreground>
+            <LedColor>#ffffff</LedColor>
+            <LedGlowColor>#0000ff</LedGlowColor>
+            <Background1>#787878</Background1>
+            <Background2>#040404</Background2>
+            <GaugeStyle>1</GaugeStyle>
+            <ThresholdEnabled>1</ThresholdEnabled>
+            <MaxValue>5</MaxValue>
+            <MinValue>0</MinValue>
+            <NumericIndicatorEnabled>1</NumericIndicatorEnabled>
+            <Precision>0</Precision>
+            <PrecisionNumeric>1</PrecisionNumeric>
+            <Steps>5</Steps>
+            <Threshold>3</Threshold>
+            <Units></Units>
+            <Label></Label>
+            <EndAngle>-45</EndAngle>
+            <StartAngle>225</StartAngle>
+            <TagId>5</TagId>
+            <Tooltip></Tooltip>
+        </Item>
+        <Item>
+            <ItemType>GaugeItem</ItemType>
+            <Geometry X="170" Y="600" W="107" H="170" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="Gauge" GroupId="0" LayerId="0"/>
+            <Foreground>#ffffff</Foreground>
+            <LedColor>#ffffff</LedColor>
+            <LedGlowColor>#0000ff</LedGlowColor>
+            <Background1>#787878</Background1>
+            <Background2>#040404</Background2>
+            <GaugeStyle>1</GaugeStyle>
+            <ThresholdEnabled>1</ThresholdEnabled>
+            <MaxValue>5</MaxValue>
+            <MinValue>0</MinValue>
+            <NumericIndicatorEnabled>1</NumericIndicatorEnabled>
+            <Precision>0</Precision>
+            <PrecisionNumeric>1</PrecisionNumeric>
+            <Steps>5</Steps>
+            <Threshold>2</Threshold>
+            <Units></Units>
+            <Label></Label>
+            <EndAngle>-45</EndAngle>
+            <StartAngle>225</StartAngle>
+            <TagId>6</TagId>
+            <Tooltip></Tooltip>
+        </Item>
+        <Item>
+            <ItemType>GaugeItem</ItemType>
+            <Geometry X="300" Y="600" W="107" H="170" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="Gauge" GroupId="0" LayerId="0"/>
+            <Foreground>#ffffff</Foreground>
+            <LedColor>#ffffff</LedColor>
+            <LedGlowColor>#0000ff</LedGlowColor>
+            <Background1>#787878</Background1>
+            <Background2>#040404</Background2>
+            <GaugeStyle>1</GaugeStyle>
+            <ThresholdEnabled>1</ThresholdEnabled>
+            <MaxValue>5</MaxValue>
+            <MinValue>0</MinValue>
+            <NumericIndicatorEnabled>1</NumericIndicatorEnabled>
+            <Precision>1</Precision>
+            <PrecisionNumeric>1</PrecisionNumeric>
+            <Steps>5</Steps>
+            <Threshold>2.5</Threshold>
+            <Units></Units>
+            <Label></Label>
+            <EndAngle>-45</EndAngle>
+            <StartAngle>225</StartAngle>
+            <TagId>7</TagId>
+            <Tooltip></Tooltip>
+        </Item>
+        <Item>
+            <ItemType>GaugeItem</ItemType>
+            <Geometry X="420" Y="600" W="107" H="170" Rot="0" ZVAL="0" GZVAL="0" HFlip="0" VFlip="0"/>
+            <Properties Name="Gauge" GroupId="0" LayerId="0"/>
+            <Foreground>#ffffff</Foreground>
+            <LedColor>#ffffff</LedColor>
+            <LedGlowColor>#0000ff</LedGlowColor>
+            <Background1>#787878</Background1>
+            <Background2>#040404</Background2>
+            <GaugeStyle>1</GaugeStyle>
+            <ThresholdEnabled>1</ThresholdEnabled>
+            <MaxValue>100</MaxValue>
+            <MinValue>0</MinValue>
+            <NumericIndicatorEnabled>1</NumericIndicatorEnabled>
+            <Precision>0</Precision>
+            <PrecisionNumeric>1</PrecisionNumeric>
+            <Steps>10</Steps>
+            <Threshold>70</Threshold>
+            <Units></Units>
+            <Label></Label>
+            <EndAngle>-45</EndAngle>
+            <StartAngle>225</StartAngle>
+            <TagId>8</TagId>
             <Tooltip></Tooltip>
         </Item>
     </ItemList>

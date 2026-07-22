@@ -67,13 +67,6 @@ int adc_channel_to_gpio(adc_unit_t unit, adc_channel_t channel);
 const char* adc_get_pin_mapping_json(void);
 
 /**
- * @brief Get sensor-specific GPIO pin info using ESP-IDF function
- * @param sensor_name Name of the sensor (e.g., "pH", "ORP", "TDS", "TEMP")
- * @return String with GPIO info (e.g., "GPIO32")
- */
-const char* sensor_get_gpio_info(const char *sensor_name);
-
-/**
  * @brief Get ADC channel for a specific GPIO pin (reverse mapping)
  * @param gpio_num GPIO pin number
  * @return ADC channel or -1 if not found

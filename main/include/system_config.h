@@ -8,6 +8,11 @@
 #include <stddef.h>
 
 // ============================================================
+// System Version
+// ============================================================
+#define FW_VERSION "v1.1.0"
+
+// ============================================================
 // Hardware Configuration
 // ============================================================
 #define ANALOGUE_SENSOR_COUNT  6
@@ -118,8 +123,8 @@ GND     38         -    Power    Ground
 // ============================================================
 // Logging Configuration
 // ============================================================
-#define LOG_MAX_FILES                      2
-#define LOG_FILE_SIZE                 524288
+#define LOG_MAX_FILES                     10
+#define LOG_FILE_SIZE                 102400
 #define CONFIG_RS232_CONSOLE_ENABLE        0
 
 // ============================================================
@@ -178,7 +183,7 @@ GND     38         -    Power    Ground
 #define STACK_SIZE_MAIN          8192
 #define STACK_SIZE_SENSOR        4096
 #define STACK_SIZE_RELAY         1024
-#define STACK_SIZE_MODBUS        4096
+#define STACK_SIZE_MODBUS        8192
 #define STACK_SIZE_WIFI          3072
 #define STACK_SIZE_NTP           4096
 #define STACK_SIZE_WATCHDOG      1024

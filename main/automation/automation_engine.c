@@ -57,25 +57,27 @@ static void fire_rule_outputs(automation_rule_t *rule) {
         output_t *out = &rule->outputs[i];
         
         if (out->type == OUTPUT_RELAY) {
-            uint16_t duration = out->custom_duration;
-            if (duration == 0) {
-                // Use relay default duration
-                relay_config_t *cfg = relay_get_config(out->id);
-                if (cfg) {
-                    duration = cfg->activity_duration;
+            int16_t duration = out->custom_duration;
+            if (duration == 0) { // special condition to turn off the relay
+                relay_off(out->id);
+                AUTO_LOG_D("Rule #%d '%s': Relay %d is triggered off manually.", rule->rule_id, rule->name, out->id);
+            } else {
+                if (duration == -1) { // special condition to turn on the relay
+                    relay_on(out->id);
+                    AUTO_LOG_D("Rule #%d '%s': Relay %d is triggered on and will not be off automatically.", rule->rule_id, rule->name, out->id);
                 } else {
-                    duration = 5;  // Default fallback
+                    if (duration < RELAY_MIN_DURATION_MS) {
+                        duration = RELAY_MIN_DURATION_MS;
+                    }
+                    relay_trigger_with_duration(out->id, duration);
+                    AUTO_LOG_D("Rule #%d '%s': Relay %d is triggered for %d seconds", rule->rule_id, rule->name, out->id, duration);
                 }
             }
-            relay_trigger_with_duration(out->id, duration);
-            
-            AUTO_LOG_I("Rule #%d '%s': Relay %d triggered for %d seconds",
-                       rule->rule_id, rule->name, out->id, duration);
         } else if (out->type == OUTPUT_EMAIL) {
         char message[256];
         snprintf(message, sizeof(message), 
                  "Rule #%d '%s': Email notification to %s", rule->rule_id, rule->name, rule->email_recipient);
-        AUTO_LOG_I(message);
+        AUTO_LOG_D(message);
         email_send_notification("Automation Alert", message);
         }
     }
@@ -144,7 +146,7 @@ void automation_evaluate(void) {
                 continue;
             }
         }
-        
+
         // Evaluate conditions
         int all_true = 1;
         for (int j = 0; j < rules[i].condition_count; j++) {
@@ -163,19 +165,19 @@ void automation_evaluate(void) {
                 break;  // Short-circuit
             }
         }
-        
+
         // Fire if conditions met
         if (all_true) {
             fire_rule_outputs(&rules[i]);
             rules[i].last_triggered = last_eval_time;
             rules[i].trigger_count++;
-            
+
             // Log the firing
             char desc[128];
             rule_get_description(&rules[i], desc, sizeof(desc));
-            AUTO_LOG_I("Rule #%d '%s' fired: %s", i, rules[i].name, desc);
+            AUTO_LOG_D("Rule #%d '%s' fired: %s", i, rules[i].name, desc);
         } else {
-            AUTO_LOG_I("Rule #%d '%s' is not fired!", i, rules[i].name);
+            AUTO_LOG_D("Rule #%d '%s' is not fired!", i, rules[i].name);
         }
     }
     
@@ -200,7 +202,7 @@ int automation_test_rule(uint8_t rule_id) {
     // Restore state
     rule->enabled = was_enabled;
     
-    AUTO_LOG_I("Rule #%d tested", rule_id);
+    AUTO_LOG_D("Rule #%d tested", rule_id);
     return 0;
 }
 

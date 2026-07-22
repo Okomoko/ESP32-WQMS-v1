@@ -57,8 +57,8 @@ async function updateHeader() {
         if (el('datetime')) el('datetime').textContent = new Date().toLocaleString();
         if (el('free-heap')) el('free-heap').textContent = (data.free_heap_kb || 0) + ' KB';
         if (el('uptime')) el('uptime').textContent = data.uptime || '0m';
-        if (el('cpu0-load')) el('cpu0-load').textContent = (data.cpu0_load || 0).toFixed(0).padStart(2, '\u2007') + '%';
-        if (el('cpu1-load')) el('cpu1-load').textContent = (data.cpu1_load || 0).toFixed(0).padStart(2, '\u2007') + '%';
+        if (el('cpu0-load')) el('cpu0-load').textContent = (data.cpu0_load || 0).toFixed(0).padStart(3, '\u2007') + '%';
+        if (el('cpu1-load')) el('cpu1-load').textContent = (data.cpu1_load || 0).toFixed(0).padStart(3, '\u2007') + '%';
 //        if (el('cpu-temp')) el('cpu-temp').textContent = (data.cpu_temp_c || 0).toFixed(0) + ' °C';
     } catch (e) {
         console.warn('Header update failed:', e);
@@ -92,7 +92,7 @@ function initTabs() {
             tabs.forEach(b => b.classList.remove('active'));
             panels.forEach(p => p.classList.remove('active'));
             btn.classList.add('active');
-            const target = document.getElementById('tab-' + btn.dataset.tab);	
+            const target = document.getElementById('tab-' + btn.dataset.tab);
             if (target) target.classList.add('active');
         });
     });
@@ -247,3 +247,7 @@ document.getElementById('reboot-btn-config')?.addEventListener('click', rebootSy
 // Expose core functions to global scope
 // ============================================================
 window.rebootSystem = rebootSystem;
+
+setInterval(() => {
+	updateHeader();
+}, REFRESH_INTERVAL);

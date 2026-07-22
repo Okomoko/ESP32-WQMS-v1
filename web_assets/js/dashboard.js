@@ -22,7 +22,7 @@ class DashboardManager {
     constructor() {
         // Chart configuration
         this.maxDataPoints = 4320;
-        this.updateInterval = 60000;
+        this.updateInterval = 30000;
         this.isUpdating = false;
         this.chart = null;
         this.historyData = [];
@@ -62,23 +62,24 @@ class DashboardManager {
         
         await this.loadSensorConfig();
         
-        if (typeof initDashboard === 'function') {
-            initDashboard();
-        }
+//        if (typeof initDashboard === 'function') {
+//            initDashboard();
+//        }
         
         this.initChart();
         this.setupSensorSelector();
         this.setupChartControls();
-        
+        this.updateStatus();
+
         setInterval(() => {
+			loadSensors();
+			loadRelays();
             if (!this.isUpdating && this.chartInitialized) {
                 this.fetchHistory();
             }
+			this.updateStatus();
         }, this.updateInterval);
-        
-        setInterval(() => this.updateStatus(), 30000);
-        this.updateStatus();
-        
+
         window.dashboardManager = this;
     }
 
@@ -504,14 +505,12 @@ if (document.readyState === 'loading') {
 
 async function initDashboard() {
     // First, run the existing initialization
-    await updateHeader();
+//    await updateHeader();
     await loadSensors();
     await loadRelays();
-    setInterval(async () => {
-        await updateHeader();
-        await loadSensors();
-        await loadRelays();
-    }, REFRESH_INTERVAL);
+//    setInterval(() => {
+//        updateHeader();
+//    }, REFRESH_INTERVAL);
 
 }
 
@@ -552,6 +551,7 @@ async function loadSensors() {
     }
 }
 
+/*
 async function loadSensorSelectors() {
     try {
         const [readingsData, configData] = await Promise.all([
@@ -582,6 +582,7 @@ async function loadSensorSelectors() {
         console.warn('Sensor load failed:', e);
     }
 }
+*/
 
 function renderSensorCards(sensors) {
     const grid = document.getElementById('sensor-grid');
@@ -626,6 +627,7 @@ function renderSensorCards(sensors) {
     }).join('');
 }
 
+/*
 function renderSensorSelector(sensors) {
     const grid = document.getElementById('sensor-selector');
     if (!grid) return;
@@ -644,6 +646,7 @@ function renderSensorSelector(sensors) {
         `;
     }).join('');
 }
+*/
 
 // ============================================================
 // Dashboard - Relay Cards

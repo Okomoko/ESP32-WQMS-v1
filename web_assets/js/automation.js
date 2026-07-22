@@ -132,7 +132,7 @@ async function loadAutomationElements() {
         const relayList = document.getElementById('relay-list');
         if (relayList) {
             relayList.innerHTML = (relayData.relays || []).map(r => `
-                <div class="element-item output" draggable="true" data-type="${NODE_TYPES.RELAY}" data-id="${r.id}" data-name="${r.name || 'Relay ' + r.id}" data-pin="${r.pin || '--'}" data-duration="${r.activity_duration || 5000}">
+                <div class="element-item output" draggable="true" data-type="${NODE_TYPES.RELAY}" data-id="${r.id}" data-name="${r.name || 'Relay ' + r.id}" data-pin="${r.pin || '--'}" data-duration="${r.activity_duration}">
                     ⚡ ${r.name || 'Relay ' + r.id}
                     <span class="badge">PIN ${r.pin || '--'}</span>
                     <span class="badge status ${r.active ? 'triggered' : 'idle'}">${r.active ? '⚡' : '○'}</span>
@@ -196,7 +196,7 @@ function getRuleDescription(rule) {
     const sensorName = document.querySelector('div[data-type="sensor"][data-id="'+cond.sensor_id+'"]').getAttribute("data-name");
     const relayName = document.querySelector('div[data-type="relay"][data-id="'+out.id+'"]').getAttribute("data-name");
     
-    return `${sensorName} ${compMap[cond.comparator] || '>'} ${cond.threshold} → ${relayName} (${out.duration || 5000} ms)`;
+    return `${sensorName} ${compMap[cond.comparator] || '>'} ${cond.threshold} → ${relayName} (${out.duration} ms)`;
 }
 
 // ============================================================
@@ -433,7 +433,7 @@ function renderWorkflow() {
                 break;
             case NODE_TYPES.RELAY:
                 title = node.params.name || 'Relay ' + node.source_id;
-                body = `Duration: ${node.params.duration || 5000}ms`;
+                body = node.params.duration == -1 ? `Turn ON` : node.params.duration == 0 ? `Turn OFF` : `Duration: ${node.params.duration}ms`;
                 borderColor = '#43a047';
                 bgColor = '#e8f5e9';
                 break;
@@ -928,9 +928,9 @@ function editNode(nodeId) {
             }
             break;
         case NODE_TYPES.RELAY:
-            const newDuration = prompt('Enter duration (miliseconds):', node.params.duration);
+            const newDuration = prompt('Enter duration (miliseconds):', parseInt(node.params.duration) || '5000');
             if (newDuration !== null) {
-                newParams.duration = parseInt(newDuration) || 5000;
+                newParams.duration = parseInt(newDuration);
                 changed = true;
             }
             break;
@@ -980,14 +980,7 @@ async function deleteRule(ruleId) {
     try {
         showNotification('Deleting rule...', 'info');
         
-        const response = await api.del(`/api/rules/delete?id=${ruleId}`);
-        
-        if (result.status !== 'success') {
-            throw new Error('Delete failed: ' + response.status);
-        }
-        
-        const result = await response.json();
-        console.log('Delete result:', result);
+        const result = await api.del(`/api/rules/delete?id=${ruleId}`);
         
         if (result.status === 'success') {
             showNotification('Rule deleted successfully', 'success');
@@ -1264,7 +1257,7 @@ async function saveRule() {
             outputs.push({
                 type: 0,
                 id: relay.source_id || 0,
-                duration: parseInt(relay.params.duration) || 5000
+                duration: relay.params.duration
             });
         });
     }
@@ -1427,7 +1420,7 @@ async function loadRuleToCanvas(ruleId) {
                 y: startY + yOffset + (index * nodeSpacing),
                 params: {
                     name: relayName,
-                    duration: out.duration || 5000
+                    duration: out.duration
                 }
             };
             relayNodes.push(node);
@@ -1542,7 +1535,7 @@ document.addEventListener('dragstart', function(e) {
             id: el.dataset.id || '0',
             name: el.dataset.name || el.textContent.trim(),
             pin: el.dataset.pin || '--',
-            duration: el.dataset.duration || '5000'
+            duration: el.dataset.duration
         };
         e.dataTransfer.setData('application/json', JSON.stringify(data));
         e.dataTransfer.effectAllowed = 'copy';
@@ -1604,12 +1597,19 @@ document.addEventListener('drop', function(e) {
         } else if (data.type === NODE_TYPES.OPERATOR) {
             params = { operator: data.name || 'AND' };
         } else if (data.type === NODE_TYPES.RELAY) {
-            const duration = prompt('Enter duration (miliseconds):', data.duration || '5000');
+            const duration = prompt('Enter duration (miliseconds):', parseInt(data.duration) || '5000');
             if (duration === null) return;
-            params = { 
-                name: data.name, 
-                duration: parseInt(duration) || 5000
-            };
+            if (duration === '0') {
+                params = { 
+                    name: data.name, 
+                    duration: 0
+                };
+            } else {
+                params = { 
+                    name: data.name, 
+                    duration: parseInt(duration) || 5000
+                };
+            }
         } else if (data.type === NODE_TYPES.EMAIL) {
             const recipient = prompt('Enter recipient email:', 'admin@example.com');
             if (recipient === null) return;
@@ -1720,7 +1720,7 @@ async function importRules() {
 // Initialize Automation
 // ============================================================
 async function initAutomation() {
-    await updateHeader();
+//    await updateHeader();
     await loadAutomationElements();
     await loadRules();
 
@@ -1747,7 +1747,7 @@ async function initAutomation() {
 //    }, 15000);
 
     // Auto-refresh header
-    setInterval(updateHeader, REFRESH_INTERVAL);
+//    setInterval(updateHeader, REFRESH_INTERVAL);
 }
 
 // ============================================================
@@ -1771,8 +1771,10 @@ window.importRules = importRules;
 // ============================================================
 // Initialize when DOM is ready
 // ============================================================
+/*
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAutomation);
 } else {
     initAutomation();
 }
+*/

@@ -5,7 +5,7 @@
 // Initialize API Docs
 // ============================================================
 async function initApiDocs() {
-    await updateHeader();
+//    await updateHeader();
     
     // Set base URL
     const baseUrl = window.location.origin;
@@ -21,7 +21,7 @@ async function initApiDocs() {
     });
     
     // Auto-refresh header
-    setInterval(updateHeader, REFRESH_INTERVAL);
+//    setInterval(updateHeader, REFRESH_INTERVAL);
 }
 
 // ============================================================

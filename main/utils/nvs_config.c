@@ -42,24 +42,24 @@ static modbus_map_entry_t default_modbus_map[MODBUS_MAP_ENTRY_COUNT];
 static void load_default_sensor_configs(sensor_config_t *config, int count) {
     adc_unit_t adc_unit;
     adc_channel_t adc_channel;
-	esp_err_t ret;
+    esp_err_t ret;
     for (int i = 0; i < count && i < TOTAL_SENSOR_COUNT; i++) {
         strncpy(config[i].name, default_sensor_names[i], sizeof(config[i].name) - 1);
         config[i].name[sizeof(config[i].name) - 1] = '\0';
         config[i].enabled = 0;
         config[i].gpio_pin = default_sensor_gpios[i];
-		if (config[i].gpio_pin != GPIO_DHT11) {
-			ret = adc_continuous_io_to_channel(config[i].gpio_pin, &adc_unit, &adc_channel);
-			if (ret == ESP_OK) {
-				config[i].adc_channel = adc_channel;
-				WQMS_LOG_D("Sensor %d, GPIO %d, ADC Unit %d Channel %d", i, config[i].gpio_pin, adc_unit, adc_channel);
-			} else {
-				WQMS_LOG_E("Sensor %d, GPIO %d, ADC Channels cannot be optained, error code is %d.", i, config[i].gpio_pin, ret);
-			}
-		} else {
-			config[i].adc_channel = 255;
-			WQMS_LOG_D("DHT11 ADC Channel is set to 255");
-		}
+        if (config[i].gpio_pin != GPIO_DHT11) {
+            ret = adc_continuous_io_to_channel(config[i].gpio_pin, &adc_unit, &adc_channel);
+            if (ret == ESP_OK) {
+                config[i].adc_channel = adc_channel;
+                WQMS_LOG_D("Sensor %d, GPIO %d, ADC Unit %d Channel %d", i, config[i].gpio_pin, adc_unit, adc_channel);
+            } else {
+                WQMS_LOG_E("Sensor %d, GPIO %d, ADC Channels cannot be optained, error code is %d.", i, config[i].gpio_pin, ret);
+            }
+        } else {
+            config[i].adc_channel = 255;
+            WQMS_LOG_D("DHT11 ADC Channel is set to 255");
+        }
         config[i].modbus_register = default_sensor_modbus[i];
         config[i].calibration_factor = 1000;
         config[i].min_value = default_sensor_min[i];

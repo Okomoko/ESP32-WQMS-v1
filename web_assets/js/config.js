@@ -294,7 +294,7 @@ async function loadLogFiles() {
         const body = document.getElementById('log-file-body');
         if (!body) return;
         
-        const logs = data.logs || [];
+        const logs = [...data.logs].sort((a, b) => b.name.localeCompare(a.name)) || [];
         if (logs.length === 0) {
             body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#7a9bbf;">No log files found</td></tr>';
             return;
@@ -1378,7 +1378,7 @@ async function fetchAdcPinMapping() {
 // Initialize Configuration
 // ============================================================
 async function initConfiguration() {
-    await updateHeader();
+//    await updateHeader();
     await loadSensorConfig();
     await loadRelayConfig();
     await loadModbusMap();
@@ -1429,7 +1429,7 @@ async function initConfiguration() {
         };
         const result = await api.post('/api/config', config);
         alert(result.message || 'Configuration saved');
-        await updateHeader();
+//        await updateHeader();
     });
     
     document.getElementById('reset-config')?.addEventListener('click', function() {
@@ -1457,5 +1457,5 @@ async function initConfiguration() {
     document.getElementById('save-sensor-config')?.addEventListener('click', saveSensorConfig);
     document.getElementById('save-relay-config')?.addEventListener('click', saveRelayConfig);
 
-    setInterval(updateHeader, REFRESH_INTERVAL);
+//    setInterval(updateHeader, REFRESH_INTERVAL);
 }

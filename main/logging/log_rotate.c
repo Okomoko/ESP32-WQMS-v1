@@ -90,12 +90,17 @@ FILE* log_rotate_open(wqms_log_type_t type) {
 
     if (size >= LOG_FILE_SIZE) {
         build_file_path(type, 0, path, sizeof(path));
-        unlink(path);
+        if (unlink(path)!=0) {
+            WQMS_LOG_E("Failed to erase first log file!");
+        }
         for (int i = 1; i < LOG_MAX_FILES; i++) {
+            vTaskDelay(pdMS_TO_TICKS(100));
             char newpath[64];
             build_file_path(type, i, path, sizeof(path));
             build_file_path(type, i - 1, newpath, sizeof(newpath));
-            rename(path, newpath);
+            if (rename(path, newpath)!=0){
+                WQMS_LOG_E("Failed to rename log file %d !", i);
+            }
         }
     }
 

@@ -99,10 +99,10 @@ int rule_create(automation_rule_t *rule) {
     // Find first free slot
     int slot = -1;
     for (int i = 0; i < MAX_RULES; i++) {
-//        AUTO_LOG_I("Rule #%d, %s, %d", rules[i].rule_id, rules[i].name,  rules[i].name[0] == '\0');
+        AUTO_LOG_D("Rule #%d, %s, %d", rules[i].rule_id, rules[i].name,  rules[i].name[0] == '\0');
         if (rules[i].rule_id == -1 && rules[i].name[0] == '\0') {
             slot = i;
-//            AUTO_LOG_I("Empty Rule Slot : #%d", slot);
+            AUTO_LOG_D("Empty Rule Slot : #%d", slot);
             break;
         }
     }
@@ -114,7 +114,17 @@ int rule_create(automation_rule_t *rule) {
     rules[slot].enabled = 0;  // Disabled by default
     rules[slot].trigger_count = 0;
     rules[slot].last_triggered = 0;
-    
+    for (int i = 0; i < rules[slot].output_count; i++) {
+        int32_t xduration = rules[slot].outputs[i].custom_duration;
+        if (xduration > 0 && xduration < RELAY_MIN_DURATION_MS) {
+            xduration = RELAY_MIN_DURATION_MS;
+        } else {
+            if (xduration > RELAY_MAX_DURATION_MS) {
+                xduration = RELAY_MAX_DURATION_MS;
+            }
+        }
+        rules[slot].outputs[i].custom_duration = xduration;
+    }
     // Set timestamps
     rules[slot].created_timestamp = time(NULL);
     strcpy(rules[slot].created_by, "admin");
@@ -125,8 +135,7 @@ int rule_create(automation_rule_t *rule) {
     save_rule_to_nvs(&rules[slot]);
     rule_count++;
     
-    AUTO_LOG_I("Rule #%d '%s' created: %d conditions, %d outputs",
-               slot, rules[slot].name, rules[slot].condition_count, rules[slot].output_count);
+    AUTO_LOG_D("Rule #%d '%s' created: %d conditions, %d outputs", slot, rules[slot].name, rules[slot].condition_count, rules[slot].output_count);
     
     return slot;
 }
@@ -134,11 +143,19 @@ int rule_create(automation_rule_t *rule) {
 int rule_update(uint8_t rule_id, automation_rule_t *rule) {
     if (rule_id >= MAX_RULES) return -1;
     if (!rule) return -2;
-    
+
     // Preserve statistics
     uint32_t old_trigger_count = rules[rule_id].trigger_count;
     uint32_t old_last_triggered = rules[rule_id].last_triggered;
-    
+
+    if (old_trigger_count < rule->trigger_count) {
+        old_trigger_count = rule->trigger_count;
+    }
+
+    if (old_last_triggered < rule->last_triggered) {
+        old_last_triggered = rule->last_triggered;
+    }
+
     // Update rule
     rules[rule_id] = *rule;
     rules[rule_id].rule_id = rule_id;
@@ -146,21 +163,32 @@ int rule_update(uint8_t rule_id, automation_rule_t *rule) {
     rules[rule_id].last_triggered = old_last_triggered;
     rules[rule_id].last_modified_timestamp = time(NULL);
     strcpy(rules[rule_id].last_modified_by, "admin");
-    
+
+    for (int i = 0; i < rules[rule_id].output_count; i++) {
+        int32_t xduration = rules[rule_id].outputs[i].custom_duration;
+        if (xduration > 0 && xduration < RELAY_MIN_DURATION_MS) {
+            xduration = RELAY_MIN_DURATION_MS;
+        } else {
+            if (xduration > RELAY_MAX_DURATION_MS) {
+                xduration = RELAY_MAX_DURATION_MS;
+            }
+        }
+        rules[rule_id].outputs[i].custom_duration = xduration;
+    }
+
     // Save to NVS
     save_rule_to_nvs(&rules[rule_id]);
-    
-    AUTO_LOG_I("Rule #%d '%s' updated", rule_id, rules[rule_id].name);
+
+    AUTO_LOG_D("Rule #%d '%s' updated", rule_id, rules[rule_id].name);
     return 0;
 }
 
 int rule_delete(uint8_t rule_id) {
     if (rule_id >= MAX_RULES) return -1;
     if (rules[rule_id].name[0] == '\0') return -2;
-    
-    AUTO_LOG_I("Rule #%d '%s' deleted (was triggered %lu times)",
-               rule_id, rules[rule_id].name, rules[rule_id].trigger_count);
-    
+
+    AUTO_LOG_D("Rule #%d '%s' deleted (was triggered %lu times)", rule_id, rules[rule_id].name, rules[rule_id].trigger_count);
+
     // Clear rule
     nvs_handle_t handle;
     if (nvs_open(nvs_namespace, NVS_READWRITE, &handle) == ESP_OK) {

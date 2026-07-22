@@ -31,16 +31,16 @@ async function updateCurrentSensorValue() {
         const select = document.getElementById('cal-sensor-select');
         const sensorId = parseInt(select.value);
         if (isNaN(sensorId)) {
-            document.getElementById('cal-current1').textContent = '--';
-            document.getElementById('cal-current2').textContent = '--';
+            document.getElementById('cal-current1-value').textContent = '--';
+            document.getElementById('cal-current2-value').textContent = '--';
             return;
         }
         
         const data = await api.get('/api/sensors');
         const sensor = (data.sensors || []).find(s => s.id === sensorId);
         if (sensor) {
-            document.getElementById('cal-current1').textContent = sensor.value !== undefined ? sensor.value.toFixed(2) : '--';
-            document.getElementById('cal-current2').textContent = sensor.value !== undefined ? sensor.value.toFixed(2) : '--';
+            document.getElementById('cal-current1-value').textContent = sensor.value !== undefined ? sensor.value.toFixed(2) : '--';
+            document.getElementById('cal-current2-value').textContent = sensor.value !== undefined ? sensor.value.toFixed(2) : '--';
         }
     } catch (e) {
         console.warn('Failed to update sensor value:', e);
@@ -51,7 +51,7 @@ async function updateCurrentSensorValue() {
 // Initialize Calibration
 // ============================================================
 async function initCalibration() {
-    await updateHeader();
+//    await updateHeader();
     await loadCalibrationSensors();
     
     // ============================================================
@@ -126,11 +126,19 @@ async function initCalibration() {
                     document.getElementById('cal-result').style.display = 'block';
                 }
                 
-				document.getElementById('cal-sample-count').innerText = sampleNum
+                document.getElementById('cal-sample-count').innerText = sampleNum
                 // Enable apply button if we have at least 2 samples
                 if (sampleNum >= 2) {
                     document.getElementById('cal-apply').disabled = false;
-                }
+					document.getElementById('cal-sample-empty').innerText = ""
+                } else {
+					if (sampleNum == 0) {
+						document.getElementById('cal-sample-empty').innerText = "No samples added yet. Add at least 2 samples to calculate calibration."
+					} else {
+						document.getElementById('cal-sample-empty').innerText = "Add one more sample to calculate calibration."
+					}
+				}
+				
             } else {
                 alert('Failed to add sample: ' + (result.message || 'Unknown error'));
             }
@@ -200,7 +208,7 @@ async function initCalibration() {
     // Auto-refresh
     // ============================================================
     setInterval(() => {
-        updateHeader();
+//        updateHeader();
         updateCurrentSensorValue();
     }, REFRESH_INTERVAL);
 }

@@ -109,7 +109,7 @@ float cal_calculate_factor(void) {
     
     if (cal_session.sample_count < CAL_MIN_SAMPLES) {
         SENSOR_LOG_W("Need at least %d samples (got %d)", CAL_MIN_SAMPLES, cal_session.sample_count);
-//         return 0;
+        return -1;
     }
 
     float sum_x = 0, sum_y = 0, sum_xy = 0, sum_xx = 0;
@@ -169,12 +169,11 @@ int cal_apply(void) {
     
     // Update the specific sensor's calibration factor
     configs[cal_session.sensor_id].calibration_factor = (int)(factor * 100);  // Store as scaled integer
-    
     nvs_save_sensor_config(configs, TOTAL_SENSOR_COUNT);
-    
+
     // Reload sensor config
     sensor_reload_config();
-    
+
     SENSOR_LOG_I("Calibration applied: sensor %d, factor %.4f",
              cal_session.sensor_id, factor);
     

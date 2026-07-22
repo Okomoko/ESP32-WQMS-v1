@@ -75,7 +75,7 @@ void log_init(void) {
             printf("Failed to open log file for type %d\n", i);
         }
     }
-    
+
     WQMS_LOG_I("Logging system initialized");
     WQMS_RS232_PRINT("Logging system initialized");
 }

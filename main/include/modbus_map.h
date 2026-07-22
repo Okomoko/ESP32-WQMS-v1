@@ -8,78 +8,6 @@
 #include "system_config.h"
 
 // ============================================================
-// Register Ranges
-// ============================================================
-#define REG_SENSOR_BASE      0x0000
-#define REG_CALIB_BASE       0x0010
-#define REG_SENSOR_STATUS    0x0020
-#define REG_RELAY_BASE       0x0100
-#define REG_DURATION_BASE    0x0110
-#define REG_OFFDELAY_BASE    0x0120
-#define REG_SYSTEM_BASE      0x0200
-#define REG_STATUS_BASE      0x0300
-#define REG_COMMAND          0x0310
-
-// ============================================================
-// Sensor Registers (0x0000 - 0x000F)
-// ============================================================
-#define REG_PH              0x0000
-#define REG_EC              0x0001
-#define REG_POTASSIUM       0x0002
-#define REG_MAGNESIUM       0x0003
-#define REG_IRON            0x0004
-#define REG_PHOSPHORUS      0x0005
-#define REG_CALCIUM         0x0006
-#define REG_NITROGEN        0x0007
-#define REG_TEMPERATURE     0x0008
-#define REG_HUMIDITY        0x0009
-#define REG_SENSOR_MASK     0x000A
-
-// ============================================================
-// Calibration Registers (0x0010 - 0x001F)
-// ============================================================
-#define REG_CALIB_PH        0x0010
-#define REG_CALIB_EC        0x0011
-#define REG_CALIB_POTASSIUM 0x0012
-#define REG_CALIB_MAGNESIUM 0x0013
-#define REG_CALIB_IRON      0x0014
-#define REG_CALIB_PHOSPHORUS 0x0015
-#define REG_CALIB_CALCIUM   0x0016
-#define REG_CALIB_NITROGEN  0x0017
-#define REG_CALIB_TEMP      0x0018
-#define REG_CALIB_HUMID     0x0019
-
-// ============================================================
-// Relay Registers (0x0100 - 0x010F)
-// ============================================================
-#define REG_RELAY_0         0x0100
-#define REG_RELAY_1         0x0101
-#define REG_RELAY_2         0x0102
-#define REG_RELAY_3         0x0103
-#define REG_RELAY_4         0x0104
-#define REG_RELAY_5         0x0105
-#define REG_RELAY_6         0x0106
-#define REG_RELAY_7         0x0107
-#define REG_RELAY_8         0x0108
-#define REG_RELAY_9         0x0109
-#define REG_RELAY_10        0x010A
-#define REG_RELAY_11        0x010B
-
-// ============================================================
-// Duration Registers (0x0110 - 0x011F)
-// ============================================================
-#define REG_DURATION_0      0x0110
-#define REG_DURATION_1      0x0111
-// ... up to 0x011B
-
-// ============================================================
-// Off-delay Registers (0x0120 - 0x012F)
-// ============================================================
-#define REG_OFFDELAY_0      0x0120
-#define REG_OFFDELAY_1      0x0121
-// ... up to 0x012B
-
-// ============================================================
 // System Registers (0x0200 - 0x020F)
 // ============================================================
 #define REG_UPTIME_LOW      0x0200
@@ -126,8 +54,6 @@
 #define MODBUS_MAP_MODE_PLC      1  // Use PLC addressing (40001-49999)
 #define MODBUS_MAP_MODE_AUTO     2  // Auto-detect from request
 
-
-// modbus_map.h - Add these function code definitions
 // ============================================================
 // MODBUS Function Codes
 // ============================================================

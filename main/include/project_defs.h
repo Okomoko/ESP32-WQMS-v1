@@ -130,7 +130,7 @@ typedef struct __attribute__((packed)) {
     uint8_t enabled;
     uint8_t gpio_pin;
     uint16_t modbus_register;
-    uint16_t activity_duration;
+    int16_t activity_duration;
     uint16_t off_delay;
     uint8_t reserved[10];
 } relay_config_t;
@@ -173,7 +173,7 @@ typedef struct {
 typedef struct {
     output_type_t type;
     uint8_t id;
-    uint16_t custom_duration;
+    int16_t custom_duration;
 } output_t;
 
 typedef struct {
