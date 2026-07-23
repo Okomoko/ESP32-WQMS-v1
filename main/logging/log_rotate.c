@@ -151,6 +151,19 @@ esp_err_t log_rotate_init(void) {
         }
     }
     
+	if (write_pos > LOG_FILE_MAX_SIZE) {
+		if (unlink(LOG_FILE_PATH) == 0) {
+			WQMS_LOG_I("Log file deleted");
+		} else {
+			WQMS_LOG_W("File deletion failed (may not exist): %s", strerror(errno));
+		}
+        if (!initialize_log_file(log_file)) {
+            fclose(log_file);
+            log_file = NULL;
+            return ESP_ERR_INVALID_STATE;
+        }
+	}
+
     // Check file size
     long size = get_file_size(log_file);
     if (size != LOG_FILE_MAX_SIZE) {
@@ -188,12 +201,12 @@ esp_err_t log_rotate_write(const char* data) {
     // Read current write position
     uint32_t write_pos;
     if (!read_header(log_file, &write_pos)) {
-        WQMS_LOG_E("Failed to read header for write");
+        WQMS_LOG_E("Failed to read header for write, log file is corrupt.");
         return ESP_ERR_INVALID_STATE;
     }
     
     // Ensure write position is valid
-    if (write_pos < LOG_METADATA_SIZE || write_pos >= LOG_FILE_MAX_SIZE) {
+    if (write_pos < LOG_METADATA_SIZE || write_pos > LOG_FILE_MAX_SIZE) {
         write_pos = LOG_METADATA_SIZE;
     }
     
