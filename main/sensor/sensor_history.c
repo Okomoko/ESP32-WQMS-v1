@@ -241,7 +241,7 @@ int sensor_history_get_records(uint32_t starting_offset, sensor_record_t *buffer
     uint32_t offset = (starting_offset - 1) * sizeof(sensor_record_t);
     
     // Scan through the file
-	SENSOR_LOG_D("Sensor history record offset - number of records: %u - %u", starting_offset, number_of_records);
+	SENSOR_LOG_V("Sensor history record offset - number of records: %u - %u", starting_offset, number_of_records);
     for (uint32_t i = 0; i < sensor_idx .record_count && found < number_of_records; i++) {
         sensor_record_t record;
         fseek(f, offset, SEEK_SET);
@@ -261,7 +261,7 @@ int sensor_history_get_records(uint32_t starting_offset, sensor_record_t *buffer
     }
     
     fclose(f);
-    SENSOR_LOG_D("%d records found.", found);
+    SENSOR_LOG_V("%d records found.", found);
     return found;
 }
 	

@@ -1,145 +1,384 @@
 // log_rotate.c
-// In-place log rotation (overwrites oldest file, no extra space needed)
+// Circular buffer log rotation - NO file rename/delete operations!
 
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
-//#include <time.h>
-#include "esp_vfs.h"
-#include "esp_spiffs.h"
+#include <unistd.h>
+#include <errno.h>
+#include "esp_log.h"
+#include "esp_err.h"
 
-#include "log_rotate.h"
-#include "project_defs.h"
 #include "system_config.h"
+#include "log_rotate.h"
 #include "log_levels.h"
-//#include "ntp_client.h"
+
+// --- Static Variables ---
+static FILE* log_file = NULL;
+static bool initialized = false;
 
 // ============================================================
-// Static Variables
+// Internal: Get file size
 // ============================================================
-static const char *LOG_BASE_PATH = "/spiffs/logs/";
-static const char *LOG_FILE_NAMES[WQMS_LOG_TYPE_MAX] = {
-    "system_",      // system_0.log, system_1.log, ...
-    "system_",      // application_0.log, ...
-    "system_",      // automation_0.log, ...
-    "system_",      // notification_0.log, ...
-    "system_",      // integration_0.log, ...
-    "system_",      // sensor_0.log, ...
-    "system_",      // relay_0.log, ...
-    "system_"       // api_0.log, ...
-};
-static const char *LOG_FILE_EXT = ".log";
-
-// ============================================================
-// Internal Functions
-// ============================================================
-
-// Build full file path
-static void build_file_path(wqms_log_type_t type, int index, char *buffer, size_t size) {
-    snprintf(buffer, size, "%s%s%d%s", 
-             LOG_BASE_PATH, 
-             LOG_FILE_NAMES[type], 
-             index, 
-             LOG_FILE_EXT);
-}
-
-// Get file size
-static long get_file_size(const char *path) {
-    struct stat st;
-    if (stat(path, &st) == 0) {
-        return st.st_size;
-    }
-    return -1;
-}
-
-// ============================================================
-// Public Functions
-// ============================================================
-
-// Get filename for a specific log file index
-const char* log_rotate_get_filename(wqms_log_type_t type, int index) {
-    static char path[64];
-    build_file_path(type, index, path, sizeof(path));
-    return path;
-}
-
-// Open the next log file (creates directory if needed)
-FILE* log_rotate_open(wqms_log_type_t type) {
-    // 1. Ensure directory exists
-    mkdir("/spiffs/logs", 0777);
-    
-    // 2. Find the next file to write (circular)
-    char path[64];
-    long size = -1;
-
-    // Find the file to append
-    for (int i = 0; i < LOG_MAX_FILES; i++) {
-        build_file_path(type, i, path, sizeof(path));
-        size = get_file_size(path);
-        if (size < LOG_FILE_SIZE) {
-            if ((i+1) < LOG_MAX_FILES){
-                build_file_path(type, i + 1, path, sizeof(path));
-                if (get_file_size(path) == -1) {
-                    build_file_path(type, i, path, sizeof(path));
-                    break;
-                }
-            }
-        }
-    }
-
-    if (size >= LOG_FILE_SIZE) {
-        build_file_path(type, 0, path, sizeof(path));
-        if (unlink(path)!=0) {
-            WQMS_LOG_E("Failed to erase first log file!");
-        }
-        for (int i = 1; i < LOG_MAX_FILES; i++) {
-            vTaskDelay(pdMS_TO_TICKS(100));
-            char newpath[64];
-            build_file_path(type, i, path, sizeof(path));
-            build_file_path(type, i - 1, newpath, sizeof(newpath));
-            if (rename(path, newpath)!=0){
-                WQMS_LOG_E("Failed to rename log file %d !", i);
-            }
-        }
-    }
-
-    // 3. Open file
-    FILE *file = fopen(path, "a");
-    if (file == NULL) {
-        WQMS_LOG_E("Failed to open log file: %s", path);
-        return NULL;
-    }
-
-    // 4. Write header
-//    char ts_str[32];
-//    time_t ts = ntp_get_time();
-//    struct tm *tm_info = localtime(&ts);
-//    strftime(ts_str, sizeof(ts_str), "%Y-%m-%d %H:%M:%S", tm_info);
-//    fprintf(file, "--- Log started at %s ---\n", ts_str);
-//    fflush(file);
-
-    WQMS_LOG_D("Opened log file: %s", path);
-    return file;
-}
-
-// Check if rotation is needed
-int log_rotate_check(FILE *file, wqms_log_type_t type) {
+static long get_file_size(FILE* file) {
     if (file == NULL) return 0;
     
     long current_pos = ftell(file);
     if (current_pos < 0) return 0;
     
-    // Rotate if file exceeds max size
-    if (current_pos > LOG_FILE_SIZE) {
-        WQMS_LOG_D("Log file exceeded size, rotating");
-        return 1;
-    }
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, current_pos, SEEK_SET);
     
-    return 0;
+    return size;
 }
 
-// Close the current log file
-void log_rotate_close(wqms_log_type_t type) {
-    WQMS_LOG_D("Closed log file for type %d", type);
+// ============================================================
+// Internal: Read header (ONLY 16 bytes!)
+// ============================================================
+static bool read_header(FILE* file, uint32_t* write_pos) {
+    if (file == NULL || write_pos == NULL) return false;
+    
+    fseek(file, 0, SEEK_SET);
+    
+    uint32_t magic;
+    if (fread(&magic, sizeof(magic), 1, file) != 1) {
+        return false;
+    }
+    
+    // Check magic number (0x4C4F4700 = "LOG\0")
+    if (magic != 0x4C4F4700) {
+        return false;
+    }
+    
+    if (fread(write_pos, sizeof(*write_pos), 1, file) != 1) {
+        return false;
+    }
+    
+    return true;
+}
+
+// ============================================================
+// Internal: Write header (ONLY 16 bytes!)
+// ============================================================
+static bool write_header(FILE* file, uint32_t write_pos) {
+    if (file == NULL) return false;
+    
+    fseek(file, 0, SEEK_SET);
+    
+    uint32_t magic = 0x4C4F4700;
+    if (fwrite(&magic, sizeof(magic), 1, file) != 1) {
+        return false;
+    }
+    
+    if (fwrite(&write_pos, sizeof(write_pos), 1, file) != 1) {
+        return false;
+    }
+    
+    // Write reserved bytes (zeros)
+    uint32_t reserved = 0;
+    for (int i = 0; i < 2; i++) {
+        if (fwrite(&reserved, sizeof(reserved), 1, file) != 1) {
+            return false;
+        }
+    }
+    
+    fflush(file);
+    return true;
+}
+
+// ============================================================
+// Internal: Initialize new log file
+// ============================================================
+static bool initialize_log_file(FILE* file) {
+    if (file == NULL) return false;
+    
+    // Write header with write position at beginning of data
+    if (!write_header(file, LOG_METADATA_SIZE)) {
+        return false;
+    }
+    
+    // Pre-allocate the file to max size (doesn't use heap!)
+    fseek(file, LOG_FILE_MAX_SIZE - 1, SEEK_SET);
+    fputc('\0', file);
+    fflush(file);
+    
+    WQMS_LOG_I("Initialized log file (%d bytes)", LOG_FILE_MAX_SIZE);
+    return true;
+}
+
+// ============================================================
+// Public: Initialize log system
+// ============================================================
+esp_err_t log_rotate_init(void) {
+    if (initialized) return ESP_OK;
+    
+    // Ensure directory exists
+    mkdir("/spiffs/logs", 0755);
+    
+    // Try to open existing file for read/write
+    log_file = fopen(LOG_FILE_PATH, "r+b");
+    
+    if (log_file == NULL) {
+        // File doesn't exist, create it
+        log_file = fopen(LOG_FILE_PATH, "w+b");
+        if (log_file == NULL) {
+            WQMS_LOG_E("Failed to create log file: %s", strerror(errno));
+            return ESP_ERR_NOT_FOUND;
+        }
+        
+        // Initialize the file
+        if (!initialize_log_file(log_file)) {
+            fclose(log_file);
+            log_file = NULL;
+            return ESP_ERR_INVALID_STATE;
+        }
+        
+        WQMS_LOG_I("Created new log file");
+        initialized = true;
+        return ESP_OK;
+    }
+    
+    // Check if file has valid header
+    uint32_t write_pos;
+    if (!read_header(log_file, &write_pos)) {
+        // Invalid header, re-initialize
+        WQMS_LOG_I("Invalid header, re-initializing file");
+        if (!initialize_log_file(log_file)) {
+            fclose(log_file);
+            log_file = NULL;
+            return ESP_ERR_INVALID_STATE;
+        }
+    }
+    
+    // Check file size
+    long size = get_file_size(log_file);
+    if (size != LOG_FILE_MAX_SIZE) {
+        // Size mismatch, re-initialize
+        WQMS_LOG_I("Size mismatch, re-initializing file");
+        if (!initialize_log_file(log_file)) {
+            fclose(log_file);
+            log_file = NULL;
+            return ESP_ERR_INVALID_STATE;
+        }
+    }
+    
+    initialized = true;
+    WQMS_LOG_D("Opened existing log file (write_pos: %d)", write_pos);
+    return ESP_OK;
+}
+
+// ============================================================
+// Public: Write log entry (streaming, minimal heap)
+// ============================================================
+esp_err_t log_rotate_write(const char* data) {
+    if (!initialized || log_file == NULL || data == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    size_t data_len = strlen(data);
+    if (data_len == 0) return ESP_OK;
+    
+    // Max data size (leave room for null terminator)
+    size_t max_data_size = LOG_FILE_MAX_SIZE - LOG_METADATA_SIZE - 1;
+    if (data_len > max_data_size) {
+        data_len = max_data_size; // Truncate if too long
+    }
+    
+    // Read current write position
+    uint32_t write_pos;
+    if (!read_header(log_file, &write_pos)) {
+        WQMS_LOG_E("Failed to read header for write");
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    // Ensure write position is valid
+    if (write_pos < LOG_METADATA_SIZE || write_pos >= LOG_FILE_MAX_SIZE) {
+        write_pos = LOG_METADATA_SIZE;
+    }
+    
+    // Calculate where we'll write
+    uint32_t data_end = write_pos + data_len + 1; // +1 for null terminator
+    
+    // Check if we need to wrap
+    if (data_end >= LOG_FILE_MAX_SIZE) {
+        // Need to wrap - write to end, then wrap to beginning
+        size_t first_chunk = LOG_FILE_MAX_SIZE - write_pos - 1;
+        size_t second_chunk = data_len - first_chunk;
+        
+        // Write first chunk (to end)
+        fseek(log_file, write_pos, SEEK_SET);
+        if (fwrite(data, 1, first_chunk, log_file) != first_chunk) {
+            WQMS_LOG_E("Failed to write first chunk");
+            return ESP_ERR_INVALID_RESPONSE;
+        }
+        
+        // Write second chunk (from beginning)
+        fseek(log_file, LOG_METADATA_SIZE, SEEK_SET);
+        if (fwrite(data + first_chunk, 1, second_chunk, log_file) != second_chunk) {
+            WQMS_LOG_E("Failed to write second chunk");
+            return ESP_ERR_INVALID_RESPONSE;
+        }
+        
+        // Null terminator at end of second chunk
+        fseek(log_file, LOG_METADATA_SIZE + second_chunk, SEEK_SET);
+        fputc('\0', log_file);
+        
+        // New write position
+        write_pos = LOG_METADATA_SIZE + second_chunk + 1;
+    } else {
+        // No wrap needed
+        fseek(log_file, write_pos, SEEK_SET);
+        if (fwrite(data, 1, data_len, log_file) != data_len) {
+            WQMS_LOG_E("Failed to write data");
+            return ESP_ERR_INVALID_RESPONSE;
+        }
+        
+        // Null terminator
+        fputc('\0', log_file);
+        
+        // New write position
+        write_pos = data_end;
+    }
+    
+    // Update header with new write position
+    if (!write_header(log_file, write_pos)) {
+        WQMS_LOG_E("Failed to update header");
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    return ESP_OK;
+}
+
+// ============================================================
+// Public: Read logs (for web console / log viewer)
+// ============================================================
+size_t log_rotate_read(char* buffer, size_t buffer_size, size_t offset) {
+    if (!initialized || log_file == NULL || buffer == NULL || buffer_size == 0) {
+        return 0;
+    }
+    
+    // Read write position
+    uint32_t write_pos;
+    if (!read_header(log_file, &write_pos)) {
+        return 0;
+    }
+    
+    // Ensure write position is valid
+    if (write_pos < LOG_METADATA_SIZE || write_pos >= LOG_FILE_MAX_SIZE) {
+        write_pos = LOG_METADATA_SIZE;
+    }
+    
+    size_t total_read = 0;
+    size_t file_pos = LOG_METADATA_SIZE + offset;
+    
+    // Don't read beyond the write position
+    if (file_pos >= write_pos) {
+        return 0;
+    }
+    
+    // Read in chunks
+    char chunk[LOG_READ_CHUNK_SIZE];
+    
+    while (file_pos < write_pos && total_read < buffer_size - 1) {
+        // Calculate how much to read in this chunk
+        size_t remaining = write_pos - file_pos;
+        size_t chunk_size = (remaining < LOG_READ_CHUNK_SIZE) ? remaining : LOG_READ_CHUNK_SIZE;
+        
+        fseek(log_file, file_pos, SEEK_SET);
+        size_t bytes_read = fread(chunk, 1, chunk_size, log_file);
+        if (bytes_read == 0) break;
+        
+        // Process the chunk - replace null terminators with newlines
+        for (size_t i = 0; i < bytes_read && total_read < buffer_size - 1; i++) {
+            if (chunk[i] == '\0') {
+                buffer[total_read++] = '\n';
+            } else {
+                buffer[total_read++] = chunk[i];
+            }
+        }
+        
+        file_pos += bytes_read;
+    }
+    
+    buffer[total_read] = '\0';
+    return total_read;
+}
+
+// ============================================================
+// Public: Get total log size
+// ============================================================
+size_t log_rotate_get_size(void) {
+    if (!initialized || log_file == NULL) return 0;
+    
+    uint32_t write_pos;
+    if (!read_header(log_file, &write_pos)) {
+        return 0;
+    }
+    
+    // Ensure write position is valid
+    if (write_pos < LOG_METADATA_SIZE || write_pos >= LOG_FILE_MAX_SIZE) {
+        write_pos = LOG_METADATA_SIZE;
+    }
+    
+    return write_pos - LOG_METADATA_SIZE;
+}
+
+// ============================================================
+// Public: Check if log is empty
+// ============================================================
+bool log_rotate_is_empty(void) {
+    if (!initialized || log_file == NULL) return true;
+    
+    uint32_t write_pos;
+    if (!read_header(log_file, &write_pos)) {
+        return true;
+    }
+    
+    return (write_pos <= LOG_METADATA_SIZE);
+}
+
+// ============================================================
+// Public: Clear log
+// ============================================================
+esp_err_t log_rotate_clear(void) {
+    if (!initialized || log_file == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    // Re-initialize the file
+    if (!initialize_log_file(log_file)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    WQMS_LOG_I("Log cleared");
+    return ESP_OK;
+}
+
+// ============================================================
+// Public: Flush log
+// ============================================================
+void log_rotate_flush(void) {
+    if (log_file != NULL) {
+        fflush(log_file);
+    }
+}
+
+// ============================================================
+// Public: Close log
+// ============================================================
+void log_rotate_close(void) {
+    if (log_file != NULL) {
+        fflush(log_file);
+        fclose(log_file);
+        log_file = NULL;
+    }
+    initialized = false;
+}
+
+// ============================================================
+// Public: Check if log system is ready
+// ============================================================
+bool log_rotate_is_ready(void) {
+    return initialized && log_file != NULL;
 }

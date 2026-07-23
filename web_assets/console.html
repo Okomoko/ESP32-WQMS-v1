@@ -1,0 +1,41 @@
+<!-- web_assets/console.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Console</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app" class="console-page">
+        <!-- Console Header -->
+        <div id="console-header">
+            <div class="console-title">
+                <span class="icon">📋</span>
+                <h1>Console Output</h1>
+            </div>
+            <div class="console-controls">
+                <span id="console-status">🟢 <span class="online">Live</span></span>
+                <button id="pauseBtn" class="btn active">⏸ Pause</button>
+                <button id="clearBtn" class="btn">🗑 Clear</button>
+                <button id="downloadBtn" class="btn">💾 Download</button>
+            </div>
+        </div>
+
+        <!-- Log Content -->
+        <div id="console-content">
+            <pre id="log"><span style="color: #7a9bbf;">Connecting to console...</span></pre>
+        </div>
+
+        <!-- Console Footer -->
+        <div id="console-footer">
+            <span id="lineCount">Lines: 0</span>
+            <span id="updateTime">Updated: --:--:--</span>
+            <span id="bufferInfo">Buffer: 0%</span>
+        </div>
+    </div>
+
+    <script src="/js/console.js"></script>
+</body>
+</html>

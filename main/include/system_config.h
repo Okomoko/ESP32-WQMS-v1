@@ -123,9 +123,11 @@ GND     38         -    Power    Ground
 // ============================================================
 // Logging Configuration
 // ============================================================
-#define LOG_MAX_FILES                     10
-#define LOG_FILE_SIZE                 102400
-#define CONFIG_RS232_CONSOLE_ENABLE        0
+#define LOG_FILE_MAX_SIZE                 (1024 * 1024)  // 1MB
+#define LOG_FILE_PATH                     "/spiffs/logs/system.log"
+#define LOG_METADATA_SIZE                 16  // Header size
+#define LOG_READ_CHUNK_SIZE               256 // Read chunk size for streaming
+#define CONFIG_RS232_CONSOLE_ENABLE       0
 
 // ============================================================
 // Automation Configuration
@@ -208,5 +210,7 @@ GND     38         -    Power    Ground
 
 #define DEFAULT_RECIPIENTS "okan.sengun@gmail.com"
 #define DEFAULT_SUBJECT "WQMS System Alert - {{system_name}}"
+
+#define WEB_CONSOLE_BUFFER_SIZE  16384
 
 #endif // SYSTEM_CONFIG_H

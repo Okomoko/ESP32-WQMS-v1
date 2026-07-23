@@ -22,6 +22,7 @@
 #include "api_handler.h"
 #include "api_config.h"
 #include "log_levels.h"
+#include "log_rotate.h"
 #include "logger.h"
 #include "system_config.h"
 #include "sensor_read.h"
@@ -1264,7 +1265,7 @@ esp_err_t system_reboot_handler(httpd_req_t *req) {
     free(response);
     cJSON_Delete(root);
     
-    log_flush_all();
+//    log_flush_all();
     esp_restart();
     
     return ESP_OK;
@@ -1361,10 +1362,56 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         }
     }
     
-    // Case 1: Download specific log file (STREAMING VERSION)
+    // Case 1: Download/View specific log file
     if (has_name && strlen(name) > 0) {
-        API_LOG_D("Downloading log: %s", name);
+        API_LOG_D("Viewing log: %s", name);
         
+        // Check if it's our system log
+        if (strcmp(name, "system.log") == 0) {
+            // Stream from circular buffer
+            httpd_resp_set_type(req, "text/plain");
+            char header[128];
+            snprintf(header, sizeof(header), "attachment; filename=\"%s\"", name);
+            httpd_resp_set_hdr(req, "Content-Disposition", header);
+            
+            // Get total size
+            size_t total_size = log_rotate_get_size();
+            char content_len[32];
+            snprintf(content_len, sizeof(content_len), "%zu", total_size);
+            httpd_resp_set_hdr(req, "Content-Length", content_len);
+            
+            // Read and stream in chunks
+            char buffer[1024];
+            size_t offset = 0;
+            esp_err_t err = ESP_OK;
+            
+            httpd_resp_set_status(req, "200 OK");
+            
+            while (offset < total_size) {
+                size_t bytes_read = log_rotate_read(buffer, sizeof(buffer), offset);
+                if (bytes_read == 0) break;
+                
+                err = httpd_resp_send_chunk(req, buffer, bytes_read);
+                if (err != ESP_OK) {
+                    API_LOG_E("Failed to send chunk: %d", err);
+                    break;
+                }
+                offset += bytes_read;
+                
+                // Allow other tasks to run
+                vTaskDelay(pdMS_TO_TICKS(1));
+            }
+            
+            // Send final empty chunk
+            if (err == ESP_OK) {
+                err = httpd_resp_send_chunk(req, NULL, 0);
+            }
+            
+            API_LOG_D("Log streamed: %s (%zu bytes)", name, offset);
+            return (err == ESP_OK) ? ESP_OK : ESP_FAIL;
+        }
+        
+        // For other log files (legacy, old logs, etc.)
         char path[128];
         snprintf(path, sizeof(path), "/spiffs/logs/%.100s", name);
         
@@ -1375,25 +1422,23 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
             return ESP_FAIL;
         }
         
-        // Get file size for Content-Length header
+        // Get file size
         fseek(f, 0, SEEK_END);
         long file_size = ftell(f);
         fseek(f, 0, SEEK_SET);
         
-        // Set response headers
         httpd_resp_set_type(req, "text/plain");
         char header[128];
         snprintf(header, sizeof(header), "attachment; filename=\"%s\"", name);
         httpd_resp_set_hdr(req, "Content-Disposition", header);
         
-        // Add Content-Length if available
         if (file_size > 0) {
             char content_len[32];
             snprintf(content_len, sizeof(content_len), "%ld", file_size);
             httpd_resp_set_hdr(req, "Content-Length", content_len);
         }
         
-        char *buffer = malloc(CHUNK_SIZE * 10);
+        char *buffer = malloc(1024);
         if (!buffer) {
             fclose(f);
             httpd_resp_send_500(req);
@@ -1404,22 +1449,18 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         size_t total_sent = 0;
         esp_err_t err = ESP_OK;
         
-        // Start chunked response
         httpd_resp_set_status(req, "200 OK");
         
-        while ((bytes_read = fread(buffer, 1, CHUNK_SIZE * 10, f)) > 0) {
+        while ((bytes_read = fread(buffer, 1, 1024, f)) > 0) {
             err = httpd_resp_send_chunk(req, buffer, bytes_read);
             if (err != ESP_OK) {
                 API_LOG_E("Failed to send chunk: %d", err);
                 break;
             }
             total_sent += bytes_read;
-            
-            // Allow other tasks to run
             vTaskDelay(pdMS_TO_TICKS(1));
         }
         
-        // Send final empty chunk to signal end of response
         if (err == ESP_OK) {
             err = httpd_resp_send_chunk(req, NULL, 0);
         }
@@ -1427,25 +1468,31 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         free(buffer);
         fclose(f);
         
-        if (err == ESP_OK) {
-            API_LOG_D("Log streamed successfully: %s (%ld bytes sent)", name, total_sent);
-        } else {
-            API_LOG_E("Failed to stream log: %s", name);
-            return ESP_FAIL;
-        }
-        
-        return ESP_OK;
+        API_LOG_D("Log streamed: %s (%ld bytes sent)", name, total_sent);
+        return (err == ESP_OK) ? ESP_OK : ESP_FAIL;
     }
     
     // Case 2: List all log files
     cJSON *root = cJSON_CreateObject();
     cJSON *logs_array = cJSON_CreateArray();
     
+    // First, add the current system log (from circular buffer)
+    cJSON *system_log = cJSON_CreateObject();
+    cJSON_AddStringToObject(system_log, "name", "system.log");
+    cJSON_AddNumberToObject(system_log, "size", log_rotate_get_size());
+    cJSON_AddNumberToObject(system_log, "modified", time(NULL));
+    cJSON_AddItemToArray(logs_array, system_log);
+    
+    // Then scan for any other log files in the directory
     DIR *dir = opendir("/spiffs/logs");
     if (dir) {
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
             if (entry->d_type == DT_REG) {
+                // Skip system.log (already added)
+                if (strcmp(entry->d_name, "system.log") == 0) continue;
+                if (strcmp(entry->d_name, "system.old") == 0) continue;
+                
                 char path[128];
                 snprintf(path, sizeof(path), "/spiffs/logs/%.100s", entry->d_name);
                 struct stat st;
@@ -1459,8 +1506,6 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
             }
         }
         closedir(dir);
-    } else {
-        API_LOG_W("Logs directory not found: /spiffs/logs");
     }
     
     cJSON_AddItemToObject(root, "logs", logs_array);
@@ -1474,16 +1519,31 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
 esp_err_t logs_delete_handler(httpd_req_t *req) {
     // Check if it's the "all" endpoint
     if (strstr(req->uri, "/api/logs/all") != NULL) {
-        // Delete all logs
+        // Delete all logs (including system.log)
         int deleted = 0;
+        
+        // Clear the circular buffer
+        esp_err_t err = log_rotate_clear();
+        if (err == ESP_OK) {
+            deleted++;
+            API_LOG_D("Cleared system.log");
+        }
+        
+        // Delete other log files
         DIR *dir = opendir("/spiffs/logs");
         if (dir) {
             struct dirent *entry;
             while ((entry = readdir(dir)) != NULL) {
                 if (entry->d_type == DT_REG) {
+                    // Skip system.log (already cleared)
+                    if (strcmp(entry->d_name, "system.log") == 0) continue;
+                    
                     char path[128];
                     snprintf(path, sizeof(path), "/spiffs/logs/%.100s", entry->d_name);
-                    if (unlink(path) == 0) deleted++;
+                    if (unlink(path) == 0) {
+                        deleted++;
+                        API_LOG_D("Deleted: %s", entry->d_name);
+                    }
                 }
             }
             closedir(dir);
@@ -1494,7 +1554,6 @@ esp_err_t logs_delete_handler(httpd_req_t *req) {
         cJSON_AddNumberToObject(root, "deleted", deleted);
         cJSON_AddStringToObject(root, "message", "Logs deleted");
         send_json_response(req, root);
-        log_init();
         return ESP_OK;
     }
     
@@ -1511,6 +1570,22 @@ esp_err_t logs_delete_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
     
+    // Check if it's the system log
+    if (strcmp(name, "system.log") == 0) {
+        esp_err_t err = log_rotate_clear();
+        if (err == ESP_OK) {
+            cJSON *root = cJSON_CreateObject();
+            cJSON_AddBoolToObject(root, "success", true);
+            cJSON_AddStringToObject(root, "message", "System log cleared");
+            send_json_response(req, root);
+            return ESP_OK;
+        } else {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to clear log");
+            return ESP_FAIL;
+        }
+    }
+    
+    // Delete other log files
     char path[128];
     snprintf(path, sizeof(path), "/spiffs/logs/%s", name);
     
@@ -1519,14 +1594,12 @@ esp_err_t logs_delete_handler(httpd_req_t *req) {
         cJSON_AddBoolToObject(root, "success", true);
         cJSON_AddStringToObject(root, "message", "Log deleted");
         send_json_response(req, root);
-        log_init();
         return ESP_OK;
     } else {
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File not found");
         return ESP_FAIL;
     }
 }
-
 
 // Helper function to build JSON for a single rule
 void build_rule_json(automation_rule_t *rule, char *buffer, size_t buffer_size) {
@@ -2060,7 +2133,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
 
     // Keep reading in chunks until we have enough records
     while (records_remaining > 0) {
-        API_LOG_D("Records remaining %d", records_remaining);
+        API_LOG_V("Records remaining %d", records_remaining);
         uint16_t batch_size = (records_remaining < CHUNK_SIZE) ? records_remaining : CHUNK_SIZE;
         
         // Read a batch of records

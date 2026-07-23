@@ -224,7 +224,7 @@ int dht11_read(dht11_data_t *data) {
 
     // All logging outside critical section
     if (ret == 0) {
-        SENSOR_LOG_D("DHT11: Temp=%.1f°C, Humid=%.1f%%", data->temperature, data->humidity);
+        SENSOR_LOG_V("DHT11: Temp=%.1f°C, Humid=%.1f%%", data->temperature, data->humidity);
     } else {
         switch(ret) {
             case -1:

@@ -11,7 +11,7 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "esp_event.h"
-//#include "esp_reset_reason.h"  // or just include esp_system.h
+#include "esp_log.h"
 
 #include "project_defs.h"
 #include "system_config.h"
@@ -24,6 +24,7 @@
 #include "wifi_manager.h"
 #include "email_client.h"
 #include "relay_control.h"
+#include "web_console.h"
 
 // ============================================================
 // External function prototypes
@@ -40,6 +41,11 @@ void web_upload_init(void);
 // Main Entry Point
 // ============================================================
 void app_main(void) {
+    // ============================================================
+    // Step 0: Start web console interface
+    // ============================================================
+   ESP_ERROR_CHECK(web_console_init());
+
     // Check reset reason right at boot
     esp_reset_reason_t reason = esp_reset_reason();
     

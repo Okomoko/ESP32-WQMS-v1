@@ -5,18 +5,16 @@
 #define LOG_ROTATE_H
 
 #include <stdio.h>
-#include "log_levels.h"   // For wqms_log_type_t
+#include "esp_err.h"
 
-// Open a log file for the given type (creates or reopens)
-FILE* log_rotate_open(wqms_log_type_t type);
-
-// Check if rotation is needed (file size exceeded)
-int log_rotate_check(FILE *file, wqms_log_type_t type);
-
-// Close the current log file
-void log_rotate_close(wqms_log_type_t type);
-
-// Get the current filename for a log type
-const char* log_rotate_get_filename(wqms_log_type_t type, int index);
+esp_err_t log_rotate_init(void);
+esp_err_t log_rotate_write(const char* data);
+size_t log_rotate_read(char* buffer, size_t buffer_size, size_t offset);
+size_t log_rotate_get_size(void);
+bool log_rotate_is_empty(void);
+esp_err_t log_rotate_clear(void);
+void log_rotate_flush(void);
+void log_rotate_close(void);
+bool log_rotate_is_ready(void);
 
 #endif // LOG_ROTATE_H

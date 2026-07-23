@@ -6,6 +6,10 @@
 
 #include "sdkconfig.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ============================================================
 // Log Level Definitions (Macros for conditional compilation)
 // ============================================================
@@ -16,13 +20,48 @@
 #define WQMS_LOG_LEVEL_DEBUG    4
 #define WQMS_LOG_LEVEL_VERBOSE  5
 
-// Default to INFO if not defined
-#ifndef CONFIG_WQMS_LOG_LEVEL
-    #define CONFIG_WQMS_LOG_LEVEL WQMS_LOG_LEVEL_INFO
-#endif
+#define CONFIG_WQMS_LOG_LEVEL WQMS_LOG_LEVEL_DEBUG
+// ============================================================
+// NEW: Separate Log Levels for Different Outputs
+// ============================================================
+
+// Console output level (USB + Web Console) - Show DEBUG and above
+#define WQMS_LOG_LEVEL_CONSOLE  WQMS_LOG_LEVEL_DEBUG
+
+// File output level (SPIFFS) - Show INFO and above (NO DEBUG)
+#define WQMS_LOG_LEVEL_FILE     WQMS_LOG_LEVEL_INFO
+
+// Module-specific file log levels
+// Each module type can have different file logging threshold
+#define WQMS_LOG_LEVEL_FILE_SYSTEM      WQMS_LOG_LEVEL_INFO
+#define WQMS_LOG_LEVEL_FILE_APPLICATION WQMS_LOG_LEVEL_INFO
+#define WQMS_LOG_LEVEL_FILE_AUTOMATION  WQMS_LOG_LEVEL_DEBUG  // Automation gets DEBUG in files
+#define WQMS_LOG_LEVEL_FILE_NOTIFICATION WQMS_LOG_LEVEL_INFO
+#define WQMS_LOG_LEVEL_FILE_API         WQMS_LOG_LEVEL_INFO
+#define WQMS_LOG_LEVEL_FILE_INTEGRATION WQMS_LOG_LEVEL_INFO
+#define WQMS_LOG_LEVEL_FILE_SENSOR      WQMS_LOG_LEVEL_DEBUG  // Sensors get DEBUG in files
+#define WQMS_LOG_LEVEL_FILE_RELAY       WQMS_LOG_LEVEL_INFO
+
+// Helper: Get file log level for a specific type
+#define WQMS_LOG_GET_FILE_LEVEL(type) \
+    ((type) == WQMS_LOG_TYPE_SYSTEM ? WQMS_LOG_LEVEL_FILE_SYSTEM : \
+     (type) == WQMS_LOG_TYPE_APPLICATION ? WQMS_LOG_LEVEL_FILE_APPLICATION : \
+     (type) == WQMS_LOG_TYPE_AUTOMATION ? WQMS_LOG_LEVEL_FILE_AUTOMATION : \
+     (type) == WQMS_LOG_TYPE_NOTIFICATION ? WQMS_LOG_LEVEL_FILE_NOTIFICATION : \
+     (type) == WQMS_LOG_TYPE_API ? WQMS_LOG_LEVEL_FILE_API : \
+     (type) == WQMS_LOG_TYPE_INTEGRATION ? WQMS_LOG_LEVEL_FILE_INTEGRATION : \
+     (type) == WQMS_LOG_TYPE_SENSOR ? WQMS_LOG_LEVEL_FILE_SENSOR : \
+     (type) == WQMS_LOG_TYPE_RELAY ? WQMS_LOG_LEVEL_FILE_RELAY : \
+     WQMS_LOG_LEVEL_FILE)
+
+// Helper: Check if a log level should be written to console
+#define WQMS_LOG_TO_CONSOLE(level) ((level) <= WQMS_LOG_LEVEL_CONSOLE)
+
+// Helper: Check if a log level should be written to file
+#define WQMS_LOG_TO_FILE(type, level) ((level) <= WQMS_LOG_GET_FILE_LEVEL(type))
 
 // ============================================================
-// Log Type Definitions (Enum values use different naming)
+// Log Type Definitions
 // ============================================================
 typedef enum {
     WQMS_LOG_TYPE_SYSTEM = 0,
@@ -161,5 +200,8 @@ typedef enum {
 // Function Prototypes
 // ============================================================
 void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *format, ...);
+
+// NEW: Get string representation of log type
+const char* wqms_log_type_to_string(wqms_log_type_t type);
 
 #endif // LOG_LEVELS_H

@@ -1874,3 +1874,302 @@ tr:hover {
 #log-viewer-close:hover {
     color: #d32f2f;
 }
+
+/* ============================================================
+   CONSOLE VIEWER
+   ============================================================ */
+
+/* Console page layout */
+#app.console-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Console Header */
+#console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 16px 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e6edf6;
+}
+
+.console-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.console-title .icon {
+    font-size: 24px;
+}
+
+.console-title h1 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #0a2744;
+    margin: 0;
+}
+
+.console-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.console-controls #console-status {
+    font-size: 0.85rem;
+    padding: 4px 12px;
+    background: #f5f8fc;
+    border-radius: 20px;
+}
+
+.console-controls #console-status .online {
+    color: #2e7d32;
+}
+
+.console-controls #console-status .offline {
+    color: #d32f2f;
+}
+
+.console-controls .btn {
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    border-radius: 20px;
+    border: 1px solid #dde6ef;
+    background: #f8fafd;
+    color: #1f4a7a;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.console-controls .btn:hover {
+    background: #e6edf6;
+    border-color: #b0c4d9;
+}
+
+.console-controls .btn.active {
+    background: #2b7be4;
+    border-color: #2b7be4;
+    color: #ffffff;
+}
+
+.console-controls .btn.active:hover {
+    background: #1a5fb0;
+}
+
+/* Console Content (log viewer) */
+#console-content {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e6edf6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    min-height: 400px;
+    max-height: 70vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+#console-content #log {
+    margin: 0;
+    padding: 16px 20px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #1e2b3c;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    min-height: 400px;
+    background: #fafcff;
+}
+
+/* ANSI color classes for console */
+#log .error { color: #d32f2f; }
+#log .warn { color: #f9a825; }
+#log .info { color: #2e7d32; }
+#log .debug { color: #1976d2; }
+#log .verbose { color: #6c757d; }
+#log .bold { font-weight: bold; }
+
+/* Console Footer */
+#console-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #ffffff;
+    border-radius: 0 0 16px 16px;
+    padding: 10px 20px;
+    border-top: 1px solid #e6edf6;
+    margin-top: 0;
+    font-size: 0.8rem;
+    color: #7a9bbf;
+}
+
+#console-footer span {
+    background: #f5f8fc;
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+
+/* Scrollbar styling for console content */
+#console-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+#console-content::-webkit-scrollbar-track {
+    background: #f8fafd;
+    border-radius: 0 0 8px 8px;
+}
+
+#console-content::-webkit-scrollbar-thumb {
+    background: #dde6ef;
+    border-radius: 4px;
+}
+
+#console-content::-webkit-scrollbar-thumb:hover {
+    background: #b0c4d9;
+}
+
+/* Console responsive */
+@media (max-width: 768px) {
+    #console-header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px 16px;
+    }
+
+    .console-controls {
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .console-controls .btn {
+        font-size: 0.75rem;
+        padding: 4px 12px;
+    }
+
+    #console-content {
+        max-height: 55vh;
+        min-height: 300px;
+    }
+
+    #console-content #log {
+        font-size: 12px;
+        padding: 12px 14px;
+        min-height: 300px;
+    }
+
+    #console-footer {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: 4px;
+        padding: 8px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    #console-header {
+        padding: 10px 12px;
+    }
+
+    .console-title h1 {
+        font-size: 1rem;
+    }
+
+    #console-content {
+        max-height: 45vh;
+        min-height: 200px;
+    }
+
+    #console-content #log {
+        font-size: 11px;
+        padding: 10px 12px;
+        min-height: 200px;
+    }
+}
+
+/* Dark mode for console (optional) */
+@media (prefers-color-scheme: dark) {
+    #console-content #log {
+        background: #1a1a2e;
+        color: #d4e2f0;
+    }
+
+    #console-content {
+        border-color: #2a3a6e;
+        background: #1a1a2e;
+    }
+
+    #console-header {
+        background: #1a1a2e;
+        border-color: #2a3a6e;
+    }
+
+    .console-title h1 {
+        color: #60a5fa;
+    }
+
+    .console-controls #console-status {
+        background: #16213e;
+        color: #a8b2d1;
+    }
+
+    .console-controls .btn {
+        background: #16213e;
+        border-color: #2a3a6e;
+        color: #a8b2d1;
+    }
+
+    .console-controls .btn:hover {
+        background: #1e2d5e;
+        border-color: #3a4a8e;
+    }
+
+    .console-controls .btn.active {
+        background: #2b7be4;
+        border-color: #2b7be4;
+        color: #ffffff;
+    }
+
+    #console-footer {
+        background: #1a1a2e;
+        border-color: #2a3a6e;
+        color: #6a7a9e;
+    }
+
+    #console-footer span {
+        background: #16213e;
+        color: #8a9abe;
+    }
+
+    #console-content #log .error { color: #ff6b6b; }
+    #console-content #log .warn { color: #ffd93d; }
+    #console-content #log .info { color: #6bcb6b; }
+    #console-content #log .debug { color: #4fc3f7; }
+    #console-content #log .verbose { color: #9e9e9e; }
+
+    /* Scrollbar dark theme */
+    #console-content::-webkit-scrollbar-track {
+        background: #16213e;
+    }
+
+    #console-content::-webkit-scrollbar-thumb {
+        background: #2a3a6e;
+    }
+
+    #console-content::-webkit-scrollbar-thumb:hover {
+        background: #3a4a8e;
+    }
+}
