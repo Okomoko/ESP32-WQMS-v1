@@ -136,7 +136,7 @@ GND     38         -    Power    Ground
 #define MAX_CONDITIONS_PER_RULE            8
 #define MAX_OUTPUTS_PER_RULE               4
 #define RULE_NAME_MAX_LEN                 32
-#define DEFAULT_AUTOMATION_INTERVAL_SEC   60
+#define DEFAULT_AUTOMATION_INTERVAL_SEC   15
 
 // ============================================================
 // MODBUS Configuration

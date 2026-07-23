@@ -60,27 +60,68 @@ class DashboardManager {
             return;
         }
         
+        // Load sensor config first
         await this.loadSensorConfig();
         
-//        if (typeof initDashboard === 'function') {
-//            initDashboard();
-//        }
-        
+        // Initialize chart
         this.initChart();
         this.setupSensorSelector();
         this.setupChartControls();
+        this.setupChartToggle();  // <-- ADD THIS
         this.updateStatus();
 
-        setInterval(() => {
-			loadSensors();
-			loadRelays();
-            if (!this.isUpdating && this.chartInitialized) {
-                this.fetchHistory();
-            }
-			this.updateStatus();
-        }, this.updateInterval);
+        // Chart is visible by default
+        this.chartVisible = false;
+
+        const container = document.getElementById('chart-container');
+        const selector = document.getElementById('sensor-selector');
+        const btn = document.getElementById('chart-toggle-btn');
+        
+        if (container) container.classList.add('hidden');
+        if (selector) selector.classList.add('hidden');
+        if (btn) {
+            btn.textContent = '📊 Show Chart';
+            btn.classList.add('hidden');
+        }
+
+        // Load sensors and relays separately
+        loadSensors();
+        loadRelays();
 
         window.dashboardManager = this;
+    }
+
+    /**
+     * Setup chart toggle button
+     */
+    setupChartToggle() {
+        const btn = document.getElementById('chart-toggle-btn');
+        if (!btn) return;
+        
+        btn.addEventListener('click', () => this.toggleChartVisibility());
+
+/*
+        // Restore state from localStorage if available
+        const savedState = localStorage.getItem('chart_visible');
+        if (savedState === 'false') {
+            // Start hidden
+            const container = document.getElementById('chart-container');
+            const selector = document.getElementById('sensor-selector');
+            if (container) container.classList.add('hidden');
+            if (selector) selector.classList.add('hidden');
+            btn.textContent = '📊 Show Chart';
+            btn.classList.add('hidden');
+            this.chartVisible = false;
+            this.pauseChartUpdates();
+        }
+*/
+    }
+
+    /**
+     * Save chart visibility state
+     */
+    saveChartState() {
+        localStorage.setItem('chart_visible', this.chartVisible ? 'true' : 'false');
     }
 
     async loadSensorConfig() {
@@ -439,41 +480,163 @@ class DashboardManager {
         }
     }
 
-    downloadCSV() {
-        if (!this.historyData || this.historyData.length === 0) {
-            alert('No data to export');
+    /**
+     * Toggle chart visibility
+     */
+
+    toggleChartVisibility() {
+        const container = document.getElementById('chart-container');
+        const selector = document.getElementById('sensor-selector');
+        const btn = document.getElementById('chart-toggle-btn');
+        
+        if (!container) return;
+        
+        const isHidden = container.classList.contains('hidden');
+        
+        if (isHidden) {
+            // Show chart
+            container.classList.remove('hidden');
+            if (selector) selector.classList.remove('hidden');
+            btn.textContent = '📊 Hide Chart';
+            btn.classList.remove('hidden');
+            
+            this.chartVisible = true;
+
+			if (!this.chartUpdateInterval) {
+				this.chartUpdateInterval = setInterval(() => {
+					if (this.chartVisible && !this.isUpdating && this.chartInitialized) {
+						this.fetchHistory();
+					}
+					this.updateStatus();
+				}, this.updateInterval);
+			}
+
+			// Fetch data immediately
+			this.fetchHistory();
+		} else {
+            // Hide chart
+            container.classList.add('hidden');
+            if (selector) selector.classList.add('hidden');
+            btn.textContent = '📊 Show Chart';
+            btn.classList.add('hidden');
+            
+            this.chartVisible = false;
+            this.pauseChartUpdates();
+        }
+        
+        // Save state
+        this.saveChartState();
+    }
+
+    /**
+     * Pause all chart updates
+     */
+    pauseChartUpdates() {
+        this.chartVisible = false;
+
+        // Cancel any pending fetch
+        this.isUpdating = true;
+
+        // Stop the update interval if it exists
+        if (this.chartUpdateInterval) {
+            clearInterval(this.chartUpdateInterval);
+            this.chartUpdateInterval = null;
+        }
+        
+        console.log('[Dashboard] Chart updates paused');
+    }
+
+    /**
+     * Resume chart updates
+     */
+    resumeChartUpdates() {
+        this.chartVisible = true;
+        this.isUpdating = false;
+        
+        // Fetch data immediately
+        this.fetchHistory();
+        
+        // Restart interval
+        if (this.chartUpdateInterval) {
+            clearInterval(this.chartUpdateInterval);
+        }
+        this.chartUpdateInterval = setInterval(() => {
+            if (this.chartVisible && !this.isUpdating && this.chartInitialized) {
+                this.fetchHistory();
+            }
+        }, this.updateInterval);
+        
+        console.log('[Dashboard] Chart updates resumed');
+    }
+
+    /**
+     * Check if chart should update (visibility-aware)
+     */
+    shouldUpdateChart() {
+        return this.chartVisible && this.chartInitialized && !this.isUpdating;
+    }
+
+    /**
+     * Override fetchHistory to check visibility
+     */
+    async fetchHistory() {
+        // Skip if chart is not visible
+        if (!this.chartVisible) {
+            console.log('[Dashboard] Chart hidden, skipping update');
             return;
         }
-
-        let csv = 'Timestamp';
-        const sensorKeys = Array.from(this.selectedSensors);
-        sensorKeys.forEach(key => {
-            csv += ',' + (this.sensorLabels[key] || key);
-        });
-        csv += '\n';
         
-        this.historyData.forEach(entry => {
-            const d = new Date(entry.timestamp * 1000);
-            const timeStr = d.toLocaleString();
-            let row = timeStr;
-            
-            sensorKeys.forEach(key => {
-                const value = entry[key];
-                row += ',' + (value !== undefined && value !== null ? value : '');
-            });
-            
-            csv += row + '\n';
-        });
+        if (this.isUpdating || !this.chartInitialized) return;
+        this.isUpdating = true;
 
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'sensor_data_' + new Date().toISOString().slice(0, 10) + '.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        try {
+            const response = await fetch('/api/history?limit=' + this.maxDataPoints);
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            
+            const data = await response.json();
+            
+            if (data && data.entries && data.entries.length > 0) {
+                this.historyData = data.entries.map(entry => {
+                    const mapped = {
+                        timestamp: entry.timestamp,
+                        sensor_mask: entry.sensor_mask
+                    };
+                    
+                    Object.keys(entry).forEach(key => {
+                        if (key !== 'timestamp' && key !== 'sensor_mask') {
+                            mapped[key] = entry[key];
+                        }
+                    });
+                    
+                    return mapped;
+                });
+                
+                const dataKeys = Object.keys(this.historyData[0]).filter(
+                    k => k !== 'timestamp' && k !== 'sensor_mask'
+                );
+                
+                if (dataKeys.length > 0) {
+                    const currentSelected = Array.from(this.selectedSensors);
+                    const needsUpdate = dataKeys.some(key => !currentSelected.includes(key));
+                    
+                    if (needsUpdate) {
+                        this.selectedSensors = new Set(dataKeys);
+                    }
+                }
+                
+                this.updateChart();
+                this.updateChartFooter();
+            } else {
+                this.showNoDataMessage('No data available yet');
+            }
+        } catch (error) {
+            console.error('Error fetching history:', error);
+            this.showNoDataMessage('Error loading data');
+        } finally {
+            this.isUpdating = false;
+        }
     }
 }
 
@@ -505,12 +668,13 @@ if (document.readyState === 'loading') {
 
 async function initDashboard() {
     // First, run the existing initialization
-//    await updateHeader();
+    await updateHeader();
     await loadSensors();
     await loadRelays();
-//    setInterval(() => {
-//        updateHeader();
-//    }, REFRESH_INTERVAL);
+    setInterval(() => {
+        loadSensors();
+        loadRelays();
+    }, REFRESH_INTERVAL);
 
 }
 

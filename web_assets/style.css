@@ -2173,3 +2173,47 @@ tr:hover {
         background: #3a4a8e;
     }
 }
+
+/* ============================================================
+   CHART TOGGLE
+   ============================================================ */
+
+/* Chart container with transition */
+#chart-container {
+    transition: all 0.3s ease;
+    overflow: hidden;
+    max-height: 450px;
+    opacity: 1;
+}
+
+#chart-container.hidden {
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+/* Chart hidden state - completely invisible and not taking space */
+#chart-container.hidden canvas {
+    display: none !important;
+}
+
+/* Sensor selector hidden state */
+#sensor-selector.hidden {
+    display: none !important;
+}
+
+/* Toggle button state */
+#chart-toggle-btn.hidden {
+    background: #6c757d;
+}
+
+#chart-toggle-btn.hidden:hover {
+    background: #5a6268;
+}
+
+/* Smooth transition for sensor selector */
+#sensor-selector {
+    transition: all 0.3s ease;
+}

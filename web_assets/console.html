@@ -9,6 +9,25 @@
 </head>
 <body>
     <div id="app" class="console-page">
+        <header id="header">
+            <div class="header-left">
+                <h1>🌊 WQMS</h1>
+                <span id="system-name">WQMS-System</span>
+            </div>
+            <div class="header-center">
+                <span id="ip-address">0.0.0.0</span>
+                <span id="wifi-ssid">N/A</span>
+                <span id="datetime">--:--:--</span>
+            </div>
+            <div class="header-right">
+                <span id="free-heap">0 bytes</span>
+                <span id="uptime">0m</span>
+                <span id="cpu0-load">0%</span>
+                <span id="cpu1-load">0%</span>
+<!--                <span id="cpu-temp">0°C</span> -->
+                <button id="reboot-btn" class="btn btn-danger" style="padding:4px 14px; font-size:0.7rem;">🔁 Reboot</button>
+            </div>
+        </header>
         <!-- Console Header -->
         <div id="console-header">
             <div class="console-title">
@@ -36,6 +55,7 @@
         </div>
     </div>
 
+    <script src="js/core.js"></script>
     <script src="/js/console.js"></script>
 </body>
 </html>

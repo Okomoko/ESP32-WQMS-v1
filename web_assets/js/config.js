@@ -1400,7 +1400,7 @@ async function initConfiguration() {
             'modbus-interval': config.modbus_interval_ms || 1000,
             'integration-url': config.integration_url || '',
             'integration-interval': config.integration_interval_sec || 60,
-            'automation-interval': config.automation_interval_sec || 60,
+            'automation-interval': config.automation_interval_sec || 15,
             'ntp-servers': config.ntp_servers || '',
             'ntp-timezone': config.timezone || 'EET-3',
             'wifi-ssid-input': config.wifi_ssid || ''
@@ -1423,7 +1423,7 @@ async function initConfiguration() {
             modbus_interval_ms: parseInt(document.getElementById('modbus-interval').value) || 1000,
             integration_url: document.getElementById('integration-url').value,
             integration_interval_sec: parseInt(document.getElementById('integration-interval').value) || 60,
-            automation_interval_sec: document.getElementById('automation-interval').value || 60,
+            automation_interval_sec: document.getElementById('automation-interval').value || 15,
             ntp_servers: document.getElementById('ntp-servers') ? document.getElementById('ntp-servers').value : '',
             modbus_interval_ms: parseInt(document.getElementById('modbus-interval-2').value) || 1000
         };

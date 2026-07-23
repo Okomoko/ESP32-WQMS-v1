@@ -33,7 +33,7 @@
             <a href="/automation.html">Automation</a>
             <a href="/config.html">Configuration</a>
             <a href="/calibration.html">Calibration</a>
-            <a href="/api_doc.html">API Docs</a>
+<!--            <a href="/api_doc.html">API Docs</a> -->
         </nav>
 
         <main id="dashboard">
@@ -48,10 +48,14 @@
             </section>
 
             <section id="graphs">
-                <h2>Sensor History (Last 3 Days)</h2>
-                <div class="sensor-selector" id="sensor-selector">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <h2 style="margin: 20px 0 12px; border-left: 4px solid #2b7be4; padding-left: 14px;">Sensor History (Last 3 Days)</h2>
+                    <button id="chart-toggle-btn" class="btn btn-primary" style="font-size: 0.8rem; padding: 6px 16px;">
+                        📊 Show Chart
+                    </button>
                 </div>
-                <div class="chart-container">
+                <div class="sensor-selector hidden" id="sensor-selector"></div>
+                <div class="chart-container hidden" id="chart-container">
                     <canvas id="sensor-history-chart" width="100%" height="100%"></canvas>
                 </div>
             </section>
