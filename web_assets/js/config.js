@@ -1362,6 +1362,7 @@ function clearEmailFields() {
 /**
  * Fetch ADC to GPIO pin mapping from server
  */
+/*
 async function fetchAdcPinMapping() {
     try {
         const response = await fetch('/api/adc/pins');
@@ -1373,6 +1374,7 @@ async function fetchAdcPinMapping() {
         return null;
     }
 }
+*/
 
 // ============================================================
 // Initialize Configuration
