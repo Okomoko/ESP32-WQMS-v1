@@ -17,15 +17,21 @@
 // ============================================================
 // NVS Keys
 // ============================================================
-#define NVS_KEY_SYSTEM_NAME     "sys_name"
-#define NVS_KEY_SYSTEM_LOCATION "sys_loc"
-#define NVS_KEY_TIMEZONE        "timezone"
-#define NVS_KEY_SAMPLE_INTERVAL "samp_int"
-#define NVS_KEY_MODBUS_INTERVAL "mb_int"
-#define NVS_KEY_INTEGRATION_URL "int_url"
-#define NVS_KEY_INTEGRATION_INT "int_int"
-#define NVS_KEY_CONFIG_VERSION  "cfg_ver"
-#define NVS_KEY_AUTOMATION_INT  "auto_int"
+#define NVS_KEY_SYSTEM_NAME              "sys_name"
+#define NVS_KEY_SYSTEM_LOCATION          "sys_loc"
+#define NVS_KEY_TIMEZONE                 "timezone"
+#define NVS_KEY_SAMPLE_INTERVAL          "samp_int"
+#define NVS_KEY_CONFIG_VERSION           "cfg_ver"
+#define NVS_KEY_AUTOMATION_INT           "auto_int"
+#define NVS_KEY_SUPABASE_SENSOR_URL      "sensor_url"
+#define NVS_KEY_SUPABASE_LOG_URL         "log_url"
+#define NVS_KEY_SUPABASE_API_KEY         "api_key"
+#define NVS_KEY_SUPABASE_UPLOAD_INTERVAL "upload_int"
+#define NVS_KEY_SUPABASE_CERT            "sup_cert"      // Blob storage for certificate
+#define NVS_KEY_SUPABASE_CERT_LEN        "sup_cert_len"  // Certificate length
+#define NVS_KEY_EMAIL_CERT               "email_cert"
+#define NVS_KEY_EMAIL_CERT_LEN           "email_cert_len"
+
 
 #define NVS_KEY_SENSOR_PREFIX   "sens_"
 #define NVS_KEY_RELAY_PREFIX    "relay_"
@@ -64,17 +70,19 @@ void nvs_set_timezone(const char *tz);
 uint32_t nvs_get_sample_interval(void);
 void nvs_set_sample_interval(uint32_t ms);
 
-uint32_t nvs_get_modbus_interval(void);
-void nvs_set_modbus_interval(uint32_t ms);
-
-const char* nvs_get_integration_url(void);
-void nvs_set_integration_url(const char *url);
-
-uint32_t nvs_get_integration_interval(void);
-void nvs_set_integration_interval(uint32_t sec);
-
 uint32_t nvs_get_automation_interval(void);
 void nvs_set_automation_interval(uint32_t sec);
+
+// Supabase configuration
+const char* nvs_get_supabase_sensor_url(void);
+const char* nvs_get_supabase_log_url(void);
+const char* nvs_get_supabase_api_key(void);
+uint32_t nvs_get_supabase_upload_interval(void);
+void nvs_set_supabase_sensor_url(const char *url);
+void nvs_set_supabase_log_url(const char *url);
+void nvs_set_supabase_api_key(const char *key);
+void nvs_set_supabase_upload_interval(uint32_t sec);
+bool nvs_supabase_is_configured(void);
 
 // ============================================================
 // MODBUS Map Configuration

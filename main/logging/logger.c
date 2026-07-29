@@ -20,8 +20,8 @@
 // ============================================================
 #define LOG_TIMESTAMP_LEN   32
 #define LOG_MSG_LEN         256
-#define LOG_FULL_LINE_LEN   512
-#define LOG_FILE_LINE_LEN   512
+#define LOG_FULL_LINE_LEN   LOG_MSG_LEN + LOG_TIMESTAMP_LEN + 16
+#define LOG_FILE_LINE_LEN   LOG_FULL_LINE_LEN
 
 // ============================================================
 // ANSI Color Codes

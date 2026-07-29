@@ -1,0 +1,50 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.sensor_config (
+  id integer NOT NULL,
+  system text NOT NULL,
+  sensor_name text NOT NULL,
+  unit text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT sensor_config_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.sensor_readings (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  system text NOT NULL,
+  timestamp timestamp with time zone NOT NULL,
+  sensor0 double precision,
+  sensor1 double precision,
+  sensor2 double precision,
+  sensor3 double precision,
+  sensor4 double precision,
+  sensor5 double precision,
+  sensor6 double precision,
+  sensor7 double precision,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT sensor_readings_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.system_logs (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  system text NOT NULL,
+  timestamp timestamp with time zone NOT NULL,
+  module text NOT NULL,
+  level text NOT NULL,
+  message text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT system_logs_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.system_config (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  system text NOT NULL UNIQUE,
+  location text,
+  timezone text,
+  sample_interval_ms integer,
+  upload_interval_sec integer,
+  last_sensor_upload_ts bigint,
+  last_log_upload_ts bigint,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT system_config_pkey PRIMARY KEY (id)
+);

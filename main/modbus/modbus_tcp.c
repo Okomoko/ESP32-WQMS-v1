@@ -445,20 +445,31 @@ static int process_request(uint8_t *request, int len, uint8_t *response) {
             break;
             
         case MB_FC_WRITE_SINGLE_REGISTER:    // 0x06
-        {
-            uint16_t addr = (request[8] << 8) | request[9];
+// implementation has been temporarily removed
+            APP_LOG_W("MODBUS: Coil operations not implemented yet");
+            response[7] = func_code | 0x80;
+            response[8] = MB_EX_ILLEGAL_FUNCTION;
+            response_len = 9;
+            break;
+/*            uint16_t addr = (request[8] << 8) | request[9];
             uint16_t value = (request[10] << 8) | request[11];
             APP_LOG_D("MODBUS: Write Single: addr=%d, value=%d (0x%04X)", addr, value, value);
             response_len = handle_write_register(request, len, response);
             break;
-        }
-            
+*/            
         case MB_FC_WRITE_MULTIPLE_REGISTERS: // 0x10
-            start_addr = (request[8] << 8) | request[9];
+// implementation has been temporarily removed
+            APP_LOG_W("MODBUS: Coil operations not implemented yet");
+            response[7] = func_code | 0x80;
+            response[8] = MB_EX_ILLEGAL_FUNCTION;
+            response_len = 9;
+            break;
+/*            start_addr = (request[8] << 8) | request[9];
             count = (request[10] << 8) | request[11];
             APP_LOG_D("MODBUS: Write Multiple: addr=%d, count=%d", start_addr, count);
             response_len = handle_write_multiple_registers(request, len, response);
             break;
+*/
             
         case MB_FC_READ_COILS:               // 0x01
         case MB_FC_WRITE_SINGLE_COIL:        // 0x05
@@ -744,30 +755,7 @@ static void modbus_server_task(void *pvParameters) {
             cleanup_client_socket(&client_sock);
             APP_LOG_D("MODBUS: Client connection closed");
         }
-        
-        // Update statistics periodically
-        uint32_t interval = nvs_get_modbus_interval();
-        if (interval > 0 && heartbeat_counter % 100 == 0) {
-            if (modbus_mutex && xSemaphoreTake(modbus_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-                if (REG_PACKET_LOW < MAX_REGISTERS) {
-                    registers[REG_PACKET_LOW] = packet_count & 0xFFFF;
-                }
-                if (REG_PACKET_HIGH < MAX_REGISTERS) {
-                    registers[REG_PACKET_HIGH] = (packet_count >> 16) & 0xFFFF;
-                }
-                if (REG_ERROR_LOW < MAX_REGISTERS) {
-                    registers[REG_ERROR_LOW] = error_count & 0xFFFF;
-                }
-                if (REG_ERROR_HIGH < MAX_REGISTERS) {
-                    registers[REG_ERROR_HIGH] = (error_count >> 16) & 0xFFFF;
-                }
-                if (REG_LAST_CMD < MAX_REGISTERS) {
-                    registers[REG_LAST_CMD] = last_command;
-                }
-                xSemaphoreGive(modbus_mutex);
-            }
-        }
-        
+
         watchdog_heartbeat(WDT_MODULE_MODBUS);
     }
     

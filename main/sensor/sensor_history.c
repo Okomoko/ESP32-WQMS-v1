@@ -295,7 +295,7 @@ int sensor_history_get_range(uint32_t start_ts, uint32_t end_ts,
 			SENSOR_LOG_E("Sensor history record cannot be read!");
             break;
         }
-		SENSOR_LOG_D("Sensor history record timestamp:%d", record.timestamp);
+		SENSOR_LOG_V("Sensor history record timestamp:%d", record.timestamp);
         if (record.timestamp >= start_ts && record.timestamp <= end_ts) {
             memcpy(&buffer[found], &record, sizeof(record));
             found++;

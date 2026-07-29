@@ -45,7 +45,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 
 // ============================================================
-// Header Update
+// Headeor Update
 // ============================================================
 async function updateHeader() {
     try {
@@ -69,16 +69,19 @@ async function updateHeader() {
 // Reboot System
 // ============================================================
 async function rebootSystem() {
-    if (!confirm('⚠️ Are you sure you want to reboot the system?')) return;
     const btn = document.getElementById('reboot-btn') || document.getElementById('reboot-btn-config');
+    if (!confirm('⚠️ Are you sure you want to reboot the system?')) return;
     if (btn) { btn.textContent = '⏳ Rebooting...'; btn.disabled = true; }
     try {
-        await fetch('/api/system/reboot', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-        alert('✅ System rebooting... Wait 15 seconds and refresh.');
+        fetch('/api/system/reboot', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        alert('✅ System rebooting...\n Page will be refreshed in 30 seconds...');
     } catch (e) {
-        alert('⚠️ System is rebooting... Wait 15 seconds and refresh.');
+        alert('⚠️ System is rebooting...\n Page will be refreshed in 30 seconds...');
     }
-    if (btn) { btn.textContent = '🔁 Reboot'; btn.disabled = false; }
+    //if (btn) { btn.textContent = '🔁 Reboot'; btn.disabled = false; }
+    setTimeout(function() {
+        location.reload();
+    }, 30000);
 }
 
 // ============================================================
@@ -249,5 +252,5 @@ document.getElementById('reboot-btn-config')?.addEventListener('click', rebootSy
 window.rebootSystem = rebootSystem;
 
 setInterval(() => {
-	updateHeader();
+    updateHeader();
 }, REFRESH_INTERVAL);

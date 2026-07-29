@@ -13,6 +13,8 @@
 #include "log_levels.h"
 #include "logger.h"
 #include "system_config.h"
+#include "system_config.h"
+#include "supabase_upload.h"
 
 // ============================================================
 // Local Helper Functions (no new external dependencies)
@@ -158,6 +160,11 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
     cJSON_Delete(json);
     sensor_reload_config();
     
+    esp_err_t sync_err = supabase_sync_sensor_config();
+    if (sync_err != ESP_OK) {
+        WQMS_LOG_W("Supabase sync failed: %s", esp_err_to_name(sync_err));
+    }
+
     cJSON *root = cJSON_CreateObject();
     cJSON_AddBoolToObject(root, "success", true);
     cJSON_AddStringToObject(root, "message", "Sensor configuration saved");

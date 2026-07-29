@@ -47,7 +47,7 @@ static void poll_analog_sensors(void) {
     for (int i = 0; i < ANALOGUE_SENSOR_COUNT; i++) {
 //        int sensor_id = adc_to_sensor[i];
         int sensor_id = i;
-//        SENSOR_LOG_D("Sensor %d, name %s, channel %d, pin %d", i, sensor_config[sensor_id].name, sensor_config[sensor_id].adc_channel, sensor_config[sensor_id].gpio_pin);
+        SENSOR_LOG_V("Sensor %d, name %s, channel %d, pin %d", i, sensor_config[sensor_id].name, sensor_config[sensor_id].adc_channel, sensor_config[sensor_id].gpio_pin);
         if (!sensor_config[sensor_id].enabled) continue;
         
         uint16_t raw = wqms_adc_dma_get_raw(sensor_config[i].adc_channel);
@@ -65,6 +65,8 @@ static void poll_analog_sensors(void) {
                 readings[sensor_id].status = SENSOR_STATUS_OUT_OF_RANGE;
                 readings[sensor_id].quality = 2;
                 SENSOR_LOG_W("Sensor %d (%s) out of range: %.2f", sensor_id, sensor_config[sensor_id].name, value);
+            } else {
+                SENSOR_LOG_V("Sensor %d (%s) reading value: %.2f", sensor_id, sensor_config[sensor_id].name, value);
             }
             xSemaphoreGive(sensor_mutex);
         }
@@ -300,6 +302,18 @@ uint8_t sensor_get_max(int sensor_id) {
     return sensor_config[sensor_id].max_value;
 }
 
+const char* sensor_get_unit(int sensor_id) {
+    if (sensor_id < 0 || sensor_id >= TOTAL_SENSOR_COUNT) {
+        return NULL;
+    }
+    
+    // Get from NVS config
+    sensor_config_t configs[TOTAL_SENSOR_COUNT];
+    nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
+
+    return UNIT_LOOKUP[configs[sensor_id].unit].symbol;
+}
+
 /**
  * @brief Get GPIO pin number for a specific ADC channel using ESP-IDF function
  * @param channel ADC channel (ADC_CHANNEL_0 to ADC_CHANNEL_7)
@@ -315,7 +329,7 @@ int adc_channel_to_gpio(adc_unit_t unit, adc_channel_t channel) {
         return -1;
     }
     
-    SENSOR_LOG_D("GPIO for ADC unit %d channel %d is %d", unit, channel, gpio_num);
+    SENSOR_LOG_V("GPIO for ADC unit %d channel %d is %d", unit, channel, gpio_num);
     return gpio_num;
 }
 

@@ -151,18 +151,18 @@ esp_err_t log_rotate_init(void) {
         }
     }
     
-	if (write_pos > LOG_FILE_MAX_SIZE) {
-		if (unlink(LOG_FILE_PATH) == 0) {
-			WQMS_LOG_I("Log file deleted");
-		} else {
-			WQMS_LOG_W("File deletion failed (may not exist): %s", strerror(errno));
-		}
+    if (write_pos > LOG_FILE_MAX_SIZE) {
+        if (unlink(LOG_FILE_PATH) == 0) {
+            WQMS_LOG_I("Log file deleted");
+        } else {
+            WQMS_LOG_W("File deletion failed (may not exist): %s", strerror(errno));
+        }
         if (!initialize_log_file(log_file)) {
             fclose(log_file);
             log_file = NULL;
             return ESP_ERR_INVALID_STATE;
         }
-	}
+    }
 
     // Check file size
     long size = get_file_size(log_file);
@@ -313,7 +313,9 @@ size_t log_rotate_read(char* buffer, size_t buffer_size, size_t offset) {
         
         file_pos += bytes_read;
     }
-    
+    while (buffer[total_read] != '\n' && total_read > 0) {
+		total_read--;
+	}
     buffer[total_read] = '\0';
     return total_read;
 }

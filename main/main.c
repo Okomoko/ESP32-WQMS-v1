@@ -25,6 +25,7 @@
 #include "email_client.h"
 #include "relay_control.h"
 #include "web_console.h"
+#include "supabase_upload.h"
 
 // ============================================================
 // External function prototypes
@@ -35,7 +36,6 @@ void ntp_start(void);
 void modbus_init(void);
 void webserver_init(void);
 void automation_init(void);
-void web_upload_init(void);
 
 // ============================================================
 // Main Entry Point
@@ -146,10 +146,28 @@ void app_main(void) {
     // ============================================================
     ntp_start();
 //    WQMS_LOG_I("NTP client started");
-  
+vTaskDelay(pdMS_TO_TICKS(5000));
+
     // ============================================================
-    // Step 9: Start eMail Client
+    // Step 9: Initialize Supabase upload system
     // ============================================================
+
+    WQMS_LOG_I("=== Initializing Supabase Upload ===");
+    
+    ret = supabase_upload_init();
+    if (ret == ESP_OK) {
+        ret = supabase_upload_start();
+        if (ret != ESP_OK) {
+            WQMS_LOG_E("Failed to start Supabase upload: %s", esp_err_to_name(ret));
+        }
+    } else {
+        WQMS_LOG_E("Failed to initialize Supabase upload: %s", esp_err_to_name(ret));
+    }
+
+    // ============================================================
+    // Step 10: Start eMail Client
+    // ============================================================
+//vTaskDelay(pdMS_TO_TICKS(30000));
     email_client_init();
     // Send email notification if it was a panic or watchdog reset
     if (is_panic_reboot) {
@@ -158,53 +176,52 @@ void app_main(void) {
                  "⚠️ Device rebooted due to: %s\n",
                  reason_str);
         
-        email_send_notification("Device Rebooted", 
+        ret = email_send_notification("Device Rebooted", 
                                    message);
     } else {
         char message[256];
         snprintf(message, sizeof(message), 
                  "⚠️ Device is just booted up.\n");
         
-        email_send_notification("Device Rebooted", 
+        ret = email_send_notification("Device Rebooted", 
                                    message);
     }
-    WQMS_LOG_I("Reboot notification is sent.");
+
+    if (ret == ESP_OK) {
+        WQMS_LOG_I("Reboot notification is sent.");
+    } else {
+        WQMS_LOG_E("Reboot notification cannot be sent.");
+    }
 
     // ============================================================
-    // Step 10: Start Web Server
+    // Step 11: Start Web Server
     // ============================================================
     webserver_init();
 //    WQMS_LOG_I("Web server initialized");
     
     // ============================================================
-    // Step 11: Start Relay Control
+    // Step 12: Start Relay Control
     // ============================================================
     relay_init();
 //    WQMS_LOG_I("Relay subsystem initialized");
     
     // ============================================================
-    // Step 12: Start Sensor Polling (ADC DMA)
+    // Step 13: Start Sensor Polling (ADC DMA)
     // ============================================================
     sensor_init();
 //    WQMS_LOG_I("Sensor subsystem initialized");
     
     // ============================================================
-    // Step 13: Start Automation Engine
+    // Step 14: Start Automation Engine
     // ============================================================
     automation_init();
 //    WQMS_LOG_I("Automation engine initialized");
     
     // ============================================================
-    // Step 14: Start MODBUS Slave
+    // Step 15: Start MODBUS
     // ============================================================
     modbus_init();
-//    WQMS_LOG_I("MODBUS slave initialized");
-    
-    // ============================================================
-    // Step 15: Start Integration Uploads
-    // ============================================================
-    web_upload_init();
-//    WQMS_LOG_I("Integration subsystem initialized");
+//    WQMS_LOG_I("MODBUS is initialized");
     
     // ============================================================
     // Step 16: System Ready

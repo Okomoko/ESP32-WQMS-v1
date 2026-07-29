@@ -38,6 +38,7 @@
 #include "rule_manager.h"
 #include "automation_engine.h"
 #include "spiffs_manager.h"
+#include "cert_manager.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -629,12 +630,12 @@ esp_err_t config_get_handler(httpd_req_t *req) {
     cJSON_AddStringToObject(root, "system_name", nvs_get_system_name());
     cJSON_AddStringToObject(root, "system_location", nvs_get_system_location());
     cJSON_AddNumberToObject(root, "sample_interval_ms", nvs_get_sample_interval());
-    cJSON_AddNumberToObject(root, "modbus_interval_ms", nvs_get_modbus_interval());
-    cJSON_AddStringToObject(root, "integration_url", nvs_get_integration_url());
-    cJSON_AddNumberToObject(root, "integration_interval_sec", nvs_get_integration_interval());
+    cJSON_AddStringToObject(root, "supabase_sensor_url", nvs_get_supabase_sensor_url());
+    cJSON_AddStringToObject(root, "supabase_log_url", nvs_get_supabase_log_url());
+    cJSON_AddStringToObject(root, "supabase_api_key", nvs_get_supabase_api_key());
+    cJSON_AddNumberToObject(root, "supabase_upload_interval", nvs_get_supabase_upload_interval());
     cJSON_AddNumberToObject(root, "automation_interval_sec", nvs_get_automation_interval());
     cJSON_AddStringToObject(root, "ntp_servers", ntp_get_servers());
-    
     cJSON_AddStringToObject(root, "wifi_ssid", wifi_get_ssid());
     cJSON_AddBoolToObject(root, "wifi_connected", wifi_is_connected());
     
@@ -679,23 +680,29 @@ esp_err_t config_post_handler(httpd_req_t *req) {
         nvs_set_sample_interval(item->valueint);
         API_LOG_D("Sample interval updated to: %d ms", item->valueint);
     }
-    
-    item = cJSON_GetObjectItem(json, "modbus_interval_ms");
-    if (item && cJSON_IsNumber(item)) {
-        nvs_set_modbus_interval(item->valueint);
-        API_LOG_D("MODBUS interval updated to: %d ms", item->valueint);
-    }
-    
-    item = cJSON_GetObjectItem(json, "integration_url");
+
+    item = cJSON_GetObjectItem(json, "supabase_sensor_url");
     if (item && cJSON_IsString(item)) {
-        nvs_set_integration_url(item->valuestring);
-        API_LOG_D("Integration URL updated to: %s", item->valuestring);
+        nvs_set_supabase_sensor_url(item->valuestring);
+        API_LOG_D("Supabase Sensor URL updated to: %s", item->valuestring);
     }
     
-    item = cJSON_GetObjectItem(json, "integration_interval_sec");
+    item = cJSON_GetObjectItem(json, "supabase_log_url");
+    if (item && cJSON_IsString(item)) {
+        nvs_set_supabase_log_url(item->valuestring);
+        API_LOG_D("Supabase Log URL updated to: %s", item->valuestring);
+    }
+    
+    item = cJSON_GetObjectItem(json, "supabase_api_key");
+    if (item && cJSON_IsString(item)) {
+        nvs_set_supabase_api_key(item->valuestring);
+        API_LOG_D("Supabase API Key updated to: %s", item->valuestring);
+    }
+
+    item = cJSON_GetObjectItem(json, "supabase_upload_interval");
     if (item && cJSON_IsNumber(item)) {
-        nvs_set_integration_interval(item->valueint);
-        API_LOG_D("Integration interval updated to: %d sec", item->valueint);
+        nvs_set_supabase_upload_interval(item->valueint);
+        API_LOG_D("Supabase Upload interval updated to: %d sec", item->valueint);
     }
     
     item = cJSON_GetObjectItem(json, "automation_interval_sec");
@@ -1657,22 +1664,22 @@ void build_rule_json(automation_rule_t *rule, char *buffer, size_t buffer_size) 
         "\"email_recipient\":\"%s\","
         "\"email_subject\":\"%s\""
         "}",
-		rule->rule_id,
-		rule->name,
-		rule->enabled ? 1 : 0,
-		rule->logic_type,
-		rule->condition_count,
-		conditions_str,
-		out_count,
-		outputs_str,
-		(rule->cooldown_seconds > 0) ? 1 : 0,
-		rule->cooldown_seconds,
-		(unsigned long)rule->trigger_count,
-		(unsigned long)rule->last_triggered,
-		(long)rule->created_timestamp,
-		(long)rule->last_modified_timestamp,
-		rule->email_recipient,
-		rule->email_subject
+        rule->rule_id,
+        rule->name,
+        rule->enabled ? 1 : 0,
+        rule->logic_type,
+        rule->condition_count,
+        conditions_str,
+        out_count,
+        outputs_str,
+        (rule->cooldown_seconds > 0) ? 1 : 0,
+        rule->cooldown_seconds,
+        (unsigned long)rule->trigger_count,
+        (unsigned long)rule->last_triggered,
+        (long)rule->created_timestamp,
+        (long)rule->last_modified_timestamp,
+        rule->email_recipient,
+        rule->email_subject
     );
 }
 
@@ -2602,6 +2609,163 @@ esp_err_t api_partition_sensors_delete_handler(httpd_req_t *req) {
 }
 
 // ============================================================
+// POST /api/certificate/:type - Upload certificate
+// ============================================================
+esp_err_t certificate_upload_handler(httpd_req_t *req) {
+    // Parse URL to get certificate type
+    const char *uri = req->uri;
+    cert_type_t cert_type;
+    
+    if (strstr(uri, "/supabase")) {
+        cert_type = CERT_TYPE_SUPABASE;
+    } else if (strstr(uri, "/email")) {
+        cert_type = CERT_TYPE_EMAIL;
+    } else {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid certificate type");
+        return ESP_FAIL;
+    }
+    
+    // Allocate buffer on stack or heap. Ensure it fits your expected max sizes.
+    char buffer[SSL_CERTIFICATE_MAX_SIZE + 128];
+    size_t total_len = 0;
+    size_t max_buffer_size = sizeof(buffer) - 1; // Leave 1 byte for null terminator
+    int received;
+
+    // --- LOOP TO READ ALL INCOMING DATA CHUNKS ---
+    while (total_len < max_buffer_size) {
+        received = httpd_req_recv(req, buffer + total_len, max_buffer_size - total_len);
+        
+        if (received == ESP_FAIL) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Socket read error");
+            return ESP_FAIL;
+        }
+        if (received == HTTPD_SOCK_ERR_TIMEOUT) {
+            continue; // Retry if timeout happens before completion
+        }
+        if (received == 0) {
+            break; // All data has been successfully read from the socket
+        }
+        
+        total_len += received;
+    }
+    
+    if (total_len == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Empty request");
+        return ESP_FAIL;
+    }
+    
+    buffer[total_len] = '\0'; // Properly null terminate the complete string
+    
+    API_LOG_D("=o=");
+    API_LOG_D("%d", total_len);
+    API_LOG_D("=o=");
+    API_LOG_D(buffer);
+    API_LOG_D("=o=");
+
+    cJSON *json = cJSON_Parse(buffer);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+    
+    cJSON *cert_item = cJSON_GetObjectItem(json, "certificate");
+    if (!cert_item || !cJSON_IsString(cert_item)) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing 'certificate' field");
+        return ESP_FAIL;
+    }
+    
+    const char *cert_pem = cert_item->valuestring;
+    size_t cert_len = strlen(cert_pem);
+    
+    // Validate certificate format
+    if (cert_len < 100 || !strstr(cert_pem, "BEGIN CERTIFICATE")) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid certificate format");
+        return ESP_FAIL;
+    }
+    
+    esp_err_t err = cert_manager_save(cert_type, cert_pem, cert_len);
+    cJSON_Delete(json);
+    
+    cJSON *root = cJSON_CreateObject();
+    const char *type_name = (cert_type == CERT_TYPE_SUPABASE) ? "Supabase" : "Email";
+    
+    if (err == ESP_OK) {
+        cJSON_AddBoolToObject(root, "success", true);
+        cJSON_AddStringToObject(root, "message", "Certificate uploaded successfully");
+        cJSON_AddNumberToObject(root, "size", cert_len);
+        cJSON_AddStringToObject(root, "type", type_name);
+    } else {
+        cJSON_AddBoolToObject(root, "success", false);
+        cJSON_AddStringToObject(root, "message", "Failed to save certificate");
+    }
+    
+    send_json_response(req, root);
+    return ESP_OK;
+}
+
+// ============================================================
+// DELETE /api/certificate/:type - Remove certificate
+// ============================================================
+esp_err_t certificate_delete_handler(httpd_req_t *req) {
+    const char *uri = req->uri;
+    cert_type_t cert_type;
+    
+    if (strstr(uri, "/supabase")) {
+        cert_type = CERT_TYPE_SUPABASE;
+    } else if (strstr(uri, "/email")) {
+        cert_type = CERT_TYPE_EMAIL;
+    } else {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid certificate type");
+        return ESP_FAIL;
+    }
+    
+    cert_manager_clear(cert_type);
+    
+    cJSON *root = cJSON_CreateObject();
+    const char *type_name = (cert_type == CERT_TYPE_SUPABASE) ? "Supabase" : "Email";
+    cJSON_AddBoolToObject(root, "success", true);
+    cJSON_AddStringToObject(root, "message", "Certificate removed");
+    cJSON_AddStringToObject(root, "type", type_name);
+    send_json_response(req, root);
+    return ESP_OK;
+}
+
+// ============================================================
+// GET /api/certificate/:type/status - Check certificate status
+// ============================================================
+esp_err_t certificate_status_handler(httpd_req_t *req) {
+    const char *uri = req->uri;
+    cert_type_t cert_type;
+    
+    if (strstr(uri, "/supabase")) {
+        cert_type = CERT_TYPE_SUPABASE;
+    } else if (strstr(uri, "/email")) {
+        cert_type = CERT_TYPE_EMAIL;
+    } else {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid certificate type");
+        return ESP_FAIL;
+    }
+    
+    bool has_cert = cert_manager_has(cert_type);
+    
+    cJSON *root = cJSON_CreateObject();
+    const char *type_name = (cert_type == CERT_TYPE_SUPABASE) ? "Supabase" : "Email";
+    cJSON_AddBoolToObject(root, "has_certificate", has_cert);
+    cJSON_AddStringToObject(root, "type", type_name);
+    
+    if (has_cert) {
+        size_t cert_len = 0;
+        cert_manager_get_size(cert_type, &cert_len);
+        cJSON_AddNumberToObject(root, "certificate_size", cert_len);
+    }
+    
+    send_json_response(req, root);
+    return ESP_OK;
+}
+
+// ============================================================
 // Register all API endpoints
 // ============================================================
 void register_api_endpoints(httpd_handle_t server) {
@@ -2977,6 +3141,55 @@ void register_api_endpoints(httpd_handle_t server) {
         .user_ctx  = NULL
     };
     httpd_register_uri_handler(server, &partition_sensors_delete_uri);
+
+    httpd_uri_t supabase_cert_upload_uri = {
+        .uri = "/api/certificate/supabase",
+        .method = HTTP_POST,
+        .handler = certificate_upload_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &supabase_cert_upload_uri);
+    
+    httpd_uri_t supabase_cert_delete_uri = {
+        .uri = "/api/certificate/supabase",
+        .method = HTTP_DELETE,
+        .handler = certificate_delete_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &supabase_cert_delete_uri);
+    
+    httpd_uri_t supabase_cert_status_uri = {
+        .uri = "/api/certificate/supabase/status",
+        .method = HTTP_GET,
+        .handler = certificate_status_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &supabase_cert_status_uri);
+    
+    // Email certificate endpoints
+    httpd_uri_t email_cert_upload_uri = {
+        .uri = "/api/certificate/email",
+        .method = HTTP_POST,
+        .handler = certificate_upload_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &email_cert_upload_uri);
+    
+    httpd_uri_t email_cert_delete_uri = {
+        .uri = "/api/certificate/email",
+        .method = HTTP_DELETE,
+        .handler = certificate_delete_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &email_cert_delete_uri);
+    
+    httpd_uri_t email_cert_status_uri = {
+        .uri = "/api/certificate/email/status",
+        .method = HTTP_GET,
+        .handler = certificate_status_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &email_cert_status_uri);
 
     API_LOG_I("All API endpoints registered");
 }

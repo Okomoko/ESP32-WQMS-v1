@@ -1375,6 +1375,172 @@ async function fetchAdcPinMapping() {
     }
 }
 */
+/**
+ * Check certificate status for a specific type
+ * @param {string} type - 'supabase' or 'email'
+ */
+async function checkCertificateStatus(type) {
+    const statusText = document.getElementById(`${type}-cert-status-text`);
+    if (!statusText) return;
+    
+    try {
+        const status = await api.get(`/api/certificate/${type}/status`);
+        if (status.has_certificate) {
+            const sizeKB = (status.certificate_size / 1024).toFixed(1);
+            statusText.textContent = `✅ Certificate loaded (${sizeKB} KB)`;
+            statusText.style.color = '#2e7d32';
+        } else {
+            statusText.textContent = '❌ No certificate uploaded (using default SSL)';
+            statusText.style.color = '#f9a825';
+        }
+    } catch (e) {
+        console.warn(`Failed to check ${type} certificate status:`, e);
+        statusText.textContent = '⚠️ Error checking certificate status';
+        statusText.style.color = '#d32f2f';
+    }
+}
+
+/**
+ * Upload certificate for a specific type
+ * @param {string} type - 'supabase' or 'email'
+ */
+async function uploadCertificate(type) {
+    const fileInput = document.getElementById(`${type}-cert-file-input`);
+    const statusDiv = document.getElementById(`${type}-cert-upload-status`);
+    
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.color = '#d32f2f';
+        statusDiv.textContent = '⚠️ Please select a certificate file first';
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    
+    // Check file extension
+    const validExtensions = ['.pem', '.crt', '.txt'];
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!validExtensions.includes(fileExt)) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.color = '#d32f2f';
+        statusDiv.textContent = '⚠️ Please select a .pem, .crt, or .txt file';
+        return;
+    }
+    
+    // Read file
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const certData = e.target.result;
+        if (certData.length > 2048) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.color = '#d32f2f';
+            statusDiv.textContent = '⚠️ Invalid certificate file - size must be 2048 bytes max.';
+            return;
+        }
+        // Validate that it looks like a certificate
+        if (!certData.includes('BEGIN CERTIFICATE')) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.color = '#d32f2f';
+            statusDiv.textContent = '⚠️ Invalid certificate file - must contain PEM-encoded certificate';
+            return;
+        }
+        
+        statusDiv.style.display = 'block';
+        statusDiv.style.color = '#856404';
+        statusDiv.textContent = '⏳ Uploading certificate...';
+        
+        try {
+            const result = await api.post(`/api/certificate/${type}`, {
+                certificate: certData
+            });
+            
+            if (result.success) {
+                statusDiv.style.color = '#2e7d32';
+                statusDiv.textContent = `✅ Certificate uploaded successfully (${(result.size / 1024).toFixed(1)} KB)`;
+                await checkCertificateStatus(type);
+                fileInput.value = ''; // Clear file input
+            } else {
+                statusDiv.style.color = '#d32f2f';
+                statusDiv.textContent = `❌ Upload failed: ${result.message}`;
+            }
+        } catch (error) {
+            statusDiv.style.color = '#d32f2f';
+            statusDiv.textContent = `❌ Upload failed: ${error.message}`;
+        }
+    };
+    
+    reader.onerror = function() {
+        statusDiv.style.display = 'block';
+        statusDiv.style.color = '#d32f2f';
+        statusDiv.textContent = '❌ Failed to read file';
+    };
+    
+    reader.readAsText(file);
+}
+
+/**
+ * Remove certificate for a specific type
+ * @param {string} type - 'supabase' or 'email'
+ */
+async function removeCertificate(type) {
+    const typeDisplay = type === 'supabase' ? 'Supabase' : 'Email';
+    if (!confirm(`⚠️ Remove the ${typeDisplay} certificate? The system will revert to using default SSL verification (or skip it).`)) {
+        return;
+    }
+    
+    const statusDiv = document.getElementById(`${type}-cert-upload-status`);
+    statusDiv.style.display = 'block';
+    statusDiv.style.color = '#856404';
+    statusDiv.textContent = '⏳ Removing certificate...';
+    
+    try {
+        const result = await api.del(`/api/certificate/${type}`);
+        if (result.success) {
+            statusDiv.style.color = '#2e7d32';
+            statusDiv.textContent = '✅ Certificate removed successfully';
+            await checkCertificateStatus(type);
+        } else {
+            statusDiv.style.color = '#d32f2f';
+            statusDiv.textContent = `❌ Removal failed: ${result.message}`;
+        }
+    } catch (error) {
+        statusDiv.style.color = '#d32f2f';
+        statusDiv.textContent = `❌ Removal failed: ${error.message}`;
+    }
+}
+
+// ============================================================
+// Initialize Certificate UI
+// ============================================================
+
+function initCertificateUI(type) {
+    // Check status
+    checkCertificateStatus(type);
+    
+    // Set up event listeners
+    const uploadBtn = document.getElementById(`upload-${type}-cert-btn`);
+    const removeBtn = document.getElementById(`remove-${type}-cert-btn`);
+    const fileInput = document.getElementById(`${type}-cert-file-input`);
+    const statusDiv = document.getElementById(`${type}-cert-upload-status`);
+    
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', () => uploadCertificate(type));
+    }
+    
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => removeCertificate(type));
+    }
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.color = '#7a9bbf';
+                statusDiv.textContent = `📄 Selected: ${this.files[0].name} (${(this.files[0].size / 1024).toFixed(1)} KB)`;
+            }
+        });
+    }
+}
 
 // ============================================================
 // Initialize Configuration
@@ -1390,6 +1556,8 @@ async function initConfiguration() {
     await loadEmailConfig();
     await setupEmailToggle();
     await setupEmailValidation();
+    initCertificateUI('supabase');
+    initCertificateUI('email');
     initTabs();
 
     try {
@@ -1400,8 +1568,10 @@ async function initConfiguration() {
             'sys-timezone': config.timezone || 'EET-3',
             'sample-interval': config.sample_interval_ms || 1000,
             'modbus-interval': config.modbus_interval_ms || 1000,
-            'integration-url': config.integration_url || '',
-            'integration-interval': config.integration_interval_sec || 60,
+            'supabase-sensor-url': config.supabase_sensor_url || '',
+            'supabase-log-url': config.supabase_log_url || '',
+            'supabase-api-key': config.supabase_api_key || '',
+            'supabase-upload-interval': config.supabase_upload_interval || 10,
             'automation-interval': config.automation_interval_sec || 15,
             'ntp-servers': config.ntp_servers || '',
             'ntp-timezone': config.timezone || 'EET-3',
@@ -1414,7 +1584,7 @@ async function initConfiguration() {
     } catch (e) {
         console.warn('Failed to load config:', e);
     }
-    
+
     // Save config event
     document.getElementById('save-config')?.addEventListener('click', async function() {
         const config = {
@@ -1422,12 +1592,12 @@ async function initConfiguration() {
             system_location: document.getElementById('sys-location').value,
             timezone: document.getElementById('sys-timezone').value,
             sample_interval_ms: parseInt(document.getElementById('sample-interval').value) || 1000,
-            modbus_interval_ms: parseInt(document.getElementById('modbus-interval').value) || 1000,
-            integration_url: document.getElementById('integration-url').value,
-            integration_interval_sec: parseInt(document.getElementById('integration-interval').value) || 60,
+            supabase_sensor_url: document.getElementById('supabase-sensor-url').value || '',
+            supabase_log_url: document.getElementById('supabase-log-url').value || '',
+            supabase_api_key: document.getElementById('supabase-api-key').value || '',
+            supabase_upload_interval: parseInt(document.getElementById('supabase-upload-interval').value) || 10,
             automation_interval_sec: document.getElementById('automation-interval').value || 15,
             ntp_servers: document.getElementById('ntp-servers') ? document.getElementById('ntp-servers').value : '',
-            modbus_interval_ms: parseInt(document.getElementById('modbus-interval-2').value) || 1000
         };
         const result = await api.post('/api/config', config);
         alert(result.message || 'Configuration saved');

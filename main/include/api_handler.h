@@ -78,4 +78,9 @@ esp_err_t api_rules_delete_handler(httpd_req_t *req);
 esp_err_t api_rules_import_handler(httpd_req_t *req);
 esp_err_t api_rules_export_handler(httpd_req_t *req);
 
+// Generic Certificate endpoints
+esp_err_t certificate_upload_handler(httpd_req_t *req);
+esp_err_t certificate_delete_handler(httpd_req_t *req);
+esp_err_t certificate_status_handler(httpd_req_t *req);
+
 #endif // API_HANDLER_H

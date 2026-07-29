@@ -173,26 +173,25 @@ GND     38         -    Power    Ground
 #define NTP_DEFAULT_TIMEZONE         "EET-3"
 
 // ============================================================
-// Integration Configuration
+// Supabase Constants
 // ============================================================
-#define INTEGRATION_BUFFER_MAX_ITEMS     100
-#define INTEGRATION_WEB_TIMEOUT_MS       5000
-#define DEFAULT_INTEGRATION_INTERVAL_SEC 60
+#define HTTP_TIMEOUT_MS       10000
+#define MAX_LOG_BATCH_SIZE       10
 
 // ============================================================
 // Task Stack Sizes
 // ============================================================
-#define STACK_SIZE_MAIN          8192
-#define STACK_SIZE_SENSOR        4096
-#define STACK_SIZE_RELAY         1024
-#define STACK_SIZE_MODBUS        8192
-#define STACK_SIZE_WIFI          3072
-#define STACK_SIZE_NTP           4096
-#define STACK_SIZE_WATCHDOG      1024
-#define STACK_SIZE_WEBSERVER    16384
-#define STACK_SIZE_AUTOMATION   16384
-#define STACK_SIZE_INTEGRATION   2048
-#define STACK_SIZE_LOGGING       1024
+#define STACK_SIZE_MAIN              8192
+#define STACK_SIZE_SENSOR            4096
+#define STACK_SIZE_RELAY             1024
+#define STACK_SIZE_MODBUS            8192
+#define STACK_SIZE_WIFI              3072
+#define STACK_SIZE_NTP               4096
+#define STACK_SIZE_WATCHDOG          1024
+#define STACK_SIZE_WEBSERVER        16384
+#define STACK_SIZE_AUTOMATION       16384
+#define STACK_SIZE_LOGGING           1024
+#define STACK_SIZE_SUPABASE_UPLOAD  16384
 
 // ============================================================
 // Task Priorities
@@ -205,12 +204,14 @@ GND     38         -    Power    Ground
 #define PRIORITY_WATCHDOG       1
 #define PRIORITY_WEBSERVER      1
 #define PRIORITY_AUTOMATION     3
-#define PRIORITY_INTEGRATION    2
+#define PRIORITY_UPLOAD_TASK    2
 #define PRIORITY_LOGGING        1
 
 #define DEFAULT_RECIPIENTS "okan.sengun@gmail.com"
 #define DEFAULT_SUBJECT "WQMS System Alert - {{system_name}}"
 
-#define WEB_CONSOLE_BUFFER_SIZE  16384
+#define WEB_CONSOLE_BUFFER_SIZE  32768
+
+#define SSL_CERTIFICATE_MAX_SIZE  2048
 
 #endif // SYSTEM_CONFIG_H

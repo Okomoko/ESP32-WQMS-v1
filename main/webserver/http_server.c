@@ -225,7 +225,7 @@ static esp_err_t favicon_handler(httpd_req_t *req) {
 void webserver_init(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.lru_purge_enable = true;
-    config.max_uri_handlers = 64;
+    config.max_uri_handlers = 128;
     config.stack_size = STACK_SIZE_WEBSERVER;
     
     if (httpd_start(&server, &config) == ESP_OK) {

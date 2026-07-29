@@ -52,6 +52,8 @@ uint8_t sensor_get_min(int sensor_id);
 // Get sensor max value
 uint8_t sensor_get_max(int sensor_id);
 
+const char* sensor_get_unit(int sensor_id);
+
 /**
  * @brief Get GPIO pin number for a specific ADC channel using ESP-IDF function
  * @param unit ADC unit (ADC_UNIT_1 or ADC_UNIT_2)

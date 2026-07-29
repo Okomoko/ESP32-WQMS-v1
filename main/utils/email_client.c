@@ -12,6 +12,7 @@
 #include "logger.h"
 #include "nvs_config.h"
 #include "wifi_manager.h"
+#include "cert_manager.h"
 
 // Configuration
 static email_config_t g_config = {
@@ -25,6 +26,8 @@ static email_config_t g_config = {
     .enabled = false
 };
 
+static char g_email_cert_buffer[SSL_CERTIFICATE_MAX_SIZE];
+
 // NVS Keys
 #define NVS_KEY_EMAIL_ENABLED      "email_enabled"
 #define NVS_KEY_EMAIL_SERVER       "email_server"
@@ -37,9 +40,6 @@ static email_config_t g_config = {
 
 #define BUFFER_SIZE 512
 #define TIMEOUT_MS 10000
-
-extern const char r1_pem_start[] asm("_binary_r1_pem_start");
-extern const char r1_pem_end[]   asm("_binary_r1_pem_end");
 
 // ============================================
 // BASE64 ENCODING
@@ -146,18 +146,37 @@ static esp_err_t send_email_smtp(const email_message_t *msg) {
     NOTIFICATION_LOG_D("To: %s", g_config.to_emails);
     NOTIFICATION_LOG_D("Subject: %s", msg->subject);
 
+    size_t cert_len = 0;
+    esp_tls_cfg_t cfg = {0};
+
+    if (cert_manager_has(CERT_TYPE_EMAIL)) {
+        esp_err_t err = cert_manager_load(CERT_TYPE_EMAIL, g_email_cert_buffer, SSL_CERTIFICATE_MAX_SIZE, &cert_len);
+        if (err == ESP_OK && cert_len > 0) {
+            g_email_cert_buffer[cert_len] = 0;
+            g_email_cert_buffer[cert_len+1] = 0;
+            // Use g_email_cert_buffer for TLS configuration
+            NOTIFICATION_LOG_D("Using Email certificate from NVS (%zu bytes)", cert_len);
+
+            // Set the certificate in your TLS config
+            cfg.timeout_ms = TIMEOUT_MS;
+            cfg.non_block = false;
+            cfg.skip_common_name = true;
+            cfg.cacert_pem_buf = (const unsigned char*)g_email_cert_buffer;
+            cfg.cacert_pem_bytes = cert_len+1;
+            cfg.alpn_protos = NULL;
+        } else {
+            NOTIFICATION_LOG_W("Failed to load Email certificate: %s", esp_err_to_name(err));
+            goto cleanup;
+        }
+    } else {
+        NOTIFICATION_LOG_W("No Email certificate in NVS, exiting...");
+        goto cleanup;
+    }
+
     // 1. Connect - use TLS directly if port is 465
     if (g_config.use_tls && g_config.smtp_port == 465) {
         NOTIFICATION_LOG_D("Using direct TLS on port 465");
-        
-        esp_tls_cfg_t cfg = {
-            .timeout_ms = TIMEOUT_MS,
-            .non_block = false,
-            .skip_common_name = true,
-            .cacert_pem_buf = (const unsigned char *)r1_pem_start,
-            .cacert_pem_bytes = r1_pem_end - r1_pem_start,
-        };
-        
+
         tls = esp_tls_init();
         if (!tls) { 
             NOTIFICATION_LOG_E("TLS init failed"); 
@@ -261,13 +280,12 @@ static esp_err_t send_email_smtp(const email_message_t *msg) {
             int sock_fd = sock;
             sock = -1;
             
-            esp_tls_cfg_t cfg = {
-                .timeout_ms = TIMEOUT_MS,
-                .non_block = false,
-                .skip_common_name = true,
-                .cacert_pem_buf = (const unsigned char *)r1_pem_start,
-                .cacert_pem_bytes = r1_pem_end - r1_pem_start,
-            };
+            cfg.timeout_ms = TIMEOUT_MS;
+            cfg.non_block = false;
+            cfg.skip_common_name = true;
+            cfg.cacert_pem_buf = (const unsigned char*)g_email_cert_buffer;
+            cfg.cacert_pem_bytes = cert_len;
+            cfg.alpn_protos = NULL;
             
             tls = esp_tls_init();
             if (!tls) {
@@ -629,7 +647,15 @@ esp_err_t email_send(const email_message_t *message) {
     
     char full_body[2048];
     snprintf(full_body, sizeof(full_body),
-        "%s\n\n============================\nSystem : %s\nFirmware : %s\nMAC : %s\nIP : %s\nHeap : %lu bytes\nUptime : %llu sec\n============================",
+        "%s\n\n"
+        "======================================\n"
+        "System : %s\n"
+        "Firmware : %s\n"
+        "MAC : %s\n"
+        "IP : %s\n"
+        "Heap : %lu bytes\n"
+        "Uptime : %llu sec\n"
+        "======================================",
         message->body,
         nvs_get_system_name(),
         FW_VERSION,

@@ -41,14 +41,15 @@ idf_component_register(SRCS
     webserver/api_config.c
     webserver/web_console.c
     
-    # Integration
-    integration/web_upload.c
-    integration/buffer_recovery.c
-    integration/web_upload_task.c
+    # Supabase Integration
+    supabase/supabase_upload.c
 
     # Email notification
     utils/email_client.c
     
+    # Certificate management
+    utils/cert_manager.c
+
     INCLUDE_DIRS
     "include"
     
@@ -72,7 +73,8 @@ idf_component_register(SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/favicon.ico
 
     EMBED_TXTFILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/r1.pem
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/r1.pem
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/prod-ca-2021.crt
 )
 
 # ============================================================

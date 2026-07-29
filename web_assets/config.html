@@ -87,33 +87,48 @@
                                     <option value="JST-9">Japan (JST)</option>
                                 </select>
                             </div>
-                            
+                            <div class="field-group">
+                            </div>
                             <div class="field-group">
                                 <label>Sensor Read Cycle (ms)</label>
                                 <input type="number" id="sample-interval" value="1000" min="10" max="10000" style="width:100%;">
                             </div>
-
-                            <div class="field-group">
-                                <label>MODBUS Interval (ms)</label>
-                                <input type="number" id="modbus-interval" value="1000" min="10" max="10000" style="width:100%;">
-                            </div>
-
                             <div class="field-group">
                                 <label>Automation Interval (seconds)</label>
                                 <input type="number" id="automation-interval" value="15" min="10" max="3600" style="width:100%;">
                             </div>
-
                             <div class="field-group">
-                                <label>Integration URL</label>
-                                <input type="text" id="integration-url" value="https://api.example.com/water" style="width:100%;">
+                                <label>Supabase Integration Sensor Data Endpoint</label>
+                                <input type="url" id="supabase-sensor-url" placeholder="https://your-project.supabase.co/rest/v1/sensor_readings" style="width:100%;">
                             </div>
-                            
                             <div class="field-group">
-                                <label>Integration Interval (seconds)</label>
-                                <input type="number" id="integration-interval" value="60" min="10" max="3600" style="width:100%;">
+                                <label>Supabase Integration Operational Log  Endpoint</label>
+                                <input type="url" id="supabase-log-url" placeholder="https://your-project.supabase.co/rest/v1/system_logs" style="width:100%;">
+                            </div>
+                            <div class="field-group">
+                                <label>Supabase API Key</label>
+                                <input type="url" id="supabase-api-key" style="width:100%;">
+                            </div>
+                            <div class="field-group">
+                                <label>Supabase Integration Upload Interval (seconds)</label>
+                                <input type="number" id="supabase-upload-interval" value="10" min="10" max="60" style="width:100%;">
+                            </div>
+                            <div class="field-group">
+                                <label>Supabase TLS Certificate (PEM)</label>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input type="file" id="supabase-cert-file-input" accept=".pem,.crt,.txt" style="flex:1; min-width:200px;">
+                                    <button id="upload-supabase-cert-btn" class="btn btn-primary">📤 Upload Certificate</button>
+                                    <button id="remove-supabase-cert-btn" class="btn btn-danger">🗑️ Remove Certificate</button>
+                                </div>
+                                <div id="supabase-cert-status" style="font-size:0.8rem; margin-top:4px; color:#7a9bbf;">
+                                    Status: <span id="supabase-cert-status-text">Checking...</span>
+                                </div>
+                                <div id="supabase-cert-upload-status" style="font-size:0.8rem; margin-top:4px; display:none;"></div>
+                                <div style="font-size:0.75rem; color:#7a9bbf; margin-top:4px;">
+                                    Upload a PEM-encoded certificate for TLS verification. Leave empty to skip verification.
+                                </div>
                             </div>
                         </div>
-                        
                         <div class="sensor-card-footer">
                             <div class="readings">
                                 <span>🔄 Last Saved: Never</span>
@@ -303,10 +318,6 @@
                                 <label>Port</label>
                                 <input type="number" id="modbus-port" value="502" readonly style="width:100%;">
                             </div>
-                            <div class="field-group">
-                                <label>Interval (ms)</label>
-                                <input type="number" id="modbus-interval-2" value="1000" min="10" max="10000" style="width:100%;">
-                            </div>
                             <div class="field-group" style="grid-column: 1 / -1;">
                                 <label>Register Mapping</label>
                                 <div id="modbus-map-table">
@@ -393,6 +404,9 @@
                             </div>
                             
                             <div class="field-group">
+                            </div>
+
+                            <div class="field-group">
                                 <label>SMTP Server *</label>
                                 <input type="text" id="email_smtp_server" placeholder="smtp.gmail.com" style="width:100%;">
                             </div>
@@ -422,7 +436,7 @@
                                 <input type="text" id="email_to" placeholder="user1@example.com, user2@example.com" style="width:100%;">
                                 <span class="field-hint" style="display:block; font-size:0.75rem; color:#7a9bbf; margin-top:4px;">Separate multiple with commas</span>
                             </div>
-                            
+
                             <div class="field-group">
                                 <label>Use TLS</label>
                                 <div style="display:flex; align-items:center; gap:8px; padding:4px 0;">
@@ -430,6 +444,23 @@
                                     <span style="font-size:0.9rem;">Enabled</span>
                                 </div>
                             </div>
+
+                            <div class="field-group">
+                                <label>Email TLS Certificate (PEM)</label>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input type="file" id="email-cert-file-input" accept=".pem,.crt,.txt" style="flex:1; min-width:200px;">
+                                    <button id="upload-email-cert-btn" class="btn btn-primary">📤 Upload Certificate</button>
+                                    <button id="remove-email-cert-btn" class="btn btn-danger">🗑️ Remove Certificate</button>
+                                </div>
+                                <div id="email-cert-status" style="font-size:0.8rem; margin-top:4px; color:#7a9bbf;">
+                                    Status: <span id="email-cert-status-text">Checking...</span>
+                                </div>
+                                <div id="email-cert-upload-status" style="font-size:0.8rem; margin-top:4px; display:none;"></div>
+                                <div style="font-size:0.75rem; color:#7a9bbf; margin-top:4px;">
+                                    Upload a PEM-encoded certificate for email TLS verification. Leave empty to skip verification.
+                                </div>
+                            </div>
+
                         </div>
                         <div class="sensor-card-footer">
                             <div style="display:flex; gap:8px; flex-wrap:wrap;">
