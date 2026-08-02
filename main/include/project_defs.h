@@ -88,16 +88,15 @@ typedef enum {
 
 // Sensor configuration (stored in NVS)
 typedef struct __attribute__((packed)) {
-    char name[20];
+    char name[25];
     uint8_t enabled;
     uint8_t gpio_pin;
     uint8_t adc_channel;
     uint16_t modbus_register;
-    uint16_t calibration_factor;
+    float calibration_factor;
     sensor_unit_t unit;
-    float min_value;
-    float max_value;
-    uint8_t reserved[6];
+    float safe_min;
+    float safe_max;
 } sensor_config_t;
 
 // Sensor reading (latest value)
@@ -113,7 +112,7 @@ typedef struct {
 typedef struct __attribute__((packed)) {
     uint32_t timestamp;
     uint16_t sensor_mask;
-    uint16_t values[10];
+    float values[10];
 } sensor_record_t;
 
 // ============================================================
@@ -126,13 +125,13 @@ typedef enum { //Important !!!! HW-316 boards are active low, therefore RELAY_ST
 } relay_state_t;
 
 typedef struct __attribute__((packed)) {
-    char name[20];
+    char name[25];
     uint8_t enabled;
     uint8_t gpio_pin;
     uint16_t modbus_register;
     int16_t activity_duration;
     uint16_t off_delay;
-    uint8_t reserved[10];
+    uint8_t control_device;
 } relay_config_t;
 
 typedef struct {

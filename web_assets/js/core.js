@@ -45,7 +45,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 
 // ============================================================
-// Headeor Update
+// Header Update
 // ============================================================
 async function updateHeader() {
     try {

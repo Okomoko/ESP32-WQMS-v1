@@ -72,7 +72,7 @@ body {
    ============================================================ */
 #nav {
     position: sticky;
-    top: 50px;
+    top: 50px;  /* Adjust based on header height */
     z-index: 999;
     background: #fff;
     border-radius: 12px;
@@ -126,263 +126,75 @@ h3 {
 }
 
 /* ============================================================
-   CARDS (Dashboard) - Narrower for 8 per row
+   CARDS (Dashboard)
    ============================================================ */
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
 }
 
 .card {
     background: #fff;
-    border-radius: 12px;
-    padding: 10px 8px;
+    border-radius: 14px;
+    padding: 14px 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     border: 1px solid #e6edf6;
     transition: all 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
 }
 
 .card:hover {
     box-shadow: 0 4px 16px rgba(43, 123, 228, 0.08);
 }
 
-.card .card-name {
+.card .name {
     font-weight: 600;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     color: #0a2744;
-    margin-bottom: 4px;
 }
 
-/* ============================================================
-   SENSOR GAUGE CARDS - SCADA Style (narrow)
-   ============================================================ */
-.sensor-card .card-name {
-    margin-bottom: 2px;
-    font-size: 0.75rem;
+.card .value {
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: #1f4a7a;
+    margin: 4px 0;
 }
 
-.gauge-wrapper {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    margin: 2px auto;
+.card .value span {
+    font-size: 1.1rem;
 }
 
-.gauge-wrapper.scada-gauge svg {
-    width: 100px;
-    height: 100px;
-    background: #0f0f1a;
-    border-radius: 50%;
-    box-shadow: 0 0 15px rgba(43, 123, 228, 0.08), inset 0 0 15px rgba(0,0,0,0.3);
-}
-
-.gauge-wrapper.scada-gauge .gauge-bg {
-    fill: none;
-    stroke: #1a1a2e;
-    stroke-width: 10;
-}
-
-.gauge-wrapper.scada-gauge .gauge-fill {
-    fill: none;
-    stroke: #2b7be4;
-    stroke-width: 10;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
-}
-
-.gauge-wrapper.scada-gauge .gauge-value {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.3rem;
+.relay-card .value {
+    font-size: 1.2rem !important;
     font-weight: 600;
-    color: #0a2744;
-    line-height: 1.2;
 }
 
-.sensor-status {
-    display: flex;
-    gap: 6px;
-    font-size: 0.6rem;
+.card .meta {
+    font-size: 0.7rem;
     color: #7a9bbf;
+    display: flex;
+    gap: 12px;
     flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 2px;
 }
 
 .status-ok {
-    color: #00e676;
-}
-
-.status-error {
-    color: #ff1744;
-}
-
-.status-disabled {
-    color: #4a4a5a;
-}
-
-.sensor-disabled {
-    color: #4a4a5a;
-}
-
-/* ============================================================
-   RELAY CARDS - Same width as sensors
-   ============================================================ */
-.relay-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-}
-
-.relay-card .card-name {
-    margin-bottom: 2px;
-    font-size: 0.75rem;
-}
-
-.relay-visual-container {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    align-items: center;
-    margin: 2px 0;
-    min-height: 60px;
-}
-
-.relay-visual-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-size: 0.55rem;
-    color: #4a4a5a;
-    opacity: 0.5;
-    transition: all 0.3s;
-}
-
-.relay-visual-item.active {
-    opacity: 1;
     color: #2b7be4;
 }
 
-.relay-icon-svg {
-    width: 44px;
-    height: 44px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    transition: stroke 0.3s, fill 0.3s;
+.status-error {
+    color: #d32f2f;
 }
 
-.relay-icon-svg.active {
-    stroke: #2b7be4;
-    fill: #2b7be4;
+.status-disabled {
+    color: #9e9e9e;
 }
 
-/* Pump animation - spinning impeller */
-.pump-svg .pump-impeller {
-    fill: currentColor;
-    transform-origin: 40px 40px;
+.status-active {
+    color: #2e7d32;
 }
 
-.pump-svg .pump-impeller.spinning {
-    animation: spinPump 0.8s linear infinite;
-}
-
-@keyframes spinPump {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-/* Valve animation - turning handle */
-.valve-svg .valve-handle {
-    fill: currentColor;
-    transform-origin: 40px 40px;
-}
-
-.valve-svg .valve-handle.turning {
-    animation: turnValve 1s ease-in-out infinite;
-}
-
-@keyframes turnValve {
-    0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(90deg); }
-}
-
-/* Status dot indicator */
-.relay-status-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    margin-top: 1px;
-    background: #4a4a5a;
-    transition: background 0.3s;
-}
-
-.relay-status-dot.active {
-    background: #00e676;
-    box-shadow: 0 0 8px #00e676;
-    animation: pulse 1s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
-
-.relay-icon-label {
-    margin-top: 1px;
-    font-weight: 500;
-    font-size: 0.6rem;
-}
-
-.relay-state {
-    margin: 2px 0;
-}
-
-.relay-state-badge {
-    display: inline-block;
-    padding: 1px 10px;
-    border-radius: 30px;
-    font-size: 0.6rem;
-    font-weight: 600;
-    background: #eef3f9;
-    color: #3d6a9b;
-}
-
-.relay-state-badge.relay-on {
-    background: #ff1744;
-    color: #fff;
-}
-
-.relay-state-badge.relay-off {
-    background: #e6edf6;
-    color: #5a7a9f;
-}
-
-.relay-state-badge.relay-cooldown {
-    background: #ffd740;
-    color: #000;
-}
-
-.cooldown-timer {
-    font-size: 0.6rem;
-    color: #ffd740;
-    margin-left: 4px;
-}
-
-.relay-meta {
-    font-size: 0.55rem;
-    color: #7a9bbf;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin: 2px 0;
+.status-cooldown {
+    color: #f9a825;
 }
 
 /* ============================================================
@@ -498,16 +310,17 @@ button:hover,
 }
 
 .config-group .config-field-checkbox label {
-    margin-bottom: 0;
-    min-width: 120px;
-    flex-shrink: 0;
+    margin-bottom: 0;  /* Remove bottom margin */
+    min-width: 120px;  /* Optional: keep labels aligned */
+    flex-shrink: 0;    /* Prevent label from shrinking */
 }
 
 .config-group .config-field-checkbox input[type="checkbox"] {
     width: auto;
     margin: 0;
     flex-shrink: 0;
-    accent-color: #007bff;
+    /* Keep existing checkbox styling */
+    accent-color: #007bff;  /* Modern browsers */
 }
 
 /* Optional: Add a hint text that stays on same line */
@@ -770,7 +583,7 @@ tr:hover {
 
 @media (max-width: 480px) {
     .element-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr;  /* Keep 2 columns on very small screens */
     }
 }
 
@@ -1053,6 +866,7 @@ tr:hover {
     font-weight: 500;
     letter-spacing: 0.3px;
 }
+/*    text-transform: uppercase;*/
 
 .sensor-card-body .field-group input[type="text"],
 .sensor-card-body .field-group input[type="number"] {
@@ -1374,7 +1188,7 @@ tr:hover {
     }
 
     .card-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     }
 
     .config-group {
@@ -1420,21 +1234,6 @@ tr:hover {
         flex-direction: column;
         align-items: flex-start;
     }
-
-    .gauge-wrapper {
-        width: 80px;
-        height: 80px;
-    }
-
-    .gauge-wrapper.scada-gauge svg {
-        width: 80px;
-        height: 80px;
-    }
-
-    .relay-icon-svg {
-        width: 36px;
-        height: 36px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -1447,26 +1246,15 @@ tr:hover {
     }
 
     .card-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        grid-template-columns: 1fr 1fr;
     }
 
     .card {
-        padding: 8px 6px;
+        padding: 10px 12px;
     }
 
-    .gauge-wrapper {
-        width: 70px;
-        height: 70px;
-    }
-
-    .gauge-wrapper.scada-gauge svg {
-        width: 70px;
-        height: 70px;
-    }
-
-    .relay-icon-svg {
-        width: 30px;
-        height: 30px;
+    .card .value {
+        font-size: 1.2rem;
     }
 }
 
@@ -1619,41 +1407,6 @@ tr:hover {
     background: #0f0f1a;
     border-radius: 8px;
     padding: 10px;
-}
-
-#chart-container {
-    transition: all 0.3s ease;
-    overflow: hidden;
-    max-height: 450px;
-    opacity: 1;
-}
-
-#chart-container.hidden {
-    max-height: 0;
-    opacity: 0;
-    padding: 0;
-    margin: 0;
-    pointer-events: none;
-}
-
-#chart-container.hidden canvas {
-    display: none !important;
-}
-
-#sensor-selector.hidden {
-    display: none !important;
-}
-
-#chart-toggle-btn.hidden {
-    background: #6c757d;
-}
-
-#chart-toggle-btn.hidden:hover {
-    background: #5a6268;
-}
-
-#sensor-selector {
-    transition: all 0.3s ease;
 }
 
 /* Sensor selector - compact for ESP32 UI */
@@ -2419,4 +2172,48 @@ tr:hover {
     #console-content::-webkit-scrollbar-thumb:hover {
         background: #3a4a8e;
     }
+}
+
+/* ============================================================
+   CHART TOGGLE
+   ============================================================ */
+
+/* Chart container with transition */
+#chart-container {
+    transition: all 0.3s ease;
+    overflow: hidden;
+    max-height: 450px;
+    opacity: 1;
+}
+
+#chart-container.hidden {
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+/* Chart hidden state - completely invisible and not taking space */
+#chart-container.hidden canvas {
+    display: none !important;
+}
+
+/* Sensor selector hidden state */
+#sensor-selector.hidden {
+    display: none !important;
+}
+
+/* Toggle button state */
+#chart-toggle-btn.hidden {
+    background: #6c757d;
+}
+
+#chart-toggle-btn.hidden:hover {
+    background: #5a6268;
+}
+
+/* Smooth transition for sensor selector */
+#sensor-selector {
+    transition: all 0.3s ease;
 }

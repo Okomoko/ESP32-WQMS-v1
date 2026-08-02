@@ -59,15 +59,6 @@ static void poll_analog_sensors(void) {
             readings[sensor_id].raw_adc = raw;
             readings[sensor_id].status = SENSOR_STATUS_OK;
             readings[sensor_id].quality = 0;
-            
-            if (value < sensor_config[sensor_id].min_value ||
-                value > sensor_config[sensor_id].max_value) {
-                readings[sensor_id].status = SENSOR_STATUS_OUT_OF_RANGE;
-                readings[sensor_id].quality = 2;
-                SENSOR_LOG_W("Sensor %d (%s) out of range: %.2f", sensor_id, sensor_config[sensor_id].name, value);
-            } else {
-                SENSOR_LOG_V("Sensor %d (%s) reading value: %.2f", sensor_id, sensor_config[sensor_id].name, value);
-            }
             xSemaphoreGive(sensor_mutex);
         }
     }
@@ -291,15 +282,6 @@ uint8_t sensor_get_modbus(int sensor_id) {
     if (sensor_id >= TOTAL_SENSOR_COUNT) return -1;
     return sensor_config[sensor_id].modbus_register;
 
-}
-uint8_t sensor_get_min(int sensor_id) {
-    if (sensor_id >= TOTAL_SENSOR_COUNT) return -1;
-    return sensor_config[sensor_id].min_value;
-}
-
-uint8_t sensor_get_max(int sensor_id) {
-    if (sensor_id >= TOTAL_SENSOR_COUNT) return -1;
-    return sensor_config[sensor_id].max_value;
 }
 
 const char* sensor_get_unit(int sensor_id) {

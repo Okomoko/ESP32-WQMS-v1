@@ -110,6 +110,12 @@ void nvs_load_relay_config(relay_config_t *config, int count);
 void nvs_save_relay_config(relay_config_t *config, int count);
 
 // ============================================================
+// Date & Time Configuration
+// ============================================================
+esp_err_t nvs_save_datetime(void);
+esp_err_t nvs_get_datetime(void);
+
+// ============================================================
 // Factory Reset
 // ============================================================
 void nvs_factory_reset(void);

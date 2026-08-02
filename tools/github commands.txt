@@ -1,0 +1,6 @@
+git config --global core.autocrlf false
+git ls-files --format="https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/%(path)" > filelist.txt
+git add .
+git commit -m "Supabase implementation"
+git push origin main
+git rm -r --cached ScadaNodeWebApi_v1.2/

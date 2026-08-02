@@ -16,14 +16,6 @@
 #include "web_console.h"
 
 // ============================================================
-// Buffer Sizes
-// ============================================================
-#define LOG_TIMESTAMP_LEN   32
-#define LOG_MSG_LEN         256
-#define LOG_FULL_LINE_LEN   LOG_MSG_LEN + LOG_TIMESTAMP_LEN + 16
-#define LOG_FILE_LINE_LEN   LOG_FULL_LINE_LEN
-
-// ============================================================
 // ANSI Color Codes
 // ============================================================
 #define ANSI_COLOR_RED     "\033[0;31m"
@@ -105,6 +97,33 @@ static bool should_log_to_file(wqms_log_level_t level) {
 }
 
 // ============================================================
+// Helper: Strip ANSI colors from string (for file storage)
+// ============================================================
+static void strip_ansi_colors(const char* src, char* dst, size_t dst_size) {
+    if (src == NULL || dst == NULL || dst_size == 0) return;
+    
+    bool in_escape = false;
+    size_t dst_idx = 0;
+    
+    while (*src && dst_idx < dst_size - 1) {
+        if (*src == '\033') {
+            in_escape = true;
+            src++;
+            continue;
+        }
+        if (in_escape) {
+            if (*src == 'm') {
+                in_escape = false;
+            }
+            src++;
+            continue;
+        }
+        dst[dst_idx++] = *src++;
+    }
+    dst[dst_idx] = '\0';
+}
+
+// ============================================================
 // Public Function: Initialize Logging
 // ============================================================
 void log_init(void) {
@@ -133,7 +152,7 @@ void log_init(void) {
 }
 
 // ============================================================
-// Public Function: Write Log Entry
+// Public Function: Write Log Entry (LINE-BASED)
 // ============================================================
 void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *format, ...) {
     // 1. Validate inputs
@@ -152,7 +171,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
     vsnprintf(msg_buffer, sizeof(msg_buffer), format, args);
     va_end(args);
 
-    // 3. Build full log line
+    // 3. Build full log line (WITHOUT trailing newline for line-based storage)
     char full_line[LOG_FULL_LINE_LEN];
     snprintf(full_line, sizeof(full_line),
              "[%s] [%s-%s] %s",
@@ -171,7 +190,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
         
         // Build output with colors for BOTH USB and Web console
         char output[LOG_FULL_LINE_LEN + 32];
-        int len = snprintf(output, sizeof(output), "%s%s\n%s", color, full_line, ANSI_COLOR_RESET);
+        int len = snprintf(output, sizeof(output), "%s%s%s\n", color, full_line, ANSI_COLOR_RESET);
         
         if (len > 0 && len < sizeof(output)) {
             // Write to USB console
@@ -184,22 +203,24 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
     }
 
     // ============================================================
-    // 5. FILE OUTPUT (SPIFFS) - INFO+ only (no DEBUG)
+    // 5. FILE OUTPUT (SPIFFS) - LINE-BASED with \n separator
+    //    INFO+ only (no DEBUG)
+    //    Colors are stripped for clean file storage
     // ============================================================
     if (log_initialized && should_log_to_file(level)) {
-        char file_line[LOG_FILE_LINE_LEN];
-        int len = snprintf(file_line, sizeof(file_line), "%s\n", full_line);
+        // Strip ANSI colors for file storage
+        char clean_line[LOG_FILE_LINE_LEN];
+        strip_ansi_colors(full_line, clean_line, sizeof(clean_line));
         
-        if (len > 0 && len < sizeof(file_line)) {
-            esp_err_t err = log_rotate_write(file_line);
-            if (err != ESP_OK) {
-                // If file write fails, log to console
-                printf(ANSI_COLOR_RED "[SYST] [ERROR] Failed to write to log file: %d\n" ANSI_COLOR_RESET, err);
-                fflush(stdout);
-                char err_msg[64];
-                snprintf(err_msg, sizeof(err_msg), "[SYST] [ERROR] File write failed: %d\n", err);
-                web_console_write(err_msg);
-            }
+        // Write complete line (without \n - log_rotate_write_line adds it)
+        esp_err_t err = log_rotate_write_line(clean_line);
+        if (err != ESP_OK) {
+            // If file write fails, log to console
+            printf(ANSI_COLOR_RED "[SYST] [ERROR] Failed to write to log file: %d\n" ANSI_COLOR_RESET, err);
+            fflush(stdout);
+            char err_msg[64];
+            snprintf(err_msg, sizeof(err_msg), "[SYST] [ERROR] File write failed: %d\n", err);
+            web_console_write(err_msg);
         }
     }
 }

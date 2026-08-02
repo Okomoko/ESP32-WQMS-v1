@@ -301,8 +301,8 @@ esp_err_t sensors_config_get_handler(httpd_req_t *req) {
         cJSON_AddNumberToObject(sensor, "gpio_pin", configs[i].gpio_pin);
         cJSON_AddNumberToObject(sensor, "adc_channel", configs[i].adc_channel);
         cJSON_AddNumberToObject(sensor, "modbus_register", configs[i].modbus_register);
-        cJSON_AddNumberToObject(sensor, "min_value", configs[i].min_value);
-        cJSON_AddNumberToObject(sensor, "max_value", configs[i].max_value);
+        cJSON_AddNumberToObject(sensor, "safe_min", configs[i].safe_min);
+        cJSON_AddNumberToObject(sensor, "safe_max", configs[i].safe_max);
         
         // Add current reading if available
         if (readings && i < TOTAL_SENSOR_COUNT) {
@@ -336,13 +336,16 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
     
+    API_LOG_D("=0=");
+    API_LOG_D("%.200s", buffer);
+    API_LOG_D("=0=");
+
     cJSON *sensors = cJSON_GetObjectItem(json, "sensors");
     if (!sensors || !cJSON_IsArray(sensors)) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing 'sensors' array");
         return ESP_FAIL;
     }
-    
     // Load current sensor configs from NVS
     sensor_config_t configs[TOTAL_SENSOR_COUNT];
     nvs_load_sensor_config(configs, TOTAL_SENSOR_COUNT);
@@ -354,6 +357,8 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         cJSON *enabled = cJSON_GetObjectItem(item, "enabled");
         cJSON *cal = cJSON_GetObjectItem(item, "calibration_factor");
         cJSON *unit = cJSON_GetObjectItem(item, "unit");
+        cJSON *safe_min = cJSON_GetObjectItem(item, "safe_min");
+        cJSON *safe_max = cJSON_GetObjectItem(item, "safe_max");
         if (id && cJSON_IsNumber(id)) {
             int idx = id->valueint;
             if (idx >= 0 && idx < TOTAL_SENSOR_COUNT) {
@@ -366,11 +371,19 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
                     sensor_set_enabled(idx, enabled->valueint);
                 }
                 if (cal && cJSON_IsNumber(cal)) {
-                    configs[idx].calibration_factor = cal->valueint;
+//                    API_LOG_D("Sensor: %d, cal: %f", idx, (float) cal->valuedouble);
+                    configs[idx].calibration_factor = (float) cal->valuedouble;
                 }
                 if (unit && cJSON_IsNumber(unit)) {
-                    API_LOG_D("Sensor: %d, Unit: %d", id->valueint, unit->valueint);
                     configs[idx].unit = unit->valueint;
+                }
+                if (safe_min && cJSON_IsNumber(safe_min)) {
+//                    API_LOG_D("Sensor: %d, safe_min: %f", idx, (float) safe_min->valuedouble);
+                    configs[idx].safe_min = (float) safe_min->valuedouble;
+                }
+                if (safe_max && cJSON_IsNumber(safe_max)) {
+//                    API_LOG_D("Sensor: %d, safe_max: %f", idx, (float) safe_max->valuedouble);
+                    configs[idx].safe_max = (float) safe_max->valuedouble;
                 }
             }
         }
@@ -406,6 +419,7 @@ esp_err_t relays_get_handler(httpd_req_t *req) {
         cJSON_AddNumberToObject(relay, "duration", cfg ? cfg->activity_duration : 0);
         cJSON_AddNumberToObject(relay, "off_delay", cfg ? cfg->off_delay : 0);
         cJSON_AddNumberToObject(relay, "gpio_pin", cfg ? cfg->gpio_pin : 0);
+        cJSON_AddNumberToObject(relay, "control_device", cfg ? cfg->control_device : 0);
         cJSON_AddItemToArray(relays_array, relay);
     }
     
@@ -547,6 +561,7 @@ esp_err_t relays_config_get_handler(httpd_req_t *req) {
         cJSON_AddNumberToObject(relay, "modbus_register", cfg ? cfg->modbus_register : 0);
         cJSON_AddNumberToObject(relay, "duration_ms", cfg ? cfg->activity_duration : 0);
         cJSON_AddNumberToObject(relay, "off_delay_ms", cfg ? cfg->off_delay : 0);
+        cJSON_AddNumberToObject(relay, "control_device", cfg ? cfg->control_device : 0);
         cJSON_AddItemToArray(relays_array, relay);
     }
     
@@ -566,7 +581,8 @@ esp_err_t relays_config_post_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
     buffer[len] = '\0';
-    
+
+	WQMS_LOG_D("%.200s", buffer);
     cJSON *json = cJSON_Parse(buffer);
     if (!json) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
@@ -590,6 +606,7 @@ esp_err_t relays_config_post_handler(httpd_req_t *req) {
         cJSON *enabled = cJSON_GetObjectItem(item, "enabled");
         cJSON *duration = cJSON_GetObjectItem(item, "duration_ms");
         cJSON *off_delay = cJSON_GetObjectItem(item, "off_delay_ms");
+        cJSON *control_device = cJSON_GetObjectItem(item, "control_device");
         
         if (id && cJSON_IsNumber(id)) {
             int idx = id->valueint;
@@ -606,6 +623,9 @@ esp_err_t relays_config_post_handler(httpd_req_t *req) {
                 }
                 if (off_delay && cJSON_IsNumber(off_delay)) {
                     configs[idx].off_delay = off_delay->valueint;
+                }
+                if (control_device && cJSON_IsNumber(control_device)) {
+                    configs[idx].control_device = control_device->valueint;
                 }
             }
         }
@@ -1361,49 +1381,124 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
     char query[128] = {0};
     char name[64] = {0};
     int has_name = 0;
+    int tail_mode = 0;
+    int lines = 0;
     
-    // Check if 'name' query parameter exists
+    // Check query parameters
     if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
         if (httpd_query_key_value(query, "name", name, sizeof(name)) == ESP_OK) {
             has_name = 1;
+        }
+        // Check for tail parameter
+        char tail_param[16] = {0};
+        if (httpd_query_key_value(query, "tail", tail_param, sizeof(tail_param)) == ESP_OK) {
+            if (strcmp(tail_param, "true") == 0 || strcmp(tail_param, "1") == 0) {
+                tail_mode = 1;
+            }
+        }
+        // Check for lines parameter
+        char lines_param[16] = {0};
+        if (httpd_query_key_value(query, "lines", lines_param, sizeof(lines_param)) == ESP_OK) {
+            lines = atoi(lines_param);
+            if (lines < 1) lines = 20;
+            if (lines > 500) lines = 500;
         }
     }
     
     // Case 1: Download/View specific log file
     if (has_name && strlen(name) > 0) {
-        API_LOG_D("Viewing log: %s", name);
+        API_LOG_D("Viewing log: %s (tail=%d, lines=%d)", name, tail_mode, lines);
         
         // Check if it's our system log
         if (strcmp(name, "system.log") == 0) {
-            // Stream from circular buffer
+            // Stream from circular buffer using line-based reading
             httpd_resp_set_type(req, "text/plain");
             char header[128];
             snprintf(header, sizeof(header), "attachment; filename=\"%s\"", name);
             httpd_resp_set_hdr(req, "Content-Disposition", header);
             
-            // Get total size
-            size_t total_size = log_rotate_get_size();
-            char content_len[32];
-            snprintf(content_len, sizeof(content_len), "%zu", total_size);
-            httpd_resp_set_hdr(req, "Content-Length", content_len);
+            // If tail mode is enabled, we'll send limited lines
+            if (tail_mode) {
+                // Get total line count
+                uint32_t total_lines = log_rotate_get_line_count();
+                uint32_t start_line = 0;
+                
+                if (total_lines > lines && lines > 0) {
+                    // Start from (total_lines - lines) lines back
+                    start_line = total_lines - lines;
+                }
+                
+                // We need to find the offset for the start line
+                // Skip lines by reading and discarding
+                uint32_t read_offset = LOG_METADATA_SIZE;
+                char discard_buffer[LOG_MAX_LINE_LENGTH + 1];
+                uint32_t line_count = 0;
+                
+                while (line_count < start_line) {
+                    size_t bytes_read = log_rotate_read_line(discard_buffer, sizeof(discard_buffer), &read_offset);
+                    if (bytes_read == 0) break;
+                    line_count++;
+                }
+                
+                // Now stream from the calculated offset
+                char buffer[LOG_MAX_LINE_LENGTH + 2];
+                size_t bytes_read;
+                int lines_sent = 0;
+                esp_err_t err = ESP_OK;
+                
+                httpd_resp_set_status(req, "200 OK");
+                
+                while (lines_sent < lines && lines_sent < 500) {
+                    bytes_read = log_rotate_read_line(buffer, sizeof(buffer) - 1, &read_offset);
+                    if (bytes_read == 0) break;
+                    
+                    // Add newline
+                    buffer[bytes_read] = '\n';
+                    
+                    err = httpd_resp_send_chunk(req, buffer, bytes_read + 1);
+                    if (err != ESP_OK) {
+                        API_LOG_E("Failed to send chunk: %d", err);
+                        break;
+                    }
+                    lines_sent++;
+                    
+                    // Allow other tasks to run
+                    vTaskDelay(pdMS_TO_TICKS(1));
+                }
+                
+                // Send final empty chunk
+                if (err == ESP_OK) {
+                    err = httpd_resp_send_chunk(req, NULL, 0);
+                }
+                
+                API_LOG_D("Tail log streamed: %s (%d lines sent, requested %d)", name, lines_sent, lines);
+                return (err == ESP_OK) ? ESP_OK : ESP_FAIL;
+            }
             
-            // Read and stream in chunks
-            char buffer[1024];
-            size_t offset = 0;
+            // Full log download - stream all lines
+            uint32_t read_offset = LOG_METADATA_SIZE;
+            char buffer[LOG_MAX_LINE_LENGTH + 2];
+            size_t bytes_read;
+            int lines_sent = 0;
+            size_t total_sent = 0;
             esp_err_t err = ESP_OK;
             
             httpd_resp_set_status(req, "200 OK");
             
-            while (offset < total_size) {
-                size_t bytes_read = log_rotate_read(buffer, sizeof(buffer), offset);
+            while (1) {
+                bytes_read = log_rotate_read_line(buffer, sizeof(buffer) - 1, &read_offset);
                 if (bytes_read == 0) break;
                 
-                err = httpd_resp_send_chunk(req, buffer, bytes_read);
+                // Add newline
+                buffer[bytes_read] = '\n';
+                
+                err = httpd_resp_send_chunk(req, buffer, bytes_read + 1);
                 if (err != ESP_OK) {
                     API_LOG_E("Failed to send chunk: %d", err);
                     break;
                 }
-                offset += bytes_read;
+                lines_sent++;
+                total_sent += bytes_read + 1;
                 
                 // Allow other tasks to run
                 vTaskDelay(pdMS_TO_TICKS(1));
@@ -1414,7 +1509,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
                 err = httpd_resp_send_chunk(req, NULL, 0);
             }
             
-            API_LOG_D("Log streamed: %s (%zu bytes)", name, offset);
+            API_LOG_D("Full log streamed: %s (%d lines, %zu bytes sent)", name, lines_sent, total_sent);
             return (err == ESP_OK) ? ESP_OK : ESP_FAIL;
         }
         
@@ -1487,7 +1582,9 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
     cJSON *system_log = cJSON_CreateObject();
     cJSON_AddStringToObject(system_log, "name", "system.log");
     cJSON_AddNumberToObject(system_log, "size", log_rotate_get_size());
+    cJSON_AddNumberToObject(system_log, "line_count", log_rotate_get_line_count());
     cJSON_AddNumberToObject(system_log, "modified", time(NULL));
+    cJSON_AddStringToObject(system_log, "type", "circular");
     cJSON_AddItemToArray(logs_array, system_log);
     
     // Then scan for any other log files in the directory
@@ -1508,6 +1605,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
                     cJSON_AddStringToObject(log, "name", entry->d_name);
                     cJSON_AddNumberToObject(log, "size", st.st_size);
                     cJSON_AddNumberToObject(log, "modified", st.st_mtime);
+                    cJSON_AddStringToObject(log, "type", "file");
                     cJSON_AddItemToArray(logs_array, log);
                 }
             }
@@ -1845,7 +1943,7 @@ esp_err_t api_rules_post_handler(httpd_req_t *req) {
                     rule.conditions[i].comparator = comparator->valueint;
                 }
                 if (threshold) {
-                    rule.conditions[i].threshold = threshold->valuedouble;
+                    rule.conditions[i].threshold = (float) threshold->valuedouble;
                 }
             }
         }
@@ -2034,7 +2132,7 @@ esp_err_t api_rules_import_handler(httpd_req_t *req) {
                     
                     if (sensor_id) rule.conditions[j].sensor_id = sensor_id->valueint;
                     if (comparator) rule.conditions[j].comparator = comparator->valueint;
-                    if (threshold) rule.conditions[j].threshold = threshold->valuedouble;
+                    if (threshold) rule.conditions[j].threshold = (float) threshold->valuedouble;
                 }
             }
         }
@@ -2186,7 +2284,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
                 }
                 
                 pos += snprintf(record_str + pos, sizeof(record_str) - pos,
-                    ",\"%s\":%u",
+                    ",\"%s\":%f",
                     key,
                     records[i].values[j]);
             }
@@ -2392,7 +2490,7 @@ esp_err_t api_export_csv_handler(httpd_req_t *req)
         pos += sprintf(line + pos, "%s ", ts_str);
         // Build CSV line
         for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
-            pos += sprintf(line + pos, "%d", r->values[i]);
+            pos += sprintf(line + pos, "%f", r->values[i]);
             if (i < (TOTAL_SENSOR_COUNT - 1)) pos += sprintf(line + pos, ", ");
         }
     }
@@ -2763,6 +2861,29 @@ esp_err_t certificate_status_handler(httpd_req_t *req) {
     
     send_json_response(req, root);
     return ESP_OK;
+}
+
+
+// ============================================================
+// GET /api/nvs - Returns parameter from NVS
+// ============================================================
+esp_err_t nvs_get_handler(httpd_req_t *req) {
+    char query[128] = {0};
+    char name[64] = {0};
+    char buf[32] = {0};
+    
+    // Check query parameters
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+        if (httpd_query_key_value(query, "name", name, sizeof(name)) == ESP_OK) {
+            wqms_nvs_get_str("datetime", buf, sizeof(buf));
+            cJSON *root = cJSON_CreateObject();
+            cJSON_AddStringToObject(root, "parameter", name);
+            cJSON_AddStringToObject(root, "value", buf);
+            send_json_response(req, root);
+            return ESP_OK;
+        }
+    }
+    return ESP_FAIL;
 }
 
 // ============================================================
@@ -3190,6 +3311,14 @@ void register_api_endpoints(httpd_handle_t server) {
         .user_ctx = NULL
     };
     httpd_register_uri_handler(server, &email_cert_status_uri);
+
+    httpd_uri_t nvs_get_handler_uri = {
+        .uri = "/api/nvs",
+        .method = HTTP_GET,
+        .handler = nvs_get_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &nvs_get_handler_uri);
 
     API_LOG_I("All API endpoints registered");
 }

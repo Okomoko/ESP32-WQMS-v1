@@ -127,6 +127,10 @@ GND     38         -    Power    Ground
 #define LOG_FILE_PATH                     "/spiffs/logs/system.log"
 #define LOG_METADATA_SIZE                 16  // Header size
 #define LOG_READ_CHUNK_SIZE               256 // Read chunk size for streaming
+#define LOG_MSG_LEN                       256
+#define LOG_TIMESTAMP_LEN                 32
+#define LOG_FULL_LINE_LEN                 LOG_MSG_LEN + LOG_TIMESTAMP_LEN + LOG_METADATA_SIZE
+#define LOG_FILE_LINE_LEN                 LOG_FULL_LINE_LEN
 #define CONFIG_RS232_CONSOLE_ENABLE       0
 
 // ============================================================
@@ -176,7 +180,9 @@ GND     38         -    Power    Ground
 // Supabase Constants
 // ============================================================
 #define HTTP_TIMEOUT_MS       10000
-#define MAX_LOG_BATCH_SIZE       10
+#define MAX_LOG_BATCH_SIZE        1
+#define MAX_SENSOR_BATCH_SIZE     5
+#define SUPABASE_UPLOAD_INTERVAL 60
 
 // ============================================================
 // Task Stack Sizes
@@ -188,7 +194,7 @@ GND     38         -    Power    Ground
 #define STACK_SIZE_WIFI              3072
 #define STACK_SIZE_NTP               4096
 #define STACK_SIZE_WATCHDOG          1024
-#define STACK_SIZE_WEBSERVER        16384
+#define STACK_SIZE_WEBSERVER         8192
 #define STACK_SIZE_AUTOMATION       16384
 #define STACK_SIZE_LOGGING           1024
 #define STACK_SIZE_SUPABASE_UPLOAD  16384

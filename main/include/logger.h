@@ -1,24 +1,32 @@
-// logger.h
-// Logging system header
+// logger.h - Updated public interface
 
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#include <stdint.h>
+#include <stdbool.h>
+#include "esp_err.h"
 #include "log_levels.h"
 
-// Initialize logging system
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Initialize logger
 void log_init(void);
 
-// Write a log entry
-void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *format, ...);
+// Set/get log level
+void logger_set_level(uint32_t level);
+uint32_t logger_get_level(void);
 
-// Flush all logs to disk
-void log_flush_all(void);
+// Core logging function
+void logger_log(uint32_t level, const char* module, const char* format, ...);
 
-// Close all log files
-void log_close_all(void);
+// Check if level is enabled
+bool logger_is_enabled(uint32_t level);
 
-// Backward compatibility
-#define log_write wqms_log_write
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LOGGER_H

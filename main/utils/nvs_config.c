@@ -8,6 +8,8 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_adc/adc_continuous.h"
+#include <time.h>
+#include <sys/time.h>
 
 //#include "wifi_manager.h"
 #include "nvs_config.h"
@@ -30,8 +32,6 @@ const uint16_t default_relay_modbus[] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
 const char *default_sensor_names[] = {"Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8"};
 const uint8_t default_sensor_gpios[] = {GPIO_SENSOR1, GPIO_SENSOR2, GPIO_SENSOR3, GPIO_SENSOR4, GPIO_SENSOR5, GPIO_SENSOR6, GPIO_DHT11, GPIO_DHT11};
 const uint16_t default_sensor_modbus[] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7};
-const float default_sensor_min[] = {0, 0, 0, 0, 0, 0, -10, 0};
-const float default_sensor_max[] = {1000, 1000, 1000, 1000, 1000, 1000, 60, 100};
 
 // Static array to be filled at runtime
 static modbus_map_entry_t default_modbus_map[MODBUS_MAP_ENTRY_COUNT];
@@ -61,9 +61,9 @@ static void load_default_sensor_configs(sensor_config_t *config, int count) {
             WQMS_LOG_V("DHT11 ADC Channel is set to 255");
         }
         config[i].modbus_register = default_sensor_modbus[i];
-        config[i].calibration_factor = 1000;
-        config[i].min_value = default_sensor_min[i];
-        config[i].max_value = default_sensor_max[i];
+        config[i].calibration_factor = 1;
+        config[i].safe_min = 0;
+        config[i].safe_max = 100;
     }
 }
 
@@ -79,6 +79,7 @@ static void load_default_relay_configs(relay_config_t *config, int count) {
         config[i].modbus_register = default_relay_modbus[i];
         config[i].activity_duration = RELAY_DEFAULT_DURATION_MS;
         config[i].off_delay = RELAY_DEFAULT_OFFDELAY_MS;
+        config[i].control_device = 0;
     }
 }
 
@@ -143,7 +144,7 @@ esp_err_t wqms_nvs_set_u32(const char *key, uint32_t value) {
 static char supabase_sensor_url[256] = "";
 static char supabase_log_url[256] = "";
 static char supabase_api_key[128] = "";
-static uint32_t supabase_upload_interval = 10;
+static uint32_t supabase_upload_interval = SUPABASE_UPLOAD_INTERVAL;
 
 // ============================================================
 // Public Functions - Supabase Config
@@ -413,8 +414,11 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
         }
 
         snprintf(key, sizeof(key), "%s%d_cal", NVS_KEY_SENSOR_PREFIX, i);
-        uint16_t cal = 1000;
-        if (nvs_get_u16(handle, key, &cal) == ESP_OK) {
+
+        float cal = 1000.0f;
+		uint32_t raw_bits;
+        if (nvs_get_u32(handle, key, &raw_bits) == ESP_OK) {
+			memcpy(&cal, &raw_bits, sizeof(raw_bits)); 
             config[i].calibration_factor = cal;
         }
 
@@ -428,6 +432,20 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
         uint8_t unit = 0;
         if (nvs_get_u8(handle, key, &unit) == ESP_OK) {
             config[i].unit = unit;
+        }
+
+        snprintf(key, sizeof(key), "%s%d_safe_min", NVS_KEY_SENSOR_PREFIX, i);
+        float safe_min = 0;
+        if (nvs_get_u32(handle, key, &raw_bits) == ESP_OK) {
+			memcpy(&safe_min, &raw_bits, sizeof(raw_bits)); 
+            config[i].safe_min = safe_min;
+        }
+
+        snprintf(key, sizeof(key), "%s%d_safe_max", NVS_KEY_SENSOR_PREFIX, i);
+        float safe_max = 0;
+        if (nvs_get_u32(handle, key, &raw_bits) == ESP_OK) {
+			memcpy(&safe_max, &raw_bits, sizeof(raw_bits)); 
+            config[i].safe_max = safe_max;
         }
     }
     
@@ -449,15 +467,25 @@ void nvs_save_sensor_config(sensor_config_t *config, int count) {
         
         snprintf(key, sizeof(key), "%s%d_en", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u8(handle, key, config[i].enabled);
-        
+
+		uint32_t raw_bits;
+		memcpy(&raw_bits, &config[i].calibration_factor, sizeof(config[i].calibration_factor));
         snprintf(key, sizeof(key), "%s%d_cal", NVS_KEY_SENSOR_PREFIX, i);
-        nvs_set_u16(handle, key, config[i].calibration_factor);
+        nvs_set_u32(handle, key, raw_bits);
 
         snprintf(key, sizeof(key), "%s%d_mb", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u16(handle, key, config[i].modbus_register);
 
         snprintf(key, sizeof(key), "%s%d_unit", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u8(handle, key, config[i].unit);
+
+		memcpy(&raw_bits, &config[i].safe_min, sizeof(config[i].safe_min));
+        snprintf(key, sizeof(key), "%s%d_safe_min", NVS_KEY_SENSOR_PREFIX, i);
+        nvs_set_u32(handle, key, raw_bits);
+
+		memcpy(&raw_bits, &config[i].safe_max, sizeof(config[i].safe_max));
+        snprintf(key, sizeof(key), "%s%d_safe_max", NVS_KEY_SENSOR_PREFIX, i);
+        nvs_set_u32(handle, key, raw_bits);
     }
     
     nvs_commit(handle);
@@ -506,6 +534,12 @@ void nvs_load_relay_config(relay_config_t *config, int count) {
         if (nvs_get_u16(handle, key, &mb) == ESP_OK) {
             config[i].modbus_register = mb;
         }
+
+        snprintf(key, sizeof(key), "%s%d_cd", NVS_KEY_RELAY_PREFIX, i);
+        uint8_t cd = 0;
+        if (nvs_get_u8(handle, key, &cd) == ESP_OK) {
+            config[i].control_device = cd;
+        }
     }
     nvs_close(handle);
     WQMS_LOG_D("Loaded %d relay configs from NVS", count);
@@ -535,11 +569,76 @@ void nvs_save_relay_config(relay_config_t *config, int count) {
         snprintf(key, sizeof(key), "%s%d_mb", NVS_KEY_RELAY_PREFIX, i);
         nvs_set_u16(handle, key, config[i].modbus_register);
 
+        snprintf(key, sizeof(key), "%s%d_cd", NVS_KEY_RELAY_PREFIX, i);
+        nvs_set_u8(handle, key, config[i].control_device);
     }
     
     nvs_commit(handle);
     nvs_close(handle);
     WQMS_LOG_D("Saved %d relay configs to NVS", count);
+}
+
+// ============================================================
+// Public Functions - Date & Time
+// ============================================================
+
+esp_err_t nvs_save_datetime(void) {
+    time_t now;
+    struct tm timeinfo;
+    char datetime_str[64];
+    char timezone_str[16];
+    
+    time(&now);
+    localtime_r(&now, &timeinfo);
+    
+    // Get current timezone
+    const char* tz = nvs_get_timezone();
+    strncpy(timezone_str, tz, sizeof(timezone_str) - 1);
+    timezone_str[sizeof(timezone_str) - 1] = '\0';
+    
+    // Format: "2026-07-30 14:30:00 EET-3"
+    if (strftime(datetime_str, sizeof(datetime_str), "%Y-%m-%d %H:%M:%S", &timeinfo) == 0) {
+        return ESP_FAIL;
+    }
+    
+    // Append timezone
+    char full_datetime[80];
+    snprintf(full_datetime, sizeof(full_datetime), "%s %s", datetime_str, timezone_str);
+    
+    return wqms_nvs_set_str("datetime", full_datetime);
+}
+
+esp_err_t nvs_get_datetime(void) {
+    char full_datetime[80];
+    char datetime_str[32];
+    char timezone_str[16];
+    esp_err_t err;
+    struct tm timeinfo;
+    
+    err = wqms_nvs_get_str("datetime", full_datetime, sizeof(full_datetime));
+    if (err != ESP_OK) {
+        return err;
+    }
+    
+    // Parse datetime and timezone: "2026-07-30 14:30:00 EET-3"
+    int parsed = sscanf(full_datetime, "%31[^'] %15s", datetime_str, timezone_str);
+    if (parsed != 2) {
+        return ESP_FAIL;
+    }
+    
+    if (strptime(datetime_str, "%Y-%m-%d %H:%M:%S", &timeinfo) == NULL) {
+        return ESP_FAIL;
+    }
+    
+    // Set timezone
+    nvs_set_timezone(timezone_str);
+    
+    // Set system time from NVS
+    time_t t = mktime(&timeinfo);
+    struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
+    err = settimeofday(&tv, NULL);
+    
+    return err;
 }
 
 void nvs_factory_reset(void) {
@@ -548,3 +647,4 @@ void nvs_factory_reset(void) {
     WQMS_LOG_I("NVS erased, system will restart");
     esp_restart();
 }
+

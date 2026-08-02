@@ -23,6 +23,7 @@
                 <span id="uptime">0m</span>
                 <span id="cpu0-load">0%</span>
                 <span id="cpu1-load">0%</span>
+<!--                <span id="cpu-temp">0°C</span> -->
                 <button id="reboot-btn" class="btn btn-danger" style="padding:4px 14px; font-size:0.7rem;">🔁 Reboot</button>
             </div>
         </header>
@@ -32,6 +33,7 @@
             <a href="/automation.html">Automation</a>
             <a href="/config.html">Configuration</a>
             <a href="/calibration.html">Calibration</a>
+<!--            <a href="/api_doc.html">API Docs</a> -->
         </nav>
 
         <main id="dashboard">
@@ -42,7 +44,7 @@
 
             <section id="relays">
                 <h2>Relays</h2>
-                <div id="relay-grid" class="card-grid relay-grid"></div>
+                <div id="relay-grid" class="card-grid relay-card"></div>
             </section>
 
             <section id="graphs">

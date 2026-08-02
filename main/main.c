@@ -95,6 +95,7 @@ void app_main(void) {
         WQMS_LOG_E("NVS init failed: %d", ret);
         return;
     }
+    ret = nvs_get_datetime();
     WQMS_LOG_I("NVS initialized");
 
     // ============================================================
@@ -146,7 +147,8 @@ void app_main(void) {
     // ============================================================
     ntp_start();
 //    WQMS_LOG_I("NTP client started");
-vTaskDelay(pdMS_TO_TICKS(5000));
+    vTaskDelay(pdMS_TO_TICKS(5000));
+    ret = nvs_save_datetime();
 
     // ============================================================
     // Step 9: Initialize Supabase upload system
@@ -235,6 +237,7 @@ vTaskDelay(pdMS_TO_TICKS(5000));
 //    gpio_set_direction(led_gpio, GPIO_MODE_OUTPUT);
 
     // Send heartbeat to watchdog (main task)
+    int8_t time_update = 0;
     while (1) {
         watchdog_heartbeat(WDT_MODULE_LOGGING);
 //        gpio_set_level(led_gpio, RELAY_STATE_IDLE);
@@ -243,5 +246,11 @@ vTaskDelay(pdMS_TO_TICKS(5000));
 //        gpio_set_level(led_gpio, RELAY_STATE_ACTIVE);
 //        WQMS_LOG_I("GPIO%d : %d", led_gpio, gpio_get_level(led_gpio));
         vTaskDelay(pdMS_TO_TICKS(500));
+        time_update ++;
+        if (time_update == 60) {
+            ret = supabase_sync_sensor_config();
+            ret = nvs_save_datetime();
+            time_update = 0;
+        }
     }
 }

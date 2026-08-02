@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 #include <sys/time.h>
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -18,8 +19,6 @@
 #include "log_rotate.h"
 #include "wifi_manager.h"
 #include "cert_manager.h"
-
-//#include "esp_crt_bundle.h" 
 
 // ============================================================
 // Static Variables - Last Uploaded Timestamps (Recovery Pointers)
@@ -62,12 +61,9 @@ static esp_err_t http_post_json(const char *url, const char *api_key, const char
         .keep_alive_interval = 2,
         .keep_alive_count = 3,
         .skip_cert_common_name_check = false,
-//        .crt_bundle_attach = esp_crt_bundle_attach, 
     };
     
-    // ============================================================
     // Load certificate from NVS using generic manager
-    // ============================================================
     size_t cert_len = 0;
     
     if (cert_manager_has(CERT_TYPE_SUPABASE)) {
@@ -98,10 +94,13 @@ static esp_err_t http_post_json(const char *url, const char *api_key, const char
     esp_http_client_set_header(client, "apikey", api_key);
     esp_http_client_set_header(client, "Authorization", api_key);
     esp_http_client_set_header(client, "Prefer", "return=minimal");
+    esp_http_client_set_header(client, "Prefer", "resolution=merge-duplicates");
     
     esp_http_client_set_post_field(client, json_data, strlen(json_data));
 
+    WQMS_LOG_D("HTTP client is initialized.");
     esp_err_t err = esp_http_client_perform(client);
+    WQMS_LOG_D("HTTP POST is performed.");
     if (err == ESP_OK) {
         int status_code = esp_http_client_get_status_code(client);
         if (status_code >= 200 && status_code < 300) {
@@ -125,13 +124,13 @@ static int upload_pending_sensors(void) {
     if (!nvs_supabase_is_configured()) {
         return 0;
     }
-    
+
     const char *url = nvs_get_supabase_sensor_url();
     const char *api_key = nvs_get_supabase_api_key();
     if (!url || strlen(url) == 0 || !api_key || strlen(api_key) == 0) {
         return 0;
     }
-    
+
     // Get total record count from sensor_history
     uint32_t total_records = sensor_history_get_record_count();
     if (total_records == 0) {
@@ -144,7 +143,7 @@ static int upload_pending_sensors(void) {
     if (newest_ts == 0) {
         return 0;
     }
-    
+
     // If this is the first upload, upload only the most recent
     if (last_sensor_upload_ts == 0) {
         last_sensor_upload_ts = newest_ts;
@@ -158,13 +157,12 @@ static int upload_pending_sensors(void) {
     }
     
     // Get records after last upload timestamp
-    // We need to read from sensor_history
     uint32_t start_ts = last_sensor_upload_ts + 1;
     uint32_t end_ts = newest_ts;
     
     // Limit how many we fetch at once
     uint32_t count = end_ts - start_ts;
-    if (count > 100) count = 100;  // Max 100 records per batch
+    if (count > MAX_SENSOR_BATCH_SIZE) count = MAX_SENSOR_BATCH_SIZE;
     
     sensor_record_t *records = malloc(count * sizeof(sensor_record_t));
     if (!records) {
@@ -201,7 +199,7 @@ static int upload_pending_sensors(void) {
         for (int j = 0; j < TOTAL_SENSOR_COUNT; j++) {
             char key[16];
             snprintf(key, sizeof(key), "sensor%d", j);
-            cJSON_AddNumberToObject(root, key, records[i].values[j]);
+            cJSON_AddNumberToObject(root, key, round(records[i].values[j]*1000.0)/1000.0);
         }
         
         char *json_str = cJSON_PrintUnformatted(root);
@@ -229,194 +227,195 @@ static int upload_pending_sensors(void) {
 }
 
 // ============================================================
-// Log Recovery - Uses web_console (RAM) then log_rotate (SPIFFS)
+// Log Recovery - LINE-BASED reading from log_rotate (SPIFFS)
 // ============================================================
 static int upload_pending_logs(void) {
-typedef struct {
-    uint64_t log_ts;
-    char timestamp_str[20];
-    char module[6];
-    char level[8];
-    char message[260];
-} op_log_t; 
+    typedef struct {
+        uint64_t log_ts;
+        char timestamp_str[32];
+        char module[16];
+        char level[8];
+        char message[280];
+    } op_log_t;
     
     op_log_t op_log[MAX_LOG_BATCH_SIZE];
-
+    
     if (!nvs_supabase_is_configured()) {
         return 0;
     }
+    
     const char *url = nvs_get_supabase_log_url();
     const char *api_key = nvs_get_supabase_api_key();
-
-    int collected = 0;
     if (!url || strlen(url) == 0 || !api_key || strlen(api_key) == 0) {
         return 0;
     }
     
     int uploaded = 0;
+    uint32_t total_read_bytes = 0;
     const char *sys_name = nvs_get_system_name();
-
-    // ============================================================
-    // Step 1: Try to get logs from web_console (RAM circular buffer)
-    // ============================================================
-    size_t log_size = log_rotate_get_size();
-    if (log_size > 0) {
-        char temp_buffer[1024];
-        size_t offset = 0;
-        WQMS_LOG_D("Log size : %d, offset : %d, collected : %d, MAX_LOG_BATCH_SIZE : %d", log_size, offset, collected, MAX_LOG_BATCH_SIZE);
-        // Collect logs from circular buffer
-        while (offset < log_size) {
-			WQMS_LOG_D("Log size : %d, offset : %d,", log_size, offset);
-            while (collected < MAX_LOG_BATCH_SIZE) {
-                size_t bytes_read = log_rotate_read(temp_buffer, sizeof(temp_buffer) - 1, offset);
-				WQMS_LOG_D("Collected : %d, MAX_LOG_BATCH_SIZE : %d, bytes_read : %d", collected, MAX_LOG_BATCH_SIZE, bytes_read);
-                if (bytes_read == 0) break;
-                temp_buffer[bytes_read] = '\0';
-                char *line = strtok(temp_buffer, "\n");
-				WQMS_LOG_D("line : %s", line);
-                while (line && collected < MAX_LOG_BATCH_SIZE) {
-                    if (strlen(line) > 3) {
-                        // Try to parse timestamp from log
-                        uint64_t log_ts = 0;
-                        char timestamp_str[20] = "";
-                        char module[6] = "";
-                        char level[8] = "";
-                        char message[256] = "";
-                        
-                        // Parse format: [YYYY-MM-DD HH:MM:SS] [MOD-LVL] Message
-                        char *p = line;
-                        if (*p == '[') {
-                            p++;
-                            char *end = strchr(p, ']');
-                            if (end) {
-                                size_t len = end - p;
-                                if (len < sizeof(timestamp_str)) {
-                                    strncpy(timestamp_str, p, len);
-                                    timestamp_str[len] = '\0';
-                                    // Convert to timestamp
-                                    struct tm tm = {0};
-                                    strptime(timestamp_str, "%Y-%m-%d %H:%M:%S", &tm);
-                                    log_ts = mktime(&tm);
-                                }
-                                p = end + 1;
-                            }
-                        } else {
-                            line = strtok(NULL, "\n");
-                            continue;
-                        }
-                        
-                        // Skip if this log is older than last upload
-                        if (log_ts > 0 && log_ts <= last_log_upload_ts) {
-                            line = strtok(NULL, "\n");
-                            continue;
-                        }
-
-                        // Parse module and level
-                        if (*p == '[') {
-                            p++;
-                            char *end = strchr(p, '-');
-                            if (end) {
-                                size_t len = end - p;
-                                if (len < sizeof(module)) {
-                                    strncpy(module, p, len);
-                                    module[len] = '\0';
-                                }
-                                p = end + 1;
-                            }
-                            end = strchr(p, ']');
-                            if (end) {
-                                size_t len = end - p;
-                                if (len < sizeof(level)) {
-                                    strncpy(level, p, len);
-                                    level[len] = '\0';
-                                }
-                                p = end + 1;
-                            }
-                        } else {
-                            line = strtok(NULL, "\n");
-                            continue;
-                        }
-
-                        while (*p == ' ') p++;
-                        strncpy(message, p, sizeof(message) - 1);
-                        message[sizeof(message) - 1] = '\0';
-                        
-                        if (strlen(message) > 0) {
-                            op_log[collected].log_ts = log_ts;
-                            strncpy(op_log[collected].timestamp_str, timestamp_str, sizeof(op_log[collected].timestamp_str) - 1);
-                            op_log[collected].timestamp_str[sizeof(op_log[collected].timestamp_str) - 1] = '\0';
-
-                            strncpy(op_log[collected].module, module, sizeof(op_log[collected].module) - 1);
-                            op_log[collected].module[sizeof(op_log[collected].module) - 1] = '\0';
-
-                            strncpy(op_log[collected].level, level, sizeof(op_log[collected].level) - 1);
-                            op_log[collected].level[sizeof(op_log[collected].level) - 1] = '\0';
-
-                            strncpy(op_log[collected].message, message, sizeof(op_log[collected].message) - 1);
-                            op_log[collected].message[sizeof(op_log[collected].message) - 1] = '\0';
-
-                            collected++;
+    
+    // Get total line count from log system
+    uint32_t total_lines = log_rotate_get_line_count();
+    if (total_lines == 0) {
+        WQMS_LOG_V("No logs in circular buffer");
+        return 0;
+    }
+    
+    WQMS_LOG_D("Total lines in log: %lu", total_lines);
+    
+    while (uploaded < total_lines) {
+        WQMS_LOG_D("Uploaded count: %d", uploaded);
+        // Read logs line by line using line-based API
+        uint32_t read_offset = LOG_METADATA_SIZE + total_read_bytes; //second batch nasıl alınacak
+        char line_buffer[LOG_MAX_LINE_LENGTH + 1];
+        size_t bytes_read;
+        int collected = 0;
+        while (collected < MAX_LOG_BATCH_SIZE) {
+            bytes_read = log_rotate_read_line(line_buffer, sizeof(line_buffer) - 1, &read_offset);
+            total_read_bytes += bytes_read;
+            if (bytes_read == 0) break;
+            line_buffer[bytes_read] = '\0';
+            
+            // Parse the log line
+            // Format: [YYYY-MM-DD HH:MM:SS] [MOD-LVL] Message
+            uint64_t log_ts = 0;
+            char timestamp_str[32] = "";
+            char module[16] = "";
+            char level[8] = "";
+            char message[280] = "";
+            
+            char *p = line_buffer;
+            
+            // Parse timestamp: [YYYY-MM-DD HH:MM:SS]
+            if (*p == '[') {
+                p++;
+                char *end = strchr(p, ']');
+                if (end) {
+                    size_t len = end - p;
+                    if (len < sizeof(timestamp_str)) {
+                        strncpy(timestamp_str, p, len);
+                        timestamp_str[len] = '\0';
+                        // Convert to timestamp
+                        struct tm tm = {0};
+                        char *result = strptime(timestamp_str, "%Y-%m-%d %H:%M:%S", &tm);
+                        if (result) {
+                            log_ts = mktime(&tm);
                         }
                     }
-                    line = strtok(NULL, "\n");
+                    p = end + 1;
                 }
-                offset += bytes_read;
             }
             
-            // Upload collected logs
-            if (collected > 0) {
-                cJSON *root = cJSON_CreateArray();
-                for (int i = 0; i < collected; i++) {
-                    cJSON *entry = cJSON_CreateObject();
-                    cJSON_AddStringToObject(entry, "system", sys_name ? sys_name : "WQMS-System");
-                    cJSON_AddStringToObject(entry, "timestamp", op_log[i].timestamp_str);
-                    cJSON_AddStringToObject(entry, "module", op_log[i].module);
-                    cJSON_AddStringToObject(entry, "level", op_log[i].level);
-                    cJSON_AddStringToObject(entry, "message", op_log[i].message);
-                    cJSON_AddItemToArray(root, entry);
-                }
-                
-                char *json_str = cJSON_PrintUnformatted(root);
-                cJSON_Delete(root);
-                
-                if (json_str) {
-                    esp_err_t err = http_post_json(url, api_key, json_str);
-                    
-                    if (err == ESP_OK) {
-                        // Update last upload timestamp to the newest log we uploaded
-                        for (int i = 0; i < collected; i++) {
-                            if (op_log[i].log_ts > last_log_upload_ts) {
-                                last_log_upload_ts = op_log[i].log_ts;
-                            }
-                        }
-                        uploaded = collected;
-                        last_log_upload_ok = true;
-                        last_log_upload_time = esp_timer_get_time() / 1000000ULL;
-                        WQMS_LOG_I("Uploaded %d logs from circular buffer", collected);
-                        collected = 0;
-                    } else {
-                        int inc_value = 250;
-                        for (int i = 0; i < strlen(json_str); i+=inc_value) {
-                            WQMS_LOG_D("%.*s", inc_value, json_str + i);
-                        }
-                        WQMS_LOG_W("Failed to upload logs, will retry later");
+            // Skip if this log is older than last upload
+            if (log_ts > 0 && log_ts <= last_log_upload_ts) {
+                continue;
+            }
+            
+            // Parse module and level: [MOD-LVL]
+            while (*p == ' ') p++;
+            if (*p == '[') {
+                p++;
+                char *end = strchr(p, '-');
+                if (end) {
+                    size_t len = end - p;
+                    if (len < sizeof(module)) {
+                        strncpy(module, p, len);
+                        module[len] = '\0';
                     }
-                    free(json_str);
+                    p = end + 1;
                 }
+                end = strchr(p, ']');
+                if (end) {
+                    size_t len = end - p;
+                    if (len < sizeof(level)) {
+                        strncpy(level, p, len);
+                        level[len] = '\0';
+                    }
+                    p = end + 1;
+                }
+            }
+            
+            // Get message
+            while (*p == ' ') p++;
+            strncpy(message, p, sizeof(message) - 1);
+            message[sizeof(message) - 1] = '\0';
+            
+            if (strlen(message) > 0) {
+                op_log[collected].log_ts = log_ts;
+                strncpy(op_log[collected].timestamp_str, timestamp_str, sizeof(op_log[collected].timestamp_str) - 1);
+                op_log[collected].timestamp_str[sizeof(op_log[collected].timestamp_str) - 1] = '\0';
+                
+                strncpy(op_log[collected].module, module, sizeof(op_log[collected].module) - 1);
+                op_log[collected].module[sizeof(op_log[collected].module) - 1] = '\0';
+                
+                strncpy(op_log[collected].level, level, sizeof(op_log[collected].level) - 1);
+                op_log[collected].level[sizeof(op_log[collected].level) - 1] = '\0';
+                
+                strncpy(op_log[collected].message, message, sizeof(op_log[collected].message) - 1);
+                op_log[collected].message[sizeof(op_log[collected].message) - 1] = '\0';
+                
+                collected++;
+            } else {
+                WQMS_LOG_D("Message is corrupt -%s-", message);
+            }
+        }
+        
+        // Upload collected logs
+        if (collected > 0) {
+            WQMS_LOG_D("Collected count: %d", collected);
+            cJSON *root = cJSON_CreateArray();
+            if (!root) {
+                WQMS_LOG_E("Failed to create JSON array for logs");
+                return 0;
+            }
+            
+            for (int i = 0; i < collected; i++) {
+                cJSON *entry = cJSON_CreateObject();
+                if (!entry) continue;
+                
+                cJSON_AddStringToObject(entry, "system", sys_name ? sys_name : "WQMS-System");
+                cJSON_AddStringToObject(entry, "timestamp", op_log[i].timestamp_str);
+                cJSON_AddStringToObject(entry, "module", op_log[i].module);
+                cJSON_AddStringToObject(entry, "level", op_log[i].level);
+                cJSON_AddStringToObject(entry, "message", op_log[i].message);
+                cJSON_AddItemToArray(root, entry);
+            }
+            
+            char *json_str = cJSON_PrintUnformatted(root);
+            cJSON_Delete(root);
+            
+            if (json_str) {
+                esp_err_t err = http_post_json(url, api_key, json_str);
+                
+                if (err == ESP_OK) {
+                    // Update last upload timestamp to the newest log we uploaded
+                    for (int i = 0; i < collected; i++) {
+                        if (op_log[i].log_ts > last_log_upload_ts) {
+                            last_log_upload_ts = op_log[i].log_ts;
+                        }
+                    }
+                    uploaded += collected;
+                    WQMS_LOG_I("Uploaded %d logs from circular buffer", collected);
+                } else {
+                    WQMS_LOG_W("Failed to upload logs, will retry later");
+                    // Log the first part of the JSON for debugging
+                    WQMS_LOG_D("%.250s", json_str);
+/*                    if (strlen(json_str) > 250) {
+                        int j = 250;
+                        WQMS_LOG_D("==0==");
+                        for (int i = 0; i < strlen(json_str); i=+j) {
+                            WQMS_LOG_D("%.*s", j, &json_str[i]);
+                        }
+                        WQMS_LOG_D("==0==");
+                    }
+*/
+                }
+                free(json_str);
             }
         }
     }
-    
-    // ============================================================
-    // Step 2: If no logs from RAM, fall back to log_rotate (SPIFFS)
-    // ============================================================
-    if (uploaded == 0) {
-        // This would use log_rotate.c functions to read from SPIFFS
-        // For now, just log that we need to implement this
-        WQMS_LOG_V("No logs in circular buffer, checking SPIFFS...");
-        // TODO: Implement SPIFFS log reading using log_rotate.c
-    }
-    
+    last_log_upload_time = esp_timer_get_time() / 1000000ULL;
+    last_log_upload_ok = true;
     return uploaded;
 }
 
@@ -437,7 +436,8 @@ static void upload_task(void *pvParameters) {
             // Upload pending sensors (highest priority)
             int sensor_uploaded = upload_pending_sensors();
             // Upload pending logs
-            int log_uploaded = upload_pending_logs();
+            int log_uploaded = 0;
+//            log_uploaded = upload_pending_logs(); //oko
             if (sensor_uploaded > 0 || log_uploaded > 0) {
                 WQMS_LOG_I("Uploaded %d sensors, %d logs", sensor_uploaded, log_uploaded);
             }

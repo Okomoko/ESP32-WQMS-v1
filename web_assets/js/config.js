@@ -18,6 +18,11 @@ const UNIT_DEFINITIONS = [
     { id: 9, label: 'µg/L', symbol: 'µg/L' }
 ];
 
+const CONTROLDEVICE_DEFINITIONS = [
+    { id: 0, label: 'Pump'},
+    { id: 1, label: 'Valve'}
+];
+
 // Get unit symbol by ID
 function getUnitSymbol(unitId) {
     const unit = UNIT_DEFINITIONS.find(u => u.id === unitId);
@@ -29,6 +34,16 @@ function createUnitDropdown(sensorId, selectedId) {
     UNIT_DEFINITIONS.forEach(unit => {
         const selected = (unit.id === selectedId) ? 'selected' : '';
         html += `<option value="${unit.id}" ${selected}>${unit.label} (${unit.symbol})</option>`;
+    });
+    html += `</select>`;
+    return html;
+}
+
+function createControlDeviceDropdown(relayId, selectedId) {
+    let html = `<select class="relay-cd-select" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;" data-id="${relayId}">`;
+    CONTROLDEVICE_DEFINITIONS.forEach(unit => {
+        const selected = (unit.id === selectedId) ? 'selected' : '';
+        html += `<option value="${unit.id}" ${selected}>${unit.label}</option>`;
     });
     html += `</select>`;
     return html;
@@ -49,10 +64,16 @@ async function loadSensorConfig() {
             return `
             <div class="sensor-card" style="background:#fff; border-radius:12px; border:1px solid #e6edf6; padding:14px 16px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid #f0f4f9; padding-bottom:8px; margin-bottom:8px;">
-                    <strong style="color:#0a2744;">${s.name || 'Sensor ' + s.id}</strong>
-                    <span style="font-size:0.75rem; color:#7a9bbf;">PIN: ${s.gpio_pin || '--'} | ADC: ${adcDisplay} | MODBUS: 0x0${(s.modbus_register || 0).toString(16).toUpperCase().padStart(1, '0')}</span>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <strong style="color:#0a2744;">${'Sensor ' + s.id}</strong>
+                        <label style="font-size:0.75rem; color:#7a9bbf; display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" ${s.enabled !== false ? 'checked' : ''} data-id="${s.id}" class="sensor-enabled-check">
+                            <span>Enabled</span>
+                        </label>
+                    </div>
+                    <span style="font-size:0.75rem; color:#7a9bbf;">Value: ${s.current_value !== undefined && s.status !== 3 ? s.current_value.toFixed(2) : '--'} | PIN: ${s.gpio_pin || '--'} | ADC: ${adcDisplay} | MODBUS: 0x0${(s.modbus_register || 0).toString(16).toUpperCase().padStart(1, '0')}</span>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:8px;">
                     <div>
                         <label style="font-size:0.7rem; color:#7a9bbf;">Name</label>
                         <input type="text" value="${s.name || ''}" data-id="${s.id}" class="sensor-name-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
@@ -62,19 +83,16 @@ async function loadSensorConfig() {
                         ${createUnitDropdown(s.id, s.unit || 0)}
                     </div>
                     <div>
-                        <label class="calibrate-sensor-btn" data-id="${s.id}" style="font-size:0.7rem; color:#7a9bbf;">Calibration (×1000)</label>
-                        <input type="number" value="${s.calibration_factor || 1000}" data-id="${s.id}" class="sensor-cal-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                        <label class="calibrate-sensor-btn" data-id="${s.id}" style="font-size:0.7rem; color:#7a9bbf;">Calibration</label>
+                        <input type="number" value="${s.calibration_factor.toFixed(3) || 1}" data-id="${s.id}" class="sensor-cal-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px;">
-                    <label style="font-size:0.75rem; color:#7a9bbf; display:flex; align-items:center; gap:6px;">
-                        <span>Enabled</span>
-                        <input type="checkbox" ${s.enabled !== false ? 'checked' : ''} data-id="${s.id}" class="sensor-enabled-check">
-                    </label>
-                    <div style="display:flex; gap:12px; font-size:0.75rem; color:#3d6a9b;">
-                        <span>Value: ${s.current_value !== undefined && s.status !== 3 ? s.current_value.toFixed(2) : '--'}</span>
-                        <span>Min: ${s.min_value || 0}</span>
-                        <span>Max: ${s.max_value || 100}</span>
+                    <div>
+                        <label style="font-size:0.7rem; color:#7a9bbf;">Safe min.</label>
+                        <input type="number" value="${s.safe_min.toFixed(3) || 0}" data-id="${s.id}" class="sensor-safemin-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem; color:#7a9bbf;">Safe max.</label>
+                        <input type="number" value="${s.safe_max.toFixed(3) || 1000}" data-id="${s.id}" class="sensor-safemax-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
                 </div>
             </div>
@@ -98,9 +116,11 @@ async function saveSensorConfig() {
         const id = parseInt(inp.dataset.id);
         const name = inp.value;
         const enabled = document.querySelector(`.sensor-enabled-check[data-id="${id}"]`)?.checked || false;
-        const cal = parseInt(document.querySelector(`.sensor-cal-input[data-id="${id}"]`)?.value) || 1000;
         const unit = parseInt(document.querySelector(`.sensor-unit-select[data-id="${id}"]`)?.value) || 0;
-        configs.push({ id, name, enabled, calibration_factor: cal, unit});
+        const cal = parseFloat(document.querySelector(`.sensor-cal-input[data-id="${id}"]`)?.value) || 1;
+        const safemin = parseFloat(document.querySelector(`.sensor-safemin-input[data-id="${id}"]`)?.value) || 0;
+        const safemax = parseFloat(document.querySelector(`.sensor-safemax-input[data-id="${id}"]`)?.value) || 1000;
+        configs.push({ id, name, enabled, calibration_factor: cal, unit, safe_min: safemin, safe_max: safemax});
     });
     try {
         const result = await api.post('/api/sensors/config', { sensors: configs });
@@ -130,10 +150,14 @@ async function loadRelayConfig() {
                     <strong style="color:#0a2744;">${r.name || 'Relay ' + r.id}</strong>
                     <span style="font-size:0.75rem; color:#7a9bbf;">PIN: ${r.gpio_pin || '--'} | MODBUS: 0x1${(r.modbus_register || 0).toString(16).toUpperCase().padStart(1, '0')}</span>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:8px;">
                     <div>
                         <label style="font-size:0.7rem; color:#7a9bbf;">Name</label>
                         <input type="text" value="${r.name || ''}" data-id="${r.id}" class="relay-name-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                    </div>
+                    <div class="unit-container">
+                        <label style="font-size:0.7rem; color:#7a9bbf;">Unit</label>
+                        ${createControlDeviceDropdown(r.id, r.control_device || 0)}
                     </div>
                     <div>
                         <label style="font-size:0.7rem; color:#7a9bbf;">Duration (ms)</label>
@@ -173,7 +197,8 @@ async function saveRelayConfig() {
         const enabled = document.querySelector(`.relay-enabled-check[data-id="${id}"]`)?.checked || false;
         const duration = parseInt(document.querySelector(`.relay-duration-input[data-id="${id}"]`)?.value) || 100;
         const offDelay = parseInt(document.querySelector(`.relay-offdelay-input[data-id="${id}"]`)?.value) || 50;
-        configs.push({ id, name, enabled, duration_ms: duration, off_delay_ms: offDelay });
+        const cd = parseInt(document.querySelector(`.relay-cd-select[data-id="${id}"]`)?.value) || 0;
+        configs.push({ id, name, enabled, duration_ms: duration, off_delay_ms: offDelay, control_device: cd});
     });
     try {
         const result = await api.post('/api/relays/config', { relays: configs });
@@ -1052,7 +1077,7 @@ async function loadEmailConfig() {
         // Populate form fields (matching your existing pattern)
         document.getElementById('email_enabled').checked = config.enabled || false;
         document.getElementById('email_smtp_server').value = config.smtp_server || '';
-        document.getElementById('email_smtp_port').value = config.smtp_port || 587;
+        document.getElementById('email_smtp_port').value = config.smtp_port || 465;
         document.getElementById('email_username').value = config.username || '';
         document.getElementById('email_password').value = ''; // Never show stored password
         document.getElementById('email_from').value = config.from_email || '';
@@ -1078,7 +1103,7 @@ async function saveEmailConfig() {
     const config = {
         enabled: enabled,
         smtp_server: document.getElementById('email_smtp_server').value.trim(),
-        smtp_port: parseInt(document.getElementById('email_smtp_port').value) || 587,
+        smtp_port: parseInt(document.getElementById('email_smtp_port').value) || 465,
         username: document.getElementById('email_username').value.trim(),
         password: document.getElementById('email_password').value.trim(),
         from_email: document.getElementById('email_from').value.trim(),

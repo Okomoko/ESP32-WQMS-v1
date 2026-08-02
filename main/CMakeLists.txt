@@ -38,7 +38,6 @@ idf_component_register(SRCS
     # Web Server
     webserver/http_server.c
     webserver/api_handler.c
-    webserver/api_config.c
     webserver/web_console.c
     
     # Supabase Integration

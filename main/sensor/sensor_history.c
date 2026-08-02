@@ -147,7 +147,7 @@ void sensor_history_init(void) {
 void sensor_history_add(void) {
     if (!history_initialized) return;
 
-    // Get the latest timestamp from the history file if time is not accurate.
+/*    // Get the latest timestamp from the history file if time is not accurate.
     SENSOR_LOG_D("Date/Time accuracy check...");
     uint32_t now = ntp_get_time();
     if (now < 946684800) {
@@ -162,6 +162,7 @@ void sensor_history_add(void) {
             SENSOR_LOG_E("Unable to get the last record for acquiring timestamp.");
         };
     }
+*/
     SENSOR_LOG_D("Reading the sensors...");
             
     // 1. Get current readings
@@ -179,7 +180,7 @@ void sensor_history_add(void) {
     for (int i = 0; i < TOTAL_SENSOR_COUNT; i++) {
         if (readings[i].status == SENSOR_STATUS_OK) {
             record.sensor_mask |= (1 << i);
-            record.values[i] = (uint16_t)readings[i].value;
+            record.values[i] = (float)readings[i].value;
         } else {
             record.values[i] = 0;
         }
@@ -241,21 +242,21 @@ int sensor_history_get_records(uint32_t starting_offset, sensor_record_t *buffer
     uint32_t offset = (starting_offset - 1) * sizeof(sensor_record_t);
     
     // Scan through the file
-	SENSOR_LOG_V("Sensor history record offset - number of records: %u - %u", starting_offset, number_of_records);
+    SENSOR_LOG_V("Sensor history record offset - number of records: %u - %u", starting_offset, number_of_records);
     for (uint32_t i = 0; i < sensor_idx .record_count && found < number_of_records; i++) {
         sensor_record_t record;
         fseek(f, offset, SEEK_SET);
         if (fread(&record, 1, sizeof(record), f) != sizeof(record)) {
-			SENSOR_LOG_E("Sensor history record cannot be read!");
+            SENSOR_LOG_E("Sensor history record cannot be read!");
             break;
         }
 
-		memcpy(&buffer[found], &record, sizeof(record));
-		found++;
+        memcpy(&buffer[found], &record, sizeof(record));
+        found++;
 
         offset += sizeof(record);
         if (offset >= HISTORY_FILE_SIZE) {
-			SENSOR_LOG_E("End of Sensor history file reached!");
+            SENSOR_LOG_E("End of Sensor history file reached!");
             break;
         }
     }
@@ -264,7 +265,7 @@ int sensor_history_get_records(uint32_t starting_offset, sensor_record_t *buffer
     SENSOR_LOG_V("%d records found.", found);
     return found;
 }
-	
+    
 int sensor_history_get_range(uint32_t start_ts, uint32_t end_ts,
                              sensor_record_t *buffer, int max_records) {
     if (!history_initialized) {
@@ -287,15 +288,15 @@ int sensor_history_get_range(uint32_t start_ts, uint32_t end_ts,
     uint32_t offset = 0;
     
     // Scan through the file
-	SENSOR_LOG_D("Sensor history record timestamp range: %d - %d", start_ts, end_ts);
+    SENSOR_LOG_D("Sensor history record timestamp range: %d - %d", start_ts, end_ts);
     for (uint32_t i = 0; i < sensor_idx .record_count && found < max_records; i++) {
         sensor_record_t record;
         fseek(f, offset, SEEK_SET);
         if (fread(&record, 1, sizeof(record), f) != sizeof(record)) {
-			SENSOR_LOG_E("Sensor history record cannot be read!");
+            SENSOR_LOG_E("Sensor history record cannot be read!");
             break;
         }
-		SENSOR_LOG_V("Sensor history record timestamp:%d", record.timestamp);
+        SENSOR_LOG_V("Sensor history record timestamp:%d", record.timestamp);
         if (record.timestamp >= start_ts && record.timestamp <= end_ts) {
             memcpy(&buffer[found], &record, sizeof(record));
             found++;
@@ -371,7 +372,7 @@ int sensor_history_export_csv(uint32_t start_ts, uint32_t end_ts,
         strftime(ts_str, sizeof(ts_str), "%Y-%m-%d %H:%M:%S", tm_info);
         
         snprintf(line, sizeof(line),
-                 "%s,%d,%d,%d,%d,%d,%d,%d,%d,%.1f,%d\n",
+                 "%s,%f,%f,%f,%f,%f,%f,%f,%f,%.1f,%f\n",
                  ts_str,
                  r->values[0],  // pH
                  r->values[1],  // EC
