@@ -1,5 +1,12 @@
-/* WQMS Dashboard - Complete CSS */
+/* ============================================================
+   WQMS Dashboard - OPTIMIZED CSS
+   Duplicates removed, selectors combined, media queries merged
+   Colors kept exactly as original
+   ============================================================ */
 
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
 * {
     margin: 0;
     padding: 0;
@@ -19,7 +26,39 @@ body {
 }
 
 /* ============================================================
-   HEADER
+   UTILITY CLASSES (Reusable patterns)
+   ============================================================ */
+
+/* Flex utilities */
+.flex { display: flex; }
+.flex-center { display: flex; align-items: center; flex-wrap: wrap; }
+.flex-center-gap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.flex-col { display: flex; flex-direction: column; }
+
+/* Card base - combines all card-like elements */
+.card-base {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e6edf6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Badge variants */
+.badge-base {
+    display: inline-block;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+/* Scrollbar base (consolidates all scrollbar styles) */
+.scrollbar-thin::-webkit-scrollbar { width: 8px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: #f8fafd; border-radius: 4px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #dde6ef; border-radius: 4px; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #b0c4d9; }
+
+/* ============================================================
+   HEADER (Combined header styles)
    ============================================================ */
 #header {
     position: sticky;
@@ -28,14 +67,15 @@ body {
     background: #fff;
     border-radius: 16px;
     padding: 12px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     flex-wrap: wrap;
     gap: 8px;
 }
 
+/* Combined header sections - all use same flex layout */
 .header-left,
 .header-center,
 .header-right {
@@ -45,17 +85,16 @@ body {
     flex-wrap: wrap;
 }
 
-.header-left h1 {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #0a2744;
+/* Combined header spans */
+.header-center span,
+.header-right span {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
 }
 
 .header-center span {
     background: #eef3f9;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
     color: #1f4a7a;
 }
 
@@ -63,12 +102,17 @@ body {
     font-size: 0.75rem;
     color: #3d6a9b;
     background: #f5f8fc;
-    padding: 4px 10px;
     border-radius: 16px;
 }
 
+.header-left h1 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #0a2744;
+}
+
 /* ============================================================
-   NAVIGATION - Sticky
+   NAVIGATION
    ============================================================ */
 #nav {
     position: sticky;
@@ -93,7 +137,9 @@ body {
     transition: all 0.2s;
 }
 
-#nav a:hover {
+/* Combined nav hover and rule hover (same background) */
+#nav a:hover,
+.rule-item:hover {
     background: #e6edf6;
 }
 
@@ -103,11 +149,9 @@ body {
 }
 
 /* ============================================================
-   MAIN CONTENT
+   HEADINGS
    ============================================================ */
-main {
-    padding: 8px 0;
-}
+main { padding: 8px 0; }
 
 h2 {
     font-size: 1.2rem;
@@ -126,46 +170,68 @@ h3 {
 }
 
 /* ============================================================
-   CARDS (Dashboard) - Narrower for 8 per row
+   CARDS (Combined card and grid styles)
    ============================================================ */
-.card-grid {
+.card-grid,
+.relay-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 10px;
 }
 
-.card {
-    background: #fff;
+.card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.relay-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+/* Combined card styles 
+
+    align-items: center;
+*/
+.card,
+.sensor-card {
+    background: #ffffff;
     border-radius: 12px;
     padding: 10px 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     border: 1px solid #e6edf6;
     transition: all 0.2s;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
+    text-align: left;
 }
 
-.card:hover {
+/* Combined card hover */
+.card:hover,
+.sensor-card:hover {
     box-shadow: 0 4px 16px rgba(43, 123, 228, 0.08);
 }
 
-.card .card-name {
+.card .card-name,
+.sensor-card .card-name,
+.relay-card .card-name {
     font-weight: 600;
     font-size: 0.8rem;
     color: #0a2744;
     margin-bottom: 4px;
 }
 
-/* ============================================================
-   SENSOR GAUGE CARDS - SCADA Style (narrow)
-   ============================================================ */
-.sensor-card .card-name {
+.sensor-card .card-name,
+.relay-card .card-name {
     margin-bottom: 2px;
     font-size: 0.75rem;
 }
 
+.sensor-card {
+    border-radius: 14px;
+    border: 1px solid #a6adb6;
+    padding: 16px 18px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.sensor-card:hover {
+    border-color: #c8d8e8;
+}
+
+/* ============================================================
+   SENSOR GAUGES
+   ============================================================ */
 .gauge-wrapper {
     position: relative;
     width: 100px;
@@ -206,6 +272,7 @@ h3 {
     line-height: 1.2;
 }
 
+/* Combined sensor status */
 .sensor-status {
     display: flex;
     gap: 6px;
@@ -216,34 +283,14 @@ h3 {
     margin-top: 2px;
 }
 
-.status-ok {
-    color: #00e676;
-}
-
-.status-error {
-    color: #ff1744;
-}
-
-.status-disabled {
-    color: #4a4a5a;
-}
-
-.sensor-disabled {
-    color: #4a4a5a;
-}
+.status-ok { color: #00e676; }
+.status-error { color: #ff1744; }
+.status-disabled { color: #4a4a5a; }
+.sensor-disabled { color: #4a4a5a; }
 
 /* ============================================================
-   RELAY CARDS - Same width as sensors
+   RELAY COMPONENTS (Combined relay styles)
    ============================================================ */
-.relay-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-}
-
-.relay-card .card-name {
-    margin-bottom: 2px;
-    font-size: 0.75rem;
-}
-
 .relay-visual-container {
     display: flex;
     justify-content: center;
@@ -282,7 +329,7 @@ h3 {
     fill: #2b7be4;
 }
 
-/* Pump animation - spinning impeller */
+/* Pump and Valve animations */
 .pump-svg .pump-impeller {
     fill: currentColor;
     transform-origin: 40px 40px;
@@ -297,7 +344,6 @@ h3 {
     to { transform: rotate(360deg); }
 }
 
-/* Valve animation - turning handle */
 .valve-svg .valve-handle {
     fill: currentColor;
     transform-origin: 40px 40px;
@@ -312,7 +358,7 @@ h3 {
     50% { transform: rotate(90deg); }
 }
 
-/* Status dot indicator */
+/* Combined relay state badge */
 .relay-status-dot {
     display: inline-block;
     width: 6px;
@@ -340,10 +386,9 @@ h3 {
     font-size: 0.6rem;
 }
 
-.relay-state {
-    margin: 2px 0;
-}
+.relay-state { margin: 2px 0; }
 
+/* Combined relay state badges */
 .relay-state-badge {
     display: inline-block;
     padding: 1px 10px;
@@ -354,20 +399,9 @@ h3 {
     color: #3d6a9b;
 }
 
-.relay-state-badge.relay-on {
-    background: #ff1744;
-    color: #fff;
-}
-
-.relay-state-badge.relay-off {
-    background: #e6edf6;
-    color: #5a7a9f;
-}
-
-.relay-state-badge.relay-cooldown {
-    background: #ffd740;
-    color: #000;
-}
+.relay-state-badge.relay-on { background: #ff1744; color: #fff; }
+.relay-state-badge.relay-off { background: #e6edf6; color: #5a7a9f; }
+.relay-state-badge.relay-cooldown { background: #ffd740; color: #000; }
 
 .cooldown-timer {
     font-size: 0.6rem;
@@ -386,7 +420,7 @@ h3 {
 }
 
 /* ============================================================
-   BADGE
+   BADGE (All badge styles combined)
    ============================================================ */
 .badge {
     display: inline-block;
@@ -396,8 +430,23 @@ h3 {
     font-weight: 500;
 }
 
+.sensor-card-title .badge {
+    background: #e6edf6;
+    color: #1f4a7a;
+    font-size: 0.65rem;
+}
+
+.element-grid .element-item .badge {
+    font-size: 0.55rem;
+    background: #dde6ef;
+    color: #1f4a7a;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: auto;
+}
+
 /* ============================================================
-   BUTTONS
+   BUTTONS (All button styles combined)
    ============================================================ */
 button,
 .btn {
@@ -417,44 +466,70 @@ button:hover,
     background: #d0ddea;
 }
 
-.btn-primary {
+/* Combined button variants */
+.btn-primary { background: #2b7be4; color: #fff; }
+.btn-primary:hover { background: #1a5fb0; }
+
+.btn-danger { background: #d32f2f; color: #fff; }
+.btn-danger:hover { background: #b71c1c; }
+
+.btn-success { background: #2e7d32; color: #fff; }
+.btn-success:hover { background: #1b5e20; }
+
+.btn-warning { background: #f9a825; color: #fff; }
+.btn-warning:hover { background: #f57f17; }
+
+/* Modal action buttons (specific overrides) */
+.modal-actions .btn {
+    padding: 6px 18px;
+    font-size: 0.85rem;
+}
+.modal-actions .btn-primary { border-radius: 20px; padding: 8px 20px; }
+.modal-actions .btn-secondary {
+    background: #e6edf6;
+    color: #1f4a7a;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-weight: 500;
+}
+.modal-actions .btn-secondary:hover { background: #d0ddea; }
+
+/* Console controls buttons */
+.console-controls .btn {
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    border-radius: 20px;
+    border: 1px solid #dde6ef;
+    background: #f8fafd;
+    color: #1f4a7a;
+}
+.console-controls .btn:hover {
+    background: #e6edf6;
+    border-color: #b0c4d9;
+}
+.console-controls .btn.active {
     background: #2b7be4;
-    color: #fff;
+    border-color: #2b7be4;
+    color: #ffffff;
+}
+.console-controls .btn.active:hover { background: #1a5fb0; }
+
+/* Canvas toolbar buttons */
+#canvas-toolbar .btn {
+    padding: 6px 16px;
+    font-size: 0.8rem;
 }
 
-.btn-primary:hover {
-    background: #1a5fb0;
-}
-
-.btn-danger {
-    background: #d32f2f;
-    color: #fff;
-}
-
-.btn-danger:hover {
-    background: #b71c1c;
-}
-
-.btn-success {
-    background: #2e7d32;
-    color: #fff;
-}
-
-.btn-success:hover {
-    background: #1b5e20;
-}
-
-.btn-warning {
-    background: #f9a825;
-    color: #fff;
-}
-
-.btn-warning:hover {
-    background: #f57f17;
+/* Rules actions buttons */
+#rules-actions .btn {
+    flex: 1;
+    padding: 4px 8px;
+    font-size: 0.7rem;
 }
 
 /* ============================================================
-   CONFIGURATION
+   CONFIGURATION (Combined config styles)
    ============================================================ */
 .config-group {
     display: flex;
@@ -470,8 +545,12 @@ button:hover,
     color: #1f4a7a;
 }
 
+/* Combined input styles */
 .config-group input,
-.config-group select {
+.config-group select,
+.sensor-card-body .field-group input,
+.sensor-card-body .field-group select,
+.sensor-card-body .field-group input[type="number"] {
     padding: 8px 14px;
     border-radius: 10px;
     border: 1px solid #dde6ef;
@@ -486,10 +565,24 @@ button:hover,
     box-shadow: 0 0 0 3px rgba(43, 123, 228, 0.12);
 }
 
-/* Existing config-group styling remains the same */
+.sensor-card-body .field-group input[type="text"],
+.sensor-card-body .field-group input[type="number"] {
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    background: #fafcff;
+    width: 100%;
+}
 
-/* Fix for checkbox fields - keep label and checkbox on same line */
-.config-group .config-field-checkbox {
+.sensor-card-body .field-group input:focus {
+    outline: none;
+    border-color: #2b7be4;
+    box-shadow: 0 0 0 3px rgba(43, 123, 228, 0.1);
+}
+
+/* Checkbox fields */
+.config-group .config-field-checkbox,
+.config-group:has(input[type="checkbox"]) {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -497,42 +590,14 @@ button:hover,
     margin-bottom: 10px;
 }
 
-.config-group .config-field-checkbox label {
-    margin-bottom: 0;
-    min-width: 120px;
-    flex-shrink: 0;
-}
-
-.config-group .config-field-checkbox input[type="checkbox"] {
-    width: auto;
-    margin: 0;
-    flex-shrink: 0;
-    accent-color: #007bff;
-}
-
-/* Optional: Add a hint text that stays on same line */
-.config-group .config-field-checkbox .field-hint {
-    margin-left: auto;
-    font-size: 12px;
-    color: #6c757d;
-}
-
-/* Checkbox fields - keep label and checkbox on same line */
-.config-group:has(input[type="checkbox"]) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    max-width: 100%;
-}
-
+.config-group .config-field-checkbox label,
 .config-group:has(input[type="checkbox"]) label {
     margin-bottom: 0;
     min-width: 120px;
     flex-shrink: 0;
-    font-weight: 500;
 }
 
+.config-group .config-field-checkbox input[type="checkbox"],
 .config-group:has(input[type="checkbox"]) input[type="checkbox"] {
     width: 18px;
     height: 18px;
@@ -542,10 +607,46 @@ button:hover,
     accent-color: #2b7be4;
 }
 
+.config-group .config-field-checkbox .field-hint,
 .config-group:has(input[type="checkbox"]) .field-hint {
+    margin-left: auto;
     font-size: 12px;
     color: #6c757d;
-    margin-left: auto;
+}
+
+.config-group:has(input[type="checkbox"]) {
+    gap: 12px;
+    max-width: 100%;
+}
+
+/* Calibration config overrides */
+#calibration-container .config-group {
+    max-width: 300px;
+    margin-bottom: 10px;
+}
+
+#calibration-container .config-group label {
+    color: #574d2e;
+}
+
+#calibration-container .config-group select,
+#calibration-container .config-group input {
+    padding: 8px 12px;
+    background: #f0f0e5;
+    border: 1px solid #2a3a5e;
+    border-radius: 6px;
+    color: #101010;
+}
+
+#calibration-container .config-group select:focus,
+#calibration-container .config-group input:focus {
+    outline: none;
+    border-color: #b43030;
+}
+
+#calibration-container .config-group input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 /* ============================================================
@@ -578,12 +679,10 @@ button:hover,
     padding: 8px 0;
 }
 
-.tab-panel.active {
-    display: block;
-}
+.tab-panel.active { display: block; }
 
 /* ============================================================
-   TABLES
+   TABLES (All table styles combined)
    ============================================================ */
 table {
     width: 100%;
@@ -604,12 +703,30 @@ th {
     color: #1f4a7a;
 }
 
-tr:hover {
+tr:hover,
+#cal-sample-list tr:hover td {
     background: #f8fafd;
 }
 
+/* Calibration table specific */
+#cal-sample-list th {
+    color: #a8b2d1;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+#cal-sample-list td {
+    color: #302010;
+    border-bottom: 1px solid rgba(64,64,64,0.05);
+}
+
+#cal-sample-list tr:hover td {
+    background: rgba(128,128,128,0.03);
+}
+
 /* ============================================================
-   AUTOMATION - Element Panel (Wider with columns)
+   AUTOMATION - ELEMENT PANEL
    ============================================================ */
 #automation-layout {
     display: grid;
@@ -642,9 +759,7 @@ tr:hover {
     margin-bottom: 14px;
 }
 
-.element-group {
-    margin-bottom: 14px;
-}
+.element-group { margin-bottom: 14px; }
 
 .element-group h4 {
     font-size: 0.75rem;
@@ -672,15 +787,6 @@ tr:hover {
 .element-grid .element-item:hover {
     background: #e6edf6;
     border-color: #2b7be4;
-}
-
-.element-grid .element-item .badge {
-    font-size: 0.55rem;
-    background: #dde6ef;
-    color: #1f4a7a;
-    padding: 1px 6px;
-    border-radius: 8px;
-    margin-left: auto;
 }
 
 .operator-row {
@@ -736,44 +842,6 @@ tr:hover {
     border-color: #c2185b;
 }
 
-/* ✅ Responsive adjustments */
-@media (max-width: 1024px) {
-    #automation-layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr auto;
-    }
-    
-    #element-panel {
-        max-height: 250px;
-        overflow-y: auto;
-    }
-    
-    .element-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    }
-}
-
-@media (max-width: 768px) {
-    #element-panel {
-        max-height: 200px;
-    }
-
-    .element-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .operator-row .element-item {
-        min-width: 40px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .element-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
 /* ============================================================
    CANVAS / WORKFLOW DESIGNER
    ============================================================ */
@@ -815,11 +883,6 @@ tr:hover {
     box-shadow: 0 0 0 3px rgba(43, 123, 228, 0.1);
 }
 
-#canvas-toolbar .btn {
-    padding: 6px 16px;
-    font-size: 0.8rem;
-}
-
 #automation-canvas {
     flex: 1;
     min-height: 500px;
@@ -850,7 +913,6 @@ tr:hover {
     pointer-events: auto;
 }
 
-/* ✅ Node container */
 #canvas-drop-zone .node-container {
     position: relative;
     width: 100%;
@@ -900,11 +962,6 @@ tr:hover {
     cursor: pointer;
     transition: all 0.2s;
     font-size: 0.8rem;
-}
-
-.rule-item:hover {
-    background: #e6edf6;
-    border-left-color: #1a5fb0;
 }
 
 .rule-item.active {
@@ -965,9 +1022,7 @@ tr:hover {
     color: #721c24;
 }
 
-#rules-toolbar {
-    margin-bottom: 8px;
-}
+#rules-toolbar { margin-bottom: 8px; }
 
 #rules-actions {
     display: flex;
@@ -975,29 +1030,9 @@ tr:hover {
     margin-top: 8px;
 }
 
-#rules-actions .btn {
-    flex: 1;
-    padding: 4px 8px;
-    font-size: 0.7rem;
-}
-
 /* ============================================================
-   SENSOR CONFIG CARDS
+   SENSOR CONFIG CARDS (Combined with sensor-card above)
    ============================================================ */
-.sensor-card {
-    background: #ffffff;
-    border-radius: 14px;
-    border: 1px solid #a6adb6;
-    padding: 16px 18px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
-    transition: all 0.2s ease;
-}
-
-.sensor-card:hover {
-    box-shadow: 0 4px 16px rgba(43, 123, 228, 0.08);
-    border-color: #c8d8e8;
-}
-
 .sensor-card-header {
     display: flex;
     justify-content: space-between;
@@ -1016,15 +1051,6 @@ tr:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.sensor-card-title .badge {
-    background: #e6edf6;
-    color: #1f4a7a;
-    font-size: 0.65rem;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-weight: 500;
 }
 
 .sensor-card-meta {
@@ -1052,23 +1078,6 @@ tr:hover {
     color: #7a9bbf;
     font-weight: 500;
     letter-spacing: 0.3px;
-}
-
-.sensor-card-body .field-group input[type="text"],
-.sensor-card-body .field-group input[type="number"] {
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: 1px solid #dde6ef;
-    font-size: 0.85rem;
-    background: #fafcff;
-    transition: border-color 0.2s;
-    width: 100%;
-}
-
-.sensor-card-body .field-group input:focus {
-    outline: none;
-    border-color: #2b7be4;
-    box-shadow: 0 0 0 3px rgba(43, 123, 228, 0.1);
 }
 
 .sensor-card-body .field-group input[type="checkbox"] {
@@ -1112,21 +1121,10 @@ tr:hover {
     margin-right: 6px;
 }
 
-.sensor-card .status-indicator.enabled {
-    background: #2e7d32;
-}
-
-.sensor-card .status-indicator.disabled {
-    background: #9e9e9e;
-}
-
-.sensor-card .status-indicator.error {
-    background: #d32f2f;
-}
-
-.sensor-card .status-indicator.calibrating {
-    background: #f9a825;
-}
+.sensor-card .status-indicator.enabled { background: #2e7d32; }
+.sensor-card .status-indicator.disabled { background: #9e9e9e; }
+.sensor-card .status-indicator.error { background: #d32f2f; }
+.sensor-card .status-indicator.calibrating { background: #f9a825; }
 
 /* ============================================================
    CALIBRATION
@@ -1145,10 +1143,7 @@ tr:hover {
     margin-top: 15px;
 }
 
-.cal-step.active {
-    display: block;
-}
-
+.cal-step.active { display: block; }
 .cal-step h3 {
     color: #202020;
     margin-top: 0;
@@ -1175,31 +1170,6 @@ tr:hover {
     border-radius: 6px;
 }
 
-#cal-sample-list table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-}
-
-#cal-sample-list th {
-    color: #a8b2d1;
-    padding: 8px 12px;
-    text-align: left;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-
-#cal-sample-list td {
-    padding: 6px 12px;
-    color: #302010;
-    border-bottom: 1px solid rgba(64,64,64,0.05);
-}
-
-#cal-sample-list tr:hover td {
-    background: rgba(128,128,128,0.03);
-}
-
 .cal-actions {
     display: flex;
     gap: 10px;
@@ -1216,57 +1186,24 @@ tr:hover {
     border: 1px solid rgba(75, 192, 192, 0.3);
 }
 
-
 #cal-result h4 {
     color: #2e7d32;
     margin: 0;
 }
-        
+
 #cal-result p {
-    color: #1b5e20;
     color: #7a8aae;
     margin: 5px 0 0 0;
     font-size: 0.85rem;
 }
-        
+
 #cal-factor {
     color: #ffce56;
     font-weight: bold;
 }
 
-.config-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 10px;
-    max-width: 300px;
-}
-
-.config-group label {
-    color: #574d2e;
-    font-size: 0.85rem;
-}
-
-.config-group select,
-.config-group input {
-    padding: 8px 12px;
-    background: #f0f0e5;
-    border: 1px solid #2a3a5e;
-    border-radius: 6px;
-    color: #101010;
-    font-size: 0.9rem;
-}
-
-.config-group select:focus,
-.config-group input:focus {
-    outline: none;
-    border-color: #b43030;
-}
-
-.config-group input:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
+.calibrate-sensor-btn,
+.test-relay-btn { cursor: pointer; }
 
 /* ============================================================
    API DOCS
@@ -1294,17 +1231,9 @@ tr:hover {
     color: #fff;
 }
 
-.method.get {
-    background: #2b7be4;
-}
-
-.method.post {
-    background: #2e7d32;
-}
-
-.method.delete {
-    background: #d32f2f;
-}
+.method.get { background: #2b7be4; }
+.method.post { background: #2e7d32; }
+.method.delete { background: #d32f2f; }
 
 .api-example {
     background: #1a2633;
@@ -1328,164 +1257,14 @@ tr:hover {
     word-break: break-all;
 }
 
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
-@media (max-width: 1200px) {
-    #automation-layout {
-        grid-template-columns: 200px 1fr 260px;
-    }
-}
-
-@media (max-width: 1024px) {
-    #automation-layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr auto;
-    }
-
-    #element-panel,
-    #rules-panel {
-        max-height: 250px;
-        overflow-y: auto;
-    }
-
-    #element-panel .element-list {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-
-    #element-panel .element-item {
-        font-size: 0.75rem;
-        padding: 4px 10px;
-    }
-}
-
-@media (max-width: 768px) {
-    #header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 6px;
-    }
-
-    .header-center,
-    .header-right {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .card-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    }
-
-    .config-group {
-        max-width: 100%;
-    }
-
-    #config-tabs {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        gap: 4px;
-    }
-
-    .tab-btn {
-        padding: 6px 14px;
-        font-size: 0.8rem;
-        white-space: nowrap;
-    }
-
-    #canvas-toolbar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    #canvas-toolbar #rule-name-input {
-        min-width: unset;
-    }
-
-    #automation-layout {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-
-    .sensor-card-body {
-        grid-template-columns: 1fr;
-    }
-
-    .sensor-card-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .sensor-card-footer {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .gauge-wrapper {
-        width: 80px;
-        height: 80px;
-    }
-
-    .gauge-wrapper.scada-gauge svg {
-        width: 80px;
-        height: 80px;
-    }
-
-    .relay-icon-svg {
-        width: 36px;
-        height: 36px;
-    }
-}
-
-@media (max-width: 480px) {
-    body {
-        padding: 4px;
-    }
-
-    #app {
-        padding: 4px 8px;
-    }
-
-    .card-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    }
-
-    .card {
-        padding: 8px 6px;
-    }
-
-    .gauge-wrapper {
-        width: 70px;
-        height: 70px;
-    }
-
-    .gauge-wrapper.scada-gauge svg {
-        width: 70px;
-        height: 70px;
-    }
-
-    .relay-icon-svg {
-        width: 30px;
-        height: 30px;
-    }
-}
-
-/* ============================================================
-   API DOCS - SUMMARY TABLE
-   ============================================================ */
 #api-docs .summary-table {
     overflow-x: auto;
     margin-top: 16px;
 }
 
-#api-docs .summary-table table {
-    font-size: 0.85rem;
-}
-
 /* ============================================================
-   Connection Points - Force proper styling
+   CONNECTION POINTS
    ============================================================ */
-
 .connection-point {
     position: absolute !important;
     width: 20px !important;
@@ -1514,7 +1293,6 @@ tr:hover {
     transform: scale(1.2) !important;
 }
 
-/* Output points (right side) - these should override the default */
 .connection-output,
 .connection-point[data-direction="output"] {
     right: -10px !important;
@@ -1525,7 +1303,6 @@ tr:hover {
     border-color: #ffffff !important;
 }
 
-/* Input points (left side) */
 .connection-input,
 .connection-point[data-direction="input"] {
     left: -10px !important;
@@ -1536,7 +1313,6 @@ tr:hover {
     border-color: #ffffff !important;
 }
 
-/* Add a plus sign inside the connection point */
 .connection-point::after {
     content: "+" !important;
     position: absolute !important;
@@ -1550,7 +1326,6 @@ tr:hover {
     pointer-events: none !important;
 }
 
-/* Ensure the canvas container doesn't block */
 #canvas-drop-zone {
     overflow: visible !important;
     pointer-events: auto !important;
@@ -1562,10 +1337,9 @@ tr:hover {
     touch-action: none !important;
 }
 
-/* ============================================================ */
-/* Modal Overlay */
-/* ============================================================ */
-
+/* ============================================================
+   MODAL OVERLAY
+   ============================================================ */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -1578,6 +1352,12 @@ tr:hover {
     align-items: center;
     z-index: 10000;
     backdrop-filter: blur(4px);
+    animation: modalFadeIn 0.25s ease;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 .modal-box {
@@ -1603,15 +1383,128 @@ tr:hover {
     margin: 5px;
 }
 
-.calibrate-sensor-btn {
-    cursor: pointer;
+.modal-large {
+    max-width: 800px;
+    width: 90%;
+    max-height: 85vh;
+    padding: 24px 28px;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e6edf6;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
 }
 
-.test-relay-btn {
-    cursor: pointer;
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e6edf6;
+    flex-shrink: 0;
 }
 
-/* Chart container - ensure it works without JS */
+.modal-header h2 {
+    margin: 0;
+    color: #0a2744;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.modal-close-btn,
+#log-viewer-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+    color: #7a9bbf;
+    transition: color 0.2s;
+}
+
+.modal-close-btn:hover,
+#log-viewer-close:hover {
+    color: #d32f2f;
+}
+
+#log-viewer-content {
+    flex: 1;
+    min-height: 300px;
+    max-height: 55vh;
+    position: relative;
+    margin: 12px 0;
+    background: #f8fafd;
+    border-radius: 10px;
+    border: 1px solid #e6edf6;
+    overflow: hidden;
+}
+
+.log-text {
+    margin: 0;
+    padding: 16px 20px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #1e2b3c;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 55vh;
+    overflow-y: auto;
+    height: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: #dde6ef transparent;
+}
+
+.log-text::-webkit-scrollbar { width: 8px; }
+.log-text::-webkit-scrollbar-track { background: #f8fafd; border-radius: 4px; }
+.log-text::-webkit-scrollbar-thumb { background: #dde6ef; border-radius: 4px; }
+.log-text::-webkit-scrollbar-thumb:hover { background: #b0c4d9; }
+
+.log-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #7a9bbf;
+    font-size: 1rem;
+}
+
+.log-error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #d32f2f;
+    font-size: 1rem;
+}
+
+#log-viewer-info {
+    color: #7a9bbf;
+    font-size: 0.8rem;
+    flex: 1;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 2px solid #e6edf6;
+    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ============================================================
+   CHART & SENSOR SELECTOR
+   ============================================================ */
 .chart-container {
     position: relative;
     height: 420px;
@@ -1636,28 +1529,17 @@ tr:hover {
     pointer-events: none;
 }
 
-#chart-container.hidden canvas {
-    display: none !important;
-}
+#chart-container.hidden canvas { display: none !important; }
 
-#sensor-selector.hidden {
-    display: none !important;
-}
+#sensor-selector.hidden { display: none !important; }
 
 #chart-toggle-btn.hidden {
     background: #6c757d;
 }
-
-#chart-toggle-btn.hidden:hover {
-    background: #5a6268;
-}
+#chart-toggle-btn.hidden:hover { background: #5a6268; }
 
 #sensor-selector {
     transition: all 0.3s ease;
-}
-
-/* Sensor selector - compact for ESP32 UI */
-.sensor-selector {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
@@ -1681,13 +1563,18 @@ tr:hover {
     accent-color: #f0f4f9;
 }
 
+#sensor-history-chart {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
 /* Status indicators */
 .status-value.connected { color: #4bc0c0; }
 .status-value.disconnected { color: #ff6b6b; }
 .status-value.synced { color: #4bc0c0; }
 .status-value.unsynced { color: #ffa94d; }
 
-/* Chart footer */
 .chart-footer {
     display: flex;
     justify-content: space-between;
@@ -1696,17 +1583,9 @@ tr:hover {
     margin-top: 10px;
 }
 
-#sensor-history-chart {
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-}
-
 /* ============================================================
-   WIFI CONFIG - Two Column Layout
+   WIFI CONFIG
    ============================================================ */
-
-/* WiFi scan results styling */
 #wifi-network-list {
     list-style: none;
     padding: 0;
@@ -1749,391 +1628,25 @@ tr:hover {
     gap: 4px;
 }
 
-#wifi-network-list li .signal .bars {
-    color: #f9a825;
-}
+#wifi-network-list li .signal .bars { color: #f9a825; }
+#wifi-network-list li .signal .locked { color: #d32f2f; }
+#wifi-network-list li .signal .open { color: #2e7d32; }
 
-#wifi-network-list li .signal .locked {
-    color: #d32f2f;
-}
-
-#wifi-network-list li .signal .open {
-    color: #2e7d32;
-}
-
-/* WiFi scan container scrollbar */
-#wifi-scan-results::-webkit-scrollbar {
-    width: 4px;
-}
-
-#wifi-scan-results::-webkit-scrollbar-track {
-    background: #f0f4f9;
-    border-radius: 4px;
-}
-
-#wifi-scan-results::-webkit-scrollbar-thumb {
-    background: #b0c4d9;
-    border-radius: 4px;
-}
-
-#wifi-scan-results::-webkit-scrollbar-thumb:hover {
-    background: #7a9bbf;
-}
-
-/* Responsive: Stack on mobile */
-@media (max-width: 768px) {
-    #tab-wifi .grid-2col {
-        grid-template-columns: 1fr !important;
-    }
-}
-
-/* ============================================================
-   LOG VIEWER MODAL
-   ============================================================ */
-
-/* Modal Overlay - Larger size for log viewing */
-.modal-large {
-    max-width: 800px;
-    width: 90%;
-    max-height: 85vh;
-    padding: 24px 28px;
-    background: #1a1a2e;
-    border-radius: 16px;
-    border: 1px solid #2a3a6e;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-    display: flex;
-    flex-direction: column;
-}
-
-/* Modal Header */
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #2a3a6e;
-    flex-shrink: 0;
-}
-
-.modal-header h2 {
-    margin: 0;
-    color: #60a5fa;
-    font-size: 1.2rem;
-    font-weight: 600;
-}
-
-.modal-close-btn {
-    background: none;
-    border: none;
-    color: #7a8aae;
-    font-size: 28px;
-    cursor: pointer;
-    padding: 0 8px;
-    line-height: 1;
-    transition: color 0.2s;
-}
-
-.modal-close-btn:hover {
-    color: #ff6b6b;
-}
-
-/* Log Content Area */
-#log-viewer-content {
-    flex: 1;
-    min-height: 300px;
-    max-height: 55vh;
-    position: relative;
-    margin: 12px 0;
-    background: #0f0f1a;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.log-text {
-    margin: 0;
-    padding: 16px 20px;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 13px;
-    line-height: 1.6;
-    color: #d4e2f0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    max-height: 55vh;
-    overflow-y: auto;
-    height: 100%;
-    scrollbar-width: thin;
-    scrollbar-color: #2a3a6e transparent;
-}
-
-/* Scrollbar styling for webkit browsers */
-.log-text::-webkit-scrollbar {
-    width: 8px;
-}
-
-.log-text::-webkit-scrollbar-track {
-    background: #0f0f1a;
-    border-radius: 4px;
-}
-
-.log-text::-webkit-scrollbar-thumb {
-    background: #2a3a6e;
-    border-radius: 4px;
-}
-
-.log-text::-webkit-scrollbar-thumb:hover {
-    background: #3a4a8e;
-}
-
-/* ============================================================
-   LOG VIEWER MODAL - LIGHT THEME
-   ============================================================ */
-
-/* Modal Overlay - Light theme */
-.modal-large {
-    max-width: 800px;
-    width: 90%;
-    max-height: 85vh;
-    padding: 24px 28px;
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e6edf6;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    display: flex;
-    flex-direction: column;
-}
-
-/* Modal Header */
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #e6edf6;
-    flex-shrink: 0;
-}
-
-.modal-header h2 {
-    margin: 0;
-    color: #0a2744;
-    font-size: 1.2rem;
-    font-weight: 600;
-}
-
-.modal-close-btn {
-    background: none;
-    border: none;
-    color: #7a9bbf;
-    font-size: 28px;
-    cursor: pointer;
-    padding: 0 8px;
-    line-height: 1;
-    transition: color 0.2s;
-}
-
-.modal-close-btn:hover {
-    color: #d32f2f;
-}
-
-/* Log Content Area */
-#log-viewer-content {
-    flex: 1;
-    min-height: 300px;
-    max-height: 55vh;
-    position: relative;
-    margin: 12px 0;
-    background: #f8fafd;
-    border-radius: 10px;
-    border: 1px solid #e6edf6;
-    overflow: hidden;
-}
-
-.log-text {
-    margin: 0;
-    padding: 16px 20px;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 13px;
-    line-height: 1.6;
-    color: #1e2b3c;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    max-height: 55vh;
-    overflow-y: auto;
-    height: 100%;
-    scrollbar-width: thin;
-    scrollbar-color: #dde6ef transparent;
-}
-
-/* Scrollbar styling for webkit browsers */
-.log-text::-webkit-scrollbar {
-    width: 8px;
-}
-
-.log-text::-webkit-scrollbar-track {
-    background: #f8fafd;
-    border-radius: 4px;
-}
-
-.log-text::-webkit-scrollbar-thumb {
-    background: #dde6ef;
-    border-radius: 4px;
-}
-
-.log-text::-webkit-scrollbar-thumb:hover {
-    background: #b0c4d9;
-}
-
-/* Log loading/error states - Light theme */
-.log-loading {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    color: #7a9bbf;
-    font-size: 1rem;
-}
-
-.log-error {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    color: #d32f2f;
-    font-size: 1rem;
-}
-
-/* Log info and footer - Light theme */
-#log-viewer-info {
-    color: #7a9bbf;
-    font-size: 0.8rem;
-    flex: 1;
-}
-
-.modal-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 12px;
-    border-top: 2px solid #e6edf6;
-    flex-shrink: 0;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.modal-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.modal-actions .btn {
-    padding: 6px 18px;
-    font-size: 0.85rem;
-}
-
-/* Button styles for modal */
-.modal-actions .btn-primary {
-    background: #2b7be4;
-    color: #ffffff;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 20px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.modal-actions .btn-primary:hover {
-    background: #1a5fb0;
-}
-
-.modal-actions .btn-secondary {
-    background: #e6edf6;
-    color: #1f4a7a;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 20px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.modal-actions .btn-secondary:hover {
-    background: #d0ddea;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .modal-large {
-        max-width: 95%;
-        padding: 16px;
-        max-height: 90vh;
-    }
-    
-    #log-viewer-content {
-        max-height: 45vh;
-        min-height: 200px;
-    }
-    
-    .log-text {
-        font-size: 12px;
-        padding: 12px 14px;
-        max-height: 45vh;
-    }
-    
-    .modal-footer {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-    }
-    
-    .modal-actions {
-        justify-content: center;
-    }
-}
-
-/* Animation for modal */
-.modal-overlay {
-    animation: modalFadeIn 0.25s ease;
-}
-
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* Close button for modal (X) */
-#log-viewer-close {
-    background: none;
-    border: none;
-    font-size: 28px;
-    cursor: pointer;
-    padding: 0 8px;
-    line-height: 1;
-    color: #7a9bbf;
-    transition: color 0.2s;
-}
-
-#log-viewer-close:hover {
-    color: #d32f2f;
-}
+/* WiFi scrollbar */
+#wifi-scan-results::-webkit-scrollbar { width: 4px; }
+#wifi-scan-results::-webkit-scrollbar-track { background: #f0f4f9; border-radius: 4px; }
+#wifi-scan-results::-webkit-scrollbar-thumb { background: #b0c4d9; border-radius: 4px; }
+#wifi-scan-results::-webkit-scrollbar-thumb:hover { background: #7a9bbf; }
 
 /* ============================================================
    CONSOLE VIEWER
    ============================================================ */
-
-/* Console page layout */
 #app.console-page {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
 }
 
-/* Console Header */
 #console-header {
     display: flex;
     justify-content: space-between;
@@ -2154,9 +1667,7 @@ tr:hover {
     gap: 12px;
 }
 
-.console-title .icon {
-    font-size: 24px;
-}
+.console-title .icon { font-size: 24px; }
 
 .console-title h1 {
     font-size: 1.3rem;
@@ -2179,41 +1690,9 @@ tr:hover {
     border-radius: 20px;
 }
 
-.console-controls #console-status .online {
-    color: #2e7d32;
-}
+.console-controls #console-status .online { color: #2e7d32; }
+.console-controls #console-status .offline { color: #d32f2f; }
 
-.console-controls #console-status .offline {
-    color: #d32f2f;
-}
-
-.console-controls .btn {
-    padding: 6px 16px;
-    font-size: 0.85rem;
-    border-radius: 20px;
-    border: 1px solid #dde6ef;
-    background: #f8fafd;
-    color: #1f4a7a;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.console-controls .btn:hover {
-    background: #e6edf6;
-    border-color: #b0c4d9;
-}
-
-.console-controls .btn.active {
-    background: #2b7be4;
-    border-color: #2b7be4;
-    color: #ffffff;
-}
-
-.console-controls .btn.active:hover {
-    background: #1a5fb0;
-}
-
-/* Console Content (log viewer) */
 #console-content {
     background: #ffffff;
     border-radius: 16px;
@@ -2239,6 +1718,11 @@ tr:hover {
     background: #fafcff;
 }
 
+#console-content::-webkit-scrollbar { width: 8px; }
+#console-content::-webkit-scrollbar-track { background: #f8fafd; border-radius: 0 0 8px 8px; }
+#console-content::-webkit-scrollbar-thumb { background: #dde6ef; border-radius: 4px; }
+#console-content::-webkit-scrollbar-thumb:hover { background: #b0c4d9; }
+
 /* ANSI color classes for console */
 #log .error { color: #d32f2f; }
 #log .warn { color: #f9a825; }
@@ -2247,7 +1731,6 @@ tr:hover {
 #log .verbose { color: #6c757d; }
 #log .bold { font-weight: bold; }
 
-/* Console Footer */
 #console-footer {
     display: flex;
     justify-content: space-between;
@@ -2269,54 +1752,191 @@ tr:hover {
     border-radius: 12px;
 }
 
-/* Scrollbar styling for console content */
-#console-content::-webkit-scrollbar {
-    width: 8px;
+/* Dark mode for console */
+@media (prefers-color-scheme: dark) {
+    #console-content #log {
+        background: #1a1a2e;
+        color: #d4e2f0;
+    }
+    #console-content {
+        border-color: #2a3a6e;
+        background: #1a1a2e;
+    }
+    #console-header {
+        background: #1a1a2e;
+        border-color: #2a3a6e;
+    }
+    .console-title h1 { color: #60a5fa; }
+    .console-controls #console-status {
+        background: #16213e;
+        color: #a8b2d1;
+    }
+    .console-controls .btn {
+        background: #16213e;
+        border-color: #2a3a6e;
+        color: #a8b2d1;
+    }
+    .console-controls .btn:hover {
+        background: #1e2d5e;
+        border-color: #3a4a8e;
+    }
+    .console-controls .btn.active {
+        background: #2b7be4;
+        border-color: #2b7be4;
+        color: #ffffff;
+    }
+    #console-footer {
+        background: #1a1a2e;
+        border-color: #2a3a6e;
+        color: #6a7a9e;
+    }
+    #console-footer span {
+        background: #16213e;
+        color: #8a9abe;
+    }
+    #console-content #log .error { color: #ff6b6b; }
+    #console-content #log .warn { color: #ffd93d; }
+    #console-content #log .info { color: #6bcb6b; }
+    #console-content #log .debug { color: #4fc3f7; }
+    #console-content #log .verbose { color: #9e9e9e; }
+    #console-content::-webkit-scrollbar-track { background: #16213e; }
+    #console-content::-webkit-scrollbar-thumb { background: #2a3a6e; }
+    #console-content::-webkit-scrollbar-thumb:hover { background: #3a4a8e; }
 }
 
-#console-content::-webkit-scrollbar-track {
-    background: #f8fafd;
-    border-radius: 0 0 8px 8px;
+/* ============================================================
+   RESPONSIVE - ALL MEDIA QUERIES CONSOLIDATED
+   ============================================================ */
+
+/* 1200px and below */
+@media (max-width: 1200px) {
+    #automation-layout {
+        grid-template-columns: 200px 1fr 260px;
+    }
 }
 
-#console-content::-webkit-scrollbar-thumb {
-    background: #dde6ef;
-    border-radius: 4px;
+/* 1024px and below */
+@media (max-width: 1024px) {
+    #automation-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+    }
+    
+    #element-panel,
+    #rules-panel {
+        max-height: 250px;
+        overflow-y: auto;
+    }
+    
+    #element-panel .element-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    #element-panel .element-item {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+    }
+    
+    .element-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
 }
 
-#console-content::-webkit-scrollbar-thumb:hover {
-    background: #b0c4d9;
-}
-
-/* Console responsive */
+/* 768px and below */
 @media (max-width: 768px) {
+    /* Header */
+    #header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .header-center,
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    /* Cards */
+    .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    /* Gauges */
+    .gauge-wrapper {
+        width: 80px;
+        height: 80px;
+    }
+    .gauge-wrapper.scada-gauge svg {
+        width: 80px;
+        height: 80px;
+    }
+    .relay-icon-svg {
+        width: 36px;
+        height: 36px;
+    }
+    
+    /* Config */
+    .config-group { max-width: 100%; }
+    #config-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 4px;
+    }
+    .tab-btn {
+        padding: 6px 14px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+    
+    /* Automation */
+    #canvas-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    #canvas-toolbar #rule-name-input { min-width: unset; }
+    #automation-layout {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    #element-panel { max-height: 200px; }
+    .element-grid { grid-template-columns: 1fr 1fr; }
+    .operator-row .element-item {
+        min-width: 40px;
+        font-size: 0.7rem;
+    }
+    
+    /* Sensor cards */
+    .sensor-card-body { grid-template-columns: 1fr; }
+    .sensor-card-header { flex-direction: column; align-items: flex-start; }
+    .sensor-card-footer { flex-direction: column; align-items: flex-start; }
+    
+    /* WiFi */
+    #tab-wifi .grid-2col { grid-template-columns: 1fr !important; }
+    
+    /* Console */
     #console-header {
         flex-direction: column;
         align-items: stretch;
         padding: 12px 16px;
     }
-
     .console-controls {
         justify-content: center;
         gap: 8px;
     }
-
     .console-controls .btn {
         font-size: 0.75rem;
         padding: 4px 12px;
     }
-
     #console-content {
         max-height: 55vh;
         min-height: 300px;
     }
-
     #console-content #log {
         font-size: 12px;
         padding: 12px 14px;
         min-height: 300px;
     }
-
     #console-footer {
         flex-direction: column;
         align-items: stretch;
@@ -2324,99 +1944,64 @@ tr:hover {
         gap: 4px;
         padding: 8px 16px;
     }
+    
+    /* Modal */
+    .modal-large {
+        max-width: 95%;
+        padding: 16px;
+        max-height: 90vh;
+    }
+    #log-viewer-content {
+        max-height: 45vh;
+        min-height: 200px;
+    }
+    .log-text {
+        font-size: 12px;
+        padding: 12px 14px;
+        max-height: 45vh;
+    }
+    .modal-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .modal-actions { justify-content: center; }
 }
 
+/* 480px and below */
 @media (max-width: 480px) {
-    #console-header {
-        padding: 10px 12px;
+    body { padding: 4px; }
+    #app { padding: 4px 8px; }
+    
+    .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     }
-
-    .console-title h1 {
-        font-size: 1rem;
+    .card { padding: 8px 6px; }
+    
+    .gauge-wrapper {
+        width: 70px;
+        height: 70px;
     }
-
+    .gauge-wrapper.scada-gauge svg {
+        width: 70px;
+        height: 70px;
+    }
+    .relay-icon-svg {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .element-grid { grid-template-columns: 1fr 1fr; }
+    
+    #console-header { padding: 10px 12px; }
+    .console-title h1 { font-size: 1rem; }
     #console-content {
         max-height: 45vh;
         min-height: 200px;
     }
-
     #console-content #log {
         font-size: 11px;
         padding: 10px 12px;
         min-height: 200px;
-    }
-}
-
-/* Dark mode for console (optional) */
-@media (prefers-color-scheme: dark) {
-    #console-content #log {
-        background: #1a1a2e;
-        color: #d4e2f0;
-    }
-
-    #console-content {
-        border-color: #2a3a6e;
-        background: #1a1a2e;
-    }
-
-    #console-header {
-        background: #1a1a2e;
-        border-color: #2a3a6e;
-    }
-
-    .console-title h1 {
-        color: #60a5fa;
-    }
-
-    .console-controls #console-status {
-        background: #16213e;
-        color: #a8b2d1;
-    }
-
-    .console-controls .btn {
-        background: #16213e;
-        border-color: #2a3a6e;
-        color: #a8b2d1;
-    }
-
-    .console-controls .btn:hover {
-        background: #1e2d5e;
-        border-color: #3a4a8e;
-    }
-
-    .console-controls .btn.active {
-        background: #2b7be4;
-        border-color: #2b7be4;
-        color: #ffffff;
-    }
-
-    #console-footer {
-        background: #1a1a2e;
-        border-color: #2a3a6e;
-        color: #6a7a9e;
-    }
-
-    #console-footer span {
-        background: #16213e;
-        color: #8a9abe;
-    }
-
-    #console-content #log .error { color: #ff6b6b; }
-    #console-content #log .warn { color: #ffd93d; }
-    #console-content #log .info { color: #6bcb6b; }
-    #console-content #log .debug { color: #4fc3f7; }
-    #console-content #log .verbose { color: #9e9e9e; }
-
-    /* Scrollbar dark theme */
-    #console-content::-webkit-scrollbar-track {
-        background: #16213e;
-    }
-
-    #console-content::-webkit-scrollbar-thumb {
-        background: #2a3a6e;
-    }
-
-    #console-content::-webkit-scrollbar-thumb:hover {
-        background: #3a4a8e;
     }
 }

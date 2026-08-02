@@ -222,6 +222,21 @@ function addNode(type, sourceId, x, y, params) {
     return node;
 }
 
+function getNodeDimensions(nodeId) {
+    const nodeElement = document.querySelector(`[data-node-id="${nodeId}"]`);
+    if (!nodeElement) return null;
+    
+    const rect = nodeElement.getBoundingClientRect();
+    return {
+        width: rect.width,
+        height: rect.height,
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom
+    };
+}
+
 // ============================================================
 // Render Workflow
 // ============================================================
@@ -295,13 +310,13 @@ function renderWorkflow() {
         // SOURCE: Right side of the node (where the + button is)
         // The node width is ~140px (120px min-width + 20px padding)
         // The + button is at right: -10px, so we use node.x + node width
-        const fromX = fromNode.x + 140 -15;  // Right edge of the node
+        const fromX = fromNode.x + 140 - 15;  // Right edge of the node
         const fromY = fromNode.y + 30 + 15;   // Vertically centered (half of ~60px height)
         
         // TARGET: Left side of the node (where the connection should enter)
         // The + button is NOT on the target, so we use the left edge
         const toX = toNode.x;            // Left edge of the node
-        const toY = toNode.y + 30 + 15;       // Vertically centered
+        const toY = toNode.y + getNodeDimensions(toNode.id).height / 2;       // Vertically centered
         
         // ============================================================
         // Draw the line
@@ -698,8 +713,8 @@ function updateTempLine(clientX, clientY) {
     if (!sourceNode) return;
     
     // Calculate source position (right side of the node)
-    const sourceX = containerRect.left + sourceNode.x + 140 - 15;
-    const sourceY = containerRect.top + sourceNode.y + 30 + 15;
+    const sourceX = containerRect.left + sourceNode.x + getNodeDimensions(fromNode.id).width - 15;
+    const sourceY = containerRect.top + sourceNode.y + getNodeDimensions(fromNode.id).height + 15;
     
     const dx = clientX - sourceX;
     const dy = clientY - sourceY;

@@ -273,6 +273,10 @@ function Minify-CSS {
         # Remove CSS comments (preserve important ones)
         $content = $content -replace '/\*.*?\*/', ''
         
+        # Remove multi-line comments
+        $content = $content -replace '(?s)/\*.*?\*/', ''
+        $content = $content -replace "/\*.*?\*/", ""
+
         # Remove whitespace
         $content = $content -replace '\s+', ' '
         

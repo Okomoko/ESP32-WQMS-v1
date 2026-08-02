@@ -119,12 +119,8 @@ function renderSCADAGauge(value, unit, safeMin, safeMax, isDisabled, label) {
                 <!-- Ticks -->
                 ${ticks}
                 <!-- Value -->
-                <text x="60" y="58" text-anchor="middle" fill="#e0e8f0" font-size="22" font-weight="750">${displayValue}</text>
-                <text x="60" y="74" text-anchor="middle" fill="#8899bb" font-size="14">${unit}</text>
-                <!-- Safe range text -->
-                ${!isDisabled && safeMin !== undefined && safeMax !== undefined ? 
-                    `<text x="60" y="94" text-anchor="middle" fill="#6a7a9e" font-size="5">${safeMin.toFixed(1)} - ${safeMax.toFixed(1)}</text>` : 
-                    `<text x="60" y="90" text-anchor="middle" fill="#6a7a9e" font-size="6">${label || ''}</text>`}
+                <text x="60" y="65" text-anchor="middle" fill="#e0e8f0" font-size="25" font-weight="750">${displayValue}</text>
+                <text x="60" y="84" text-anchor="middle" fill="#8899bb" font-size="16">${unit}</text>
             </svg>
         </div>
     `;

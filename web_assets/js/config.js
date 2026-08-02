@@ -147,7 +147,14 @@ async function loadRelayConfig() {
         list.innerHTML = relays.map(r => `
             <div style="background:#fff; border-radius:12px; border:1px solid #e6edf6; padding:14px 16px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid #f0f4f9; padding-bottom:8px; margin-bottom:8px;">
-                    <strong style="color:#0a2744;">${r.name || 'Relay ' + r.id}</strong>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <strong style="color:#0a2744;">${r.name || 'Relay ' + r.id}</strong>
+                        <label style="font-size:0.75rem; color:#7a9bbf; display:flex; align-items:center; gap:6px;">
+                            <span>Enabled</span>
+                            <input type="checkbox" ${r.enabled !== false ? 'checked' : ''} data-id="${r.id}" class="relay-enabled-check">
+                        </label>
+                        <span class="test-relay-btn" data-id="${r.id}" style="font-size:0.7rem; color:#7a9bbf;">${r.enabled === true ? 'Test for '+(RelayTestDuration/1000)+' seconds' : ''}</span>
+                    </div>
                     <span style="font-size:0.75rem; color:#7a9bbf;">PIN: ${r.gpio_pin || '--'} | MODBUS: 0x1${(r.modbus_register || 0).toString(16).toUpperCase().padStart(1, '0')}</span>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:8px;">
@@ -167,13 +174,6 @@ async function loadRelayConfig() {
                         <label style="font-size:0.7rem; color:#7a9bbf;">Off-delay (ms)</label>
                         <input type="number" value="${r.off_delay_ms || 50}" data-id="${r.id}" class="relay-offdelay-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
-                </div>
-                <div style="display:flex; align-items:center; margin-top:8px; gap:12px;">
-                    <label style="font-size:0.75rem; color:#7a9bbf; display:flex; align-items:center; gap:6px;">
-                        <span>Enabled</span>
-                        <input type="checkbox" ${r.enabled !== false ? 'checked' : ''} data-id="${r.id}" class="relay-enabled-check">
-                    </label>
-                    <span class="test-relay-btn" data-id="${r.id}" style="font-size:0.7rem; color:#7a9bbf;">${r.enabled === true ? 'Test for '+(RelayTestDuration/1000)+' seconds' : ''}</span>
                 </div>
             </div>
         `).join('');
