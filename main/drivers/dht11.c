@@ -185,7 +185,7 @@ void dht11_power_up(void) {
     
     dht11_set_output();
     dht11_write(1);
-    vTaskDelay(pdMS_TO_TICKS(5000));  // Wait 5 seconds for stabilization
+    vTaskDelay(pdMS_TO_TICKS(2000));  // Wait 2 seconds for stabilization
     dht11_powered = 1;
     SENSOR_LOG_D("DHT11 powered up and stable");
 }

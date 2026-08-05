@@ -23,12 +23,12 @@
 #define NVS_KEY_SAMPLE_INTERVAL          "samp_int"
 #define NVS_KEY_CONFIG_VERSION           "cfg_ver"
 #define NVS_KEY_AUTOMATION_INT           "auto_int"
-#define NVS_KEY_SUPABASE_SENSOR_URL      "sensor_url"
-#define NVS_KEY_SUPABASE_LOG_URL         "log_url"
+#define NVS_KEY_SUPABASE_PROJECT_URL     "project_url"
+#define NVS_KEY_SUPABASE_BUCKET_NAME     "bucket_name"
 #define NVS_KEY_SUPABASE_API_KEY         "api_key"
 #define NVS_KEY_SUPABASE_UPLOAD_INTERVAL "upload_int"
-#define NVS_KEY_SUPABASE_CERT            "sup_cert"      // Blob storage for certificate
-#define NVS_KEY_SUPABASE_CERT_LEN        "sup_cert_len"  // Certificate length
+#define NVS_KEY_SUPABASE_CERT            "sup_cert"
+#define NVS_KEY_SUPABASE_CERT_LEN        "sup_cert_len"
 #define NVS_KEY_EMAIL_CERT               "email_cert"
 #define NVS_KEY_EMAIL_CERT_LEN           "email_cert_len"
 
@@ -74,12 +74,18 @@ uint32_t nvs_get_automation_interval(void);
 void nvs_set_automation_interval(uint32_t sec);
 
 // Supabase configuration
-const char* nvs_get_supabase_sensor_url(void);
-const char* nvs_get_supabase_log_url(void);
+const char* nvs_get_supabase_project_url(void);
+const char* nvs_get_supabase_bucket_name(void);
+void nvs_get_supabase_bucketlist_url(char*, size_t);
+void nvs_get_supabase_bucketdownload_url(char*, size_t);
+void nvs_get_supabase_sensor_url(char*, size_t);
+void nvs_get_supabase_log_url(char*, size_t);
+void nvs_get_supabase_sensorconfig_url(char*, size_t);
+void nvs_get_supabase_systemconfig_url(char*, size_t);
 const char* nvs_get_supabase_api_key(void);
 uint32_t nvs_get_supabase_upload_interval(void);
-void nvs_set_supabase_sensor_url(const char *url);
-void nvs_set_supabase_log_url(const char *url);
+void nvs_set_supabase_project_url(const char *url);
+void nvs_set_supabase_bucket_name(const char *url);
 void nvs_set_supabase_api_key(const char *key);
 void nvs_set_supabase_upload_interval(uint32_t sec);
 bool nvs_supabase_is_configured(void);

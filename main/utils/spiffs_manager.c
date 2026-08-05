@@ -14,19 +14,20 @@
 #include "system_config.h"
 
 // ============================================================
-// Static Variables
+// Global Variables - Definition
 // ============================================================
-static int spiffs_logs_mounted = 0;
-static int spiffs_sensors_mounted = 0;
+int spiffs_logs_mounted = 0;
+int spiffs_sensors_mounted = 0;
+int spiffs_web_assets_mounted = 0;
 
 // ============================================================
 // Internal Functions
 // ============================================================
-static esp_err_t mount_spiffs(const char *partition, const char *mount_point, int *mounted_flag) {
+static esp_err_t mount_spiffs(const char *partition, const char *mount_point, int *mounted_flag, int max_files) {
     esp_vfs_spiffs_conf_t conf = {
         .base_path = mount_point,
         .partition_label = partition,
-        .max_files = 10,
+        .max_files = max_files,
         .format_if_mount_failed = true
     };
     
@@ -48,7 +49,11 @@ static esp_err_t mount_spiffs(const char *partition, const char *mount_point, in
         WQMS_LOG_D("SPIFFS %s mounted: total=%lu, used=%lu", partition, total, used);
         *mounted_flag = 1;
     }
-    
+    int gcsize = 4096;
+    while (((ret = esp_spiffs_gc(partition, gcsize)) == ESP_ERR_NOT_FINISHED) && gcsize > 128) {
+        gcsize = gcsize >> 1;
+    }
+    WQMS_LOG_D("SPIFFS %s garbage collection is initiated, returns code is %i.", partition, ret);
     return ret;
 }
 
@@ -61,22 +66,30 @@ esp_err_t format_spiffs(const char *partition_label) {
 // ============================================================
 
 void spiffs_init(void) {
+
     // Mount logs partition
-    mount_spiffs("logs", "/spiffs/logs", &spiffs_logs_mounted);
+    mount_spiffs(LOG_PARTITION_NAME, LOG_BASE_PATH, &spiffs_logs_mounted, 10);
     
     // Mount sensors partition
-    mount_spiffs("sensors", "/spiffs/sensors", &spiffs_sensors_mounted);
+    mount_spiffs(SENSOR_PARTITION_NAME, SENSOR_BASE_PATH, &spiffs_sensors_mounted, 10);
     
+    // Mount sensors partition
+    mount_spiffs(WEB_PARTITION_NAME, WEB_BASE_PATH, &spiffs_web_assets_mounted, 50);
+
     // Create directories if needed
     if (spiffs_logs_mounted) {
-        mkdir("/spiffs/logs", 0777);
+        mkdir(LOG_BASE_PATH, 0777);
         WQMS_LOG_D("Logs directory ready");
     }
     if (spiffs_sensors_mounted) {
-        mkdir("/spiffs/sensors", 0777);
+        mkdir(SENSOR_BASE_PATH, 0777);
         WQMS_LOG_D("Sensors directory ready");
     }
     
+    if (spiffs_web_assets_mounted) {
+        WQMS_LOG_D("Web assets directory ready");
+    }
+
     WQMS_LOG_I("SPIFFS initialized (logs + sensors)");
 }
 

@@ -167,7 +167,13 @@ void app_main(void) {
     }
 
     // ============================================================
-    // Step 10: Start eMail Client
+    // Step 10: Start Web Server
+    // ============================================================
+    webserver_init();
+//    WQMS_LOG_I("Web server initialized");
+
+    // ============================================================
+    // Step 11: Start eMail Client
     // ============================================================
 //vTaskDelay(pdMS_TO_TICKS(30000));
     email_client_init();
@@ -195,12 +201,6 @@ void app_main(void) {
         WQMS_LOG_E("Reboot notification cannot be sent.");
     }
 
-    // ============================================================
-    // Step 11: Start Web Server
-    // ============================================================
-    webserver_init();
-//    WQMS_LOG_I("Web server initialized");
-    
     // ============================================================
     // Step 12: Start Relay Control
     // ============================================================

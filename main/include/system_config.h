@@ -103,10 +103,10 @@ GND     38         -    Power    Ground
 // ============================================================
 // Relay Configuration
 // ============================================================
-#define RELAY_MIN_DURATION_MS     50      // Minimum 50ms (safe for mechanical)
-#define RELAY_MAX_DURATION_MS     60000   // Maximum 60 seconds
-#define RELAY_DEFAULT_DURATION_MS 100     // Default 100ms (safe for all)
-#define RELAY_DEFAULT_OFFDELAY_MS 5000    // Default 5000ms to allow re-trigger the same relay
+#define RELAY_MIN_DURATION_MS           50      // Minimum 50ms (safe for mechanical)
+#define RELAY_MAX_DURATION_MS        60000   // Maximum 60 seconds
+#define RELAY_DEFAULT_DURATION_MS      100     // Default 100ms (safe for all)
+#define RELAY_DEFAULT_OFFDELAY_MS     5000    // Default 5000ms to allow re-trigger the same relay
 
 // ============================================================
 // Sensor History Configuration (32 days fixed)
@@ -117,14 +117,14 @@ GND     38         -    Power    Ground
 #define HISTORY_MAX_RECORDS_PER_PAGE  (3* HISTORY_SAMPLES_PER_DAY)
 #define SENSOR_RECORD_SIZE            26
 #define HISTORY_FILE_SIZE             (HISTORY_MAX_RECORDS * SENSOR_RECORD_SIZE)
-#define HISTORY_FILE                  "/spiffs/sensors/history.dat"
-#define INDEX_FILE                    "/spiffs/sensors/index.dat"
+#define HISTORY_FILE                  SENSOR_BASE_PATH "history.dat"
+#define INDEX_FILE                    SENSOR_BASE_PATH "index.dat"
 
 // ============================================================
 // Logging Configuration
 // ============================================================
 #define LOG_FILE_MAX_SIZE                 (1024 * 1024)  // 1MB
-#define LOG_FILE_PATH                     "/spiffs/logs/system.log"
+#define LOG_FILE_PATH                     LOG_BASE_PATH "/system.log"
 #define LOG_METADATA_SIZE                 16  // Header size
 #define LOG_READ_CHUNK_SIZE               256 // Read chunk size for streaming
 #define LOG_MSG_LEN                       256
@@ -179,10 +179,14 @@ GND     38         -    Power    Ground
 // ============================================================
 // Supabase Constants
 // ============================================================
-#define HTTP_TIMEOUT_MS       10000
-#define MAX_LOG_BATCH_SIZE        1
-#define MAX_SENSOR_BATCH_SIZE     5
-#define SUPABASE_UPLOAD_INTERVAL 60
+#define HTTP_TIMEOUT_MS                        10000
+#define MAX_LOG_BATCH_SIZE                         1
+#define MAX_SENSOR_BATCH_SIZE                      5
+#define SUPABASE_UPLOAD_INTERVAL                  60
+#define SUPABASE_SENSOR_TABLE      "sensor_readings"
+#define SUPABASE_LOGS_TABLE            "system_logs"
+#define SUPABASE_SYSTEMCONFIG_TABLE  "system_config"
+#define SUPABASE_SENSORCONFIG_TABLE  "sensor_config"
 
 // ============================================================
 // Task Stack Sizes
@@ -190,14 +194,28 @@ GND     38         -    Power    Ground
 #define STACK_SIZE_MAIN              8192
 #define STACK_SIZE_SENSOR            4096
 #define STACK_SIZE_RELAY             1024
-#define STACK_SIZE_MODBUS            8192
-#define STACK_SIZE_WIFI              3072
+#define STACK_SIZE_MODBUS            4096 // 8192
+#define STACK_SIZE_WIFI              2048
 #define STACK_SIZE_NTP               4096
 #define STACK_SIZE_WATCHDOG          1024
-#define STACK_SIZE_WEBSERVER         8192
-#define STACK_SIZE_AUTOMATION       16384
+#define STACK_SIZE_WEBSERVER         6144 // 8192
+#define STACK_SIZE_AUTOMATION        8192 // 16384
 #define STACK_SIZE_LOGGING           1024
-#define STACK_SIZE_SUPABASE_UPLOAD  16384
+#define STACK_SIZE_SUPABASE_UPLOAD  12288 // 16384
+
+// ============================================================
+// Partition Configuration
+// ============================================================
+#define WEB_PARTITION_NAME "web_assets"
+#define WEB_BASE_PATH ""
+#define LOG_PARTITION_NAME "logs"
+#define LOG_BASE_PATH "/spiffs/logs"
+#define SENSOR_PARTITION_NAME "sensors"
+#define SENSOR_BASE_PATH "/spiffs/sensors"
+#define IoT_UPDATE_PATH "web_assets.min/" // needs to end with forward slash
+extern int spiffs_logs_mounted;
+extern int spiffs_sensors_mounted;
+extern int spiffs_web_assets_mounted;
 
 // ============================================================
 // Task Priorities

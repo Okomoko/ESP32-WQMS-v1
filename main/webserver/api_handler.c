@@ -335,10 +335,6 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
         return ESP_FAIL;
     }
-    
-    API_LOG_D("=0=");
-    API_LOG_D("%.200s", buffer);
-    API_LOG_D("=0=");
 
     cJSON *sensors = cJSON_GetObjectItem(json, "sensors");
     if (!sensors || !cJSON_IsArray(sensors)) {
@@ -650,8 +646,8 @@ esp_err_t config_get_handler(httpd_req_t *req) {
     cJSON_AddStringToObject(root, "system_name", nvs_get_system_name());
     cJSON_AddStringToObject(root, "system_location", nvs_get_system_location());
     cJSON_AddNumberToObject(root, "sample_interval_ms", nvs_get_sample_interval());
-    cJSON_AddStringToObject(root, "supabase_sensor_url", nvs_get_supabase_sensor_url());
-    cJSON_AddStringToObject(root, "supabase_log_url", nvs_get_supabase_log_url());
+    cJSON_AddStringToObject(root, "supabase_project_url", nvs_get_supabase_project_url());
+    cJSON_AddStringToObject(root, "supabase_bucket_name", nvs_get_supabase_bucket_name());
     cJSON_AddStringToObject(root, "supabase_api_key", nvs_get_supabase_api_key());
     cJSON_AddNumberToObject(root, "supabase_upload_interval", nvs_get_supabase_upload_interval());
     cJSON_AddNumberToObject(root, "automation_interval_sec", nvs_get_automation_interval());
@@ -701,16 +697,16 @@ esp_err_t config_post_handler(httpd_req_t *req) {
         API_LOG_D("Sample interval updated to: %d ms", item->valueint);
     }
 
-    item = cJSON_GetObjectItem(json, "supabase_sensor_url");
+    item = cJSON_GetObjectItem(json, "supabase_project_url");
     if (item && cJSON_IsString(item)) {
-        nvs_set_supabase_sensor_url(item->valuestring);
-        API_LOG_D("Supabase Sensor URL updated to: %s", item->valuestring);
+        nvs_set_supabase_project_url(item->valuestring);
+        API_LOG_D("Supabase Project URL updated to: %s", item->valuestring);
     }
     
-    item = cJSON_GetObjectItem(json, "supabase_log_url");
+    item = cJSON_GetObjectItem(json, "supabase_bucket_name");
     if (item && cJSON_IsString(item)) {
-        nvs_set_supabase_log_url(item->valuestring);
-        API_LOG_D("Supabase Log URL updated to: %s", item->valuestring);
+        nvs_set_supabase_bucket_name(item->valuestring);
+        API_LOG_D("Supabase Bucket Name updated to: %s", item->valuestring);
     }
     
     item = cJSON_GetObjectItem(json, "supabase_api_key");
@@ -1515,7 +1511,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         
         // For other log files (legacy, old logs, etc.)
         char path[128];
-        snprintf(path, sizeof(path), "/spiffs/logs/%.100s", name);
+        snprintf(path, sizeof(path), LOG_BASE_PATH "/%.100s", name);
         
         FILE *f = fopen(path, "r");
         if (!f) {
@@ -1588,7 +1584,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
     cJSON_AddItemToArray(logs_array, system_log);
     
     // Then scan for any other log files in the directory
-    DIR *dir = opendir("/spiffs/logs");
+    DIR *dir = opendir(LOG_BASE_PATH);
     if (dir) {
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
@@ -1598,7 +1594,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
                 if (strcmp(entry->d_name, "system.old") == 0) continue;
                 
                 char path[128];
-                snprintf(path, sizeof(path), "/spiffs/logs/%.100s", entry->d_name);
+                snprintf(path, sizeof(path), LOG_BASE_PATH "/%.100s", entry->d_name);
                 struct stat st;
                 if (stat(path, &st) == 0) {
                     cJSON *log = cJSON_CreateObject();
@@ -1612,7 +1608,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         }
         closedir(dir);
     }
-    
+
     cJSON_AddItemToObject(root, "logs", logs_array);
     send_json_response(req, root);
     return ESP_OK;
@@ -1635,7 +1631,7 @@ esp_err_t logs_delete_handler(httpd_req_t *req) {
         }
         
         // Delete other log files
-        DIR *dir = opendir("/spiffs/logs");
+        DIR *dir = opendir(LOG_BASE_PATH);
         if (dir) {
             struct dirent *entry;
             while ((entry = readdir(dir)) != NULL) {
@@ -1644,7 +1640,7 @@ esp_err_t logs_delete_handler(httpd_req_t *req) {
                     if (strcmp(entry->d_name, "system.log") == 0) continue;
                     
                     char path[128];
-                    snprintf(path, sizeof(path), "/spiffs/logs/%.100s", entry->d_name);
+                    snprintf(path, sizeof(path), LOG_BASE_PATH "/%.100s", entry->d_name);
                     if (unlink(path) == 0) {
                         deleted++;
                         API_LOG_D("Deleted: %s", entry->d_name);
@@ -1692,7 +1688,7 @@ esp_err_t logs_delete_handler(httpd_req_t *req) {
     
     // Delete other log files
     char path[128];
-    snprintf(path, sizeof(path), "/spiffs/logs/%s", name);
+    snprintf(path, sizeof(path), LOG_BASE_PATH "/%s", name);
     
     if (unlink(path) == 0) {
         cJSON *root = cJSON_CreateObject();
@@ -2678,8 +2674,8 @@ esp_err_t api_adc_pin_mapping_get_handler(httpd_req_t *req) {
 // DELETE /api/partition/logs - Delete logs partition
 // ============================================================
 esp_err_t api_partition_logs_delete_handler(httpd_req_t *req) {
-    spiffs_unmount("/spiffs/logs");
-    spiffs_unmount("/spiffs/sensors");
+    spiffs_unmount(LOG_BASE_PATH);
+    spiffs_unmount(SENSOR_BASE_PATH);
     format_spiffs("logs");
     vTaskDelay(pdMS_TO_TICKS(10000));
     spiffs_init();
@@ -2694,8 +2690,8 @@ esp_err_t api_partition_logs_delete_handler(httpd_req_t *req) {
 // DELETE /api/partition/sensors - Delete sensors partition
 // ============================================================
 esp_err_t api_partition_sensors_delete_handler(httpd_req_t *req) {
-    spiffs_unmount("/spiffs/logs");
-    spiffs_unmount("/spiffs/sensors");
+    spiffs_unmount(LOG_BASE_PATH);
+    spiffs_unmount(SENSOR_BASE_PATH);
     format_spiffs("sensors");
     vTaskDelay(pdMS_TO_TICKS(10000));
     spiffs_init();

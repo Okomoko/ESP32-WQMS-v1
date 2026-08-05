@@ -51,7 +51,7 @@ static esp_err_t http_post_json(const char *url, const char *api_key, const char
     if (!wifi_is_connected()) {
         return ESP_ERR_INVALID_STATE;
     }
-
+    API_LOG_D("HTTP Post URL : %s", url);
     esp_http_client_config_t config = {
         .url = url,
         .method = HTTP_METHOD_POST,
@@ -73,10 +73,8 @@ static esp_err_t http_post_json(const char *url, const char *api_key, const char
             supabase_cert_buffer[cert_len+1]=0;
             config.cert_pem = supabase_cert_buffer; 
             config.cert_len = cert_len + 1;
-            
-            WQMS_LOG_D("Using Supabase certificate from NVS (%zu bytes)", cert_len);
         } else {
-            WQMS_LOG_W("Failed to load Supabase certificate: %s", esp_err_to_name(err));
+			WQMS_LOG_E("Error in certificate load (%d), aborting...", err);
             return ESP_ERR_INVALID_STATE;
         }
     } else {
@@ -125,9 +123,10 @@ static int upload_pending_sensors(void) {
         return 0;
     }
 
-    const char *url = nvs_get_supabase_sensor_url();
+    char url[256];
+    nvs_get_supabase_sensor_url(url, sizeof(url));
     const char *api_key = nvs_get_supabase_api_key();
-    if (!url || strlen(url) == 0 || !api_key || strlen(api_key) == 0) {
+    if (!api_key || strlen(api_key) == 0) {
         return 0;
     }
 
@@ -244,9 +243,11 @@ static int upload_pending_logs(void) {
         return 0;
     }
     
-    const char *url = nvs_get_supabase_log_url();
+    char url[256];
+    nvs_get_supabase_log_url(url, sizeof(url));
+
     const char *api_key = nvs_get_supabase_api_key();
-    if (!url || strlen(url) == 0 || !api_key || strlen(api_key) == 0) {
+    if (!api_key || strlen(api_key) == 0) {
         return 0;
     }
     
@@ -399,7 +400,7 @@ static int upload_pending_logs(void) {
                 } else {
                     WQMS_LOG_W("Failed to upload logs, will retry later");
                     // Log the first part of the JSON for debugging
-                    WQMS_LOG_D("%.250s", json_str);
+                    WQMS_LOG_D("%.250s...", json_str);
 /*                    if (strlen(json_str) > 250) {
                         int j = 250;
                         WQMS_LOG_D("==0==");
@@ -468,10 +469,8 @@ esp_err_t supabase_upload_init(void) {
     last_log_upload_ts = 0;
     
     // Log certificate status
-    if (cert_manager_has(CERT_TYPE_SUPABASE)) {
-        WQMS_LOG_I("Supabase TLS certificate loaded from NVS");
-    } else {
-        WQMS_LOG_I("No Supabase TLS certificate in NVS, aborting Supabase upload.");
+    if (!cert_manager_has(CERT_TYPE_SUPABASE)) {
+        WQMS_LOG_E("No Supabase TLS certificate in NVS, aborting Supabase upload.");
         return ESP_ERR_INVALID_STATE;
     }
 
@@ -562,26 +561,16 @@ esp_err_t supabase_sync_sensor_config(void) {
     }
     
     const char *api_key = nvs_get_supabase_api_key();
-    const char *sensor_url = nvs_get_supabase_sensor_url();
+    char sensor_url[256];
+    nvs_get_supabase_sensor_url(sensor_url, sizeof(sensor_url));
     
-    if (!api_key || strlen(api_key) == 0 || !sensor_url || strlen(sensor_url) == 0) {
+    if (!api_key || strlen(api_key) == 0) {
         return ESP_ERR_INVALID_ARG;
     }
     
-    // Build config URL from sensor URL (replace sensor_readings with sensor_config)
     char config_url[256];
-    strncpy(config_url, sensor_url, sizeof(config_url) - 1);
-    config_url[sizeof(config_url) - 1] = '\0';
-    
-    // Find the last slash and replace the table name
-    char *last_slash = strrchr(config_url, '/');
-    if (last_slash) {
-        strcpy(last_slash + 1, "sensor_config");
-    } else {
-        WQMS_LOG_E("Invalid sensor URL format");
-        return ESP_ERR_INVALID_ARG;
-    }
-    
+    nvs_get_supabase_sensorconfig_url(config_url, sizeof(config_url));
+
     const char *sys_name = nvs_get_system_name();
     if (!sys_name) sys_name = "WQMS-System";
     

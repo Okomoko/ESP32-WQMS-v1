@@ -271,7 +271,7 @@ esp_err_t log_rotate_init(void) {
     }
     
     // Ensure directory exists
-    mkdir("/spiffs/logs", 0755);
+    mkdir(LOG_BASE_PATH, 0755);
     
     // Try to open existing file
     log_file = fopen(LOG_FILE_PATH, "r+b");

@@ -53,23 +53,23 @@ idf_component_register(SRCS
     "include"
     
     EMBED_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/index.html
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/automation.html
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/config.html
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/calibration.html
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/api_doc.html
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/console.html
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/style.css
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/core.js
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/chart.js
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/dashboard.js
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/automation.js
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/config.js
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/calibration.js
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/console.js
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/api_docs.js
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/router.js
-    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/favicon.ico
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/index.html
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/automation.html
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/config.html
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/calibration.html
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/api_doc.html
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/console.html
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/style.css
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/core.js
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/chart.js
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/dashboard.js
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/automation.js
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/config.js
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/calibration.js
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/console.js
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/api_docs.js
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/js/router.js
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/favicon.ico
 
     EMBED_TXTFILES
 #    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/r1.pem

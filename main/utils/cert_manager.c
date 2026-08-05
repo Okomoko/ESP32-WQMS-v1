@@ -125,7 +125,6 @@ esp_err_t cert_manager_load(cert_type_t type, char *buffer, size_t max_len, size
     
     if (cert_len > max_len) {
         nvs_close(handle);
-        WQMS_LOG_E("Certificate too large: %zu bytes (max: %zu)", cert_len, max_len);
         return ESP_ERR_NO_MEM;
     }
     

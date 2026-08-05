@@ -141,8 +141,8 @@ esp_err_t wqms_nvs_set_u32(const char *key, uint32_t value) {
 // ============================================================
 // Static Variables for Supabase Config
 // ============================================================
-static char supabase_sensor_url[256] = "";
-static char supabase_log_url[256] = "";
+static char supabase_project_url[256] = "";
+static char supabase_bucket_name[256] = "";
 static char supabase_api_key[128] = "";
 static uint32_t supabase_upload_interval = SUPABASE_UPLOAD_INTERVAL;
 
@@ -150,27 +150,81 @@ static uint32_t supabase_upload_interval = SUPABASE_UPLOAD_INTERVAL;
 // Public Functions - Supabase Config
 // ============================================================
 
-const char* nvs_get_supabase_sensor_url(void) { return supabase_sensor_url; }
-const char* nvs_get_supabase_log_url(void) { return supabase_log_url; }
+const char* nvs_get_supabase_project_url(void) { return supabase_project_url; }
+const char* nvs_get_supabase_bucket_name(void) { return supabase_bucket_name; }
 const char* nvs_get_supabase_api_key(void) { return supabase_api_key; }
 uint32_t nvs_get_supabase_upload_interval(void) { return supabase_upload_interval; }
 
-void nvs_set_supabase_sensor_url(const char *url) {
+void bucket_url_builder(char* bucketprefix, char* buffer, size_t max_len){
+    // Build bucket URL
+    strncpy(buffer, nvs_get_supabase_project_url(), max_len - 1);
+    buffer[max_len - 1] = '\0';
+    
+    // Find the last slash and replace the table name
+    char *last_slash = strrchr(buffer, '/');
+    if (last_slash) {
+        strcpy(last_slash + 1, bucketprefix);
+        strcpy(last_slash + 1 + strlen(bucketprefix), nvs_get_supabase_bucket_name());
+    } else {
+        WQMS_LOG_E("Invalid Supabase project URL format");
+    }
+};
+
+void nvs_get_supabase_bucketlist_url(char* buffer, size_t max_len) {
+    return bucket_url_builder("storage/v1/object/list/", buffer, max_len);
+}
+
+void nvs_get_supabase_bucketdownload_url(char* buffer, size_t max_len) {
+    return bucket_url_builder("storage/v1/object/public/", buffer, max_len);
+}
+
+void nvs_set_supabase_project_url(const char *url) {
     if (url) {
-        strncpy(supabase_sensor_url, url, sizeof(supabase_sensor_url) - 1);
-        supabase_sensor_url[sizeof(supabase_sensor_url) - 1] = '\0';
-        wqms_nvs_set_str(NVS_KEY_SUPABASE_SENSOR_URL, supabase_sensor_url);
-        WQMS_LOG_I("Supabase Sensor URL updated to: %s", supabase_sensor_url);
+        strncpy(supabase_project_url, url, sizeof(supabase_project_url) - 1);
+        supabase_project_url[sizeof(supabase_project_url) - 1] = '\0';
+        wqms_nvs_set_str(NVS_KEY_SUPABASE_PROJECT_URL, supabase_project_url);
+        WQMS_LOG_I("Supabase Project URL updated to: %s", supabase_project_url);
     }
 }
 
-void nvs_set_supabase_log_url(const char *url) {
+void nvs_set_supabase_bucket_name(const char *url) {
     if (url) {
-        strncpy(supabase_log_url, url, sizeof(supabase_log_url) - 1);
-        supabase_log_url[sizeof(supabase_log_url) - 1] = '\0';
-        wqms_nvs_set_str(NVS_KEY_SUPABASE_LOG_URL, supabase_log_url);
-        WQMS_LOG_I("Supabase Log URL updated to: %s", supabase_log_url);
+        strncpy(supabase_bucket_name, url, sizeof(supabase_bucket_name) - 1);
+        supabase_bucket_name[sizeof(supabase_bucket_name) - 1] = '\0';
+        wqms_nvs_set_str(NVS_KEY_SUPABASE_BUCKET_NAME, supabase_bucket_name);
+        WQMS_LOG_I("Supabase Bucket URL updated to: %s", supabase_bucket_name);
     }
+}
+
+void table_url_builder(char* tableprefix, char* tablename, char* buffer, size_t max_len){
+    // Build table URL
+    strncpy(buffer, nvs_get_supabase_project_url(), max_len - 1);
+    buffer[max_len - 1] = '\0';
+    
+    // Find the last slash and replace the table name
+    char *last_slash = strrchr(buffer, '/');
+    if (last_slash) {
+        strcpy(last_slash + 1, tableprefix);
+        strcpy(last_slash + 1 + strlen(tableprefix), tablename);
+    } else {
+        WQMS_LOG_E("Invalid Supabase project URL format");
+    }
+};
+
+void nvs_get_supabase_sensor_url(char* buffer, size_t max_len) { 
+    return table_url_builder("rest/v1/", SUPABASE_SENSOR_TABLE, buffer, max_len);
+}
+
+void nvs_get_supabase_log_url(char* buffer, size_t max_len) { 
+    return table_url_builder("rest/v1/", SUPABASE_LOGS_TABLE, buffer, max_len);
+}
+
+void nvs_get_supabase_sensorconfig_url(char* buffer, size_t max_len) { 
+    return table_url_builder("rest/v1/", SUPABASE_SENSORCONFIG_TABLE, buffer, max_len);
+}
+
+void nvs_get_supabase_systemconfig_url(char* buffer, size_t max_len) { 
+    return table_url_builder("rest/v1/", SUPABASE_SYSTEMCONFIG_TABLE, buffer, max_len);
 }
 
 void nvs_set_supabase_api_key(const char *key) {
@@ -191,8 +245,8 @@ void nvs_set_supabase_upload_interval(uint32_t sec) {
 }
 
 bool nvs_supabase_is_configured(void) {
-    return (strlen(supabase_sensor_url) > 0 &&
-            strlen(supabase_log_url) > 0 &&
+    return (strlen(supabase_project_url) > 0 &&
+            strlen(supabase_bucket_name) > 0 &&
             strlen(supabase_api_key) > 0);
 }
 
@@ -259,8 +313,15 @@ void nvs_config_load(void) {
     sample_interval_ms = wqms_nvs_get_u32(NVS_KEY_SAMPLE_INTERVAL, 1000);
     automation_interval_sec = wqms_nvs_get_u32(NVS_KEY_AUTOMATION_INT, DEFAULT_AUTOMATION_INTERVAL_SEC);
 
-    wqms_nvs_get_str(NVS_KEY_SUPABASE_SENSOR_URL, supabase_sensor_url, sizeof(supabase_sensor_url));
-    wqms_nvs_get_str(NVS_KEY_SUPABASE_LOG_URL, supabase_log_url, sizeof(supabase_log_url));
+    wqms_nvs_get_str(NVS_KEY_SUPABASE_PROJECT_URL, supabase_project_url, sizeof(supabase_project_url));
+    uint8_t urllen = strlen(supabase_project_url);
+    if (urllen > 0) {
+        if (supabase_project_url[urllen - 1] != '/') {
+            supabase_project_url[urllen] = '/';
+            supabase_project_url[urllen + 1] = '\0';
+        }
+    }
+    wqms_nvs_get_str(NVS_KEY_SUPABASE_BUCKET_NAME, supabase_bucket_name, sizeof(supabase_bucket_name));
     wqms_nvs_get_str(NVS_KEY_SUPABASE_API_KEY, supabase_api_key, sizeof(supabase_api_key));
     supabase_upload_interval = wqms_nvs_get_u32(NVS_KEY_SUPABASE_UPLOAD_INTERVAL, 10);
     if (supabase_upload_interval < 10) supabase_upload_interval = 10;
@@ -277,8 +338,8 @@ void nvs_config_save(void) {
     wqms_nvs_set_u32(NVS_KEY_SAMPLE_INTERVAL, sample_interval_ms);
     wqms_nvs_set_u32(NVS_KEY_AUTOMATION_INT, automation_interval_sec);
     // Save Supabase config
-    wqms_nvs_set_str(NVS_KEY_SUPABASE_SENSOR_URL, supabase_sensor_url);
-    wqms_nvs_set_str(NVS_KEY_SUPABASE_LOG_URL, supabase_log_url);
+    wqms_nvs_set_str(NVS_KEY_SUPABASE_PROJECT_URL, supabase_project_url);
+    wqms_nvs_set_str(NVS_KEY_SUPABASE_BUCKET_NAME, supabase_bucket_name);
     wqms_nvs_set_str(NVS_KEY_SUPABASE_API_KEY, supabase_api_key);
     wqms_nvs_set_u32(NVS_KEY_SUPABASE_UPLOAD_INTERVAL, supabase_upload_interval);
     WQMS_LOG_I("Config saved");
@@ -416,9 +477,9 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
         snprintf(key, sizeof(key), "%s%d_cal", NVS_KEY_SENSOR_PREFIX, i);
 
         float cal = 1000.0f;
-		uint32_t raw_bits;
+        uint32_t raw_bits;
         if (nvs_get_u32(handle, key, &raw_bits) == ESP_OK) {
-			memcpy(&cal, &raw_bits, sizeof(raw_bits)); 
+            memcpy(&cal, &raw_bits, sizeof(raw_bits)); 
             config[i].calibration_factor = cal;
         }
 
@@ -437,14 +498,14 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
         snprintf(key, sizeof(key), "%s%d_safe_min", NVS_KEY_SENSOR_PREFIX, i);
         float safe_min = 0;
         if (nvs_get_u32(handle, key, &raw_bits) == ESP_OK) {
-			memcpy(&safe_min, &raw_bits, sizeof(raw_bits)); 
+            memcpy(&safe_min, &raw_bits, sizeof(raw_bits)); 
             config[i].safe_min = safe_min;
         }
 
         snprintf(key, sizeof(key), "%s%d_safe_max", NVS_KEY_SENSOR_PREFIX, i);
         float safe_max = 0;
         if (nvs_get_u32(handle, key, &raw_bits) == ESP_OK) {
-			memcpy(&safe_max, &raw_bits, sizeof(raw_bits)); 
+            memcpy(&safe_max, &raw_bits, sizeof(raw_bits)); 
             config[i].safe_max = safe_max;
         }
     }
@@ -468,8 +529,8 @@ void nvs_save_sensor_config(sensor_config_t *config, int count) {
         snprintf(key, sizeof(key), "%s%d_en", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u8(handle, key, config[i].enabled);
 
-		uint32_t raw_bits;
-		memcpy(&raw_bits, &config[i].calibration_factor, sizeof(config[i].calibration_factor));
+        uint32_t raw_bits;
+        memcpy(&raw_bits, &config[i].calibration_factor, sizeof(config[i].calibration_factor));
         snprintf(key, sizeof(key), "%s%d_cal", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u32(handle, key, raw_bits);
 
@@ -479,11 +540,11 @@ void nvs_save_sensor_config(sensor_config_t *config, int count) {
         snprintf(key, sizeof(key), "%s%d_unit", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u8(handle, key, config[i].unit);
 
-		memcpy(&raw_bits, &config[i].safe_min, sizeof(config[i].safe_min));
+        memcpy(&raw_bits, &config[i].safe_min, sizeof(config[i].safe_min));
         snprintf(key, sizeof(key), "%s%d_safe_min", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u32(handle, key, raw_bits);
 
-		memcpy(&raw_bits, &config[i].safe_max, sizeof(config[i].safe_max));
+        memcpy(&raw_bits, &config[i].safe_max, sizeof(config[i].safe_max));
         snprintf(key, sizeof(key), "%s%d_safe_max", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u32(handle, key, raw_bits);
     }
