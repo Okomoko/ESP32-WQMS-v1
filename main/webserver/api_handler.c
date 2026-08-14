@@ -37,8 +37,9 @@
 #include "email_client.h"
 #include "rule_manager.h"
 #include "automation_engine.h"
-#include "spiffs_manager.h"
+#include "littlefs_manager.h"
 #include "cert_manager.h"
+#include "supabase_upload.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,6 +48,10 @@ uint8_t temprsens_rd();
 #ifdef __cplusplus
 }
 #endif
+
+typedef struct {
+    char* name;
+} uri_partition_t;
 
 // Stream the file in chunks
 #define CHUNK_SIZE 100
@@ -298,6 +303,7 @@ esp_err_t sensors_config_get_handler(httpd_req_t *req) {
         cJSON_AddBoolToObject(sensor, "enabled", configs[i].enabled);
         cJSON_AddNumberToObject(sensor, "unit", configs[i].unit);
         cJSON_AddNumberToObject(sensor, "calibration_factor", configs[i].calibration_factor);
+        cJSON_AddNumberToObject(sensor, "calibration_offset", configs[i].calibration_offset);
         cJSON_AddNumberToObject(sensor, "gpio_pin", configs[i].gpio_pin);
         cJSON_AddNumberToObject(sensor, "adc_channel", configs[i].adc_channel);
         cJSON_AddNumberToObject(sensor, "modbus_register", configs[i].modbus_register);
@@ -352,6 +358,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         cJSON *name = cJSON_GetObjectItem(item, "name");
         cJSON *enabled = cJSON_GetObjectItem(item, "enabled");
         cJSON *cal = cJSON_GetObjectItem(item, "calibration_factor");
+        cJSON *offset = cJSON_GetObjectItem(item, "calibration_offset");
         cJSON *unit = cJSON_GetObjectItem(item, "unit");
         cJSON *safe_min = cJSON_GetObjectItem(item, "safe_min");
         cJSON *safe_max = cJSON_GetObjectItem(item, "safe_max");
@@ -370,6 +377,10 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
 //                    API_LOG_D("Sensor: %d, cal: %f", idx, (float) cal->valuedouble);
                     configs[idx].calibration_factor = (float) cal->valuedouble;
                 }
+                if (offset && cJSON_IsNumber(offset)) {
+//                    API_LOG_D("Sensor: %d, offset: %f", idx, (float) cal->valuedouble);
+                    configs[idx].calibration_offset = (float) offset->valuedouble;
+                }
                 if (unit && cJSON_IsNumber(unit)) {
                     configs[idx].unit = unit->valueint;
                 }
@@ -386,6 +397,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
     }
     
     nvs_save_sensor_config(configs, TOTAL_SENSOR_COUNT);
+    supabase_sync_sensor_config();
     cJSON_Delete(json);
     sensor_reload_config();
     
@@ -578,7 +590,7 @@ esp_err_t relays_config_post_handler(httpd_req_t *req) {
     }
     buffer[len] = '\0';
 
-	WQMS_LOG_D("%.200s", buffer);
+    WQMS_LOG_D("%.200s", buffer);
     cJSON *json = cJSON_Parse(buffer);
     if (!json) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
@@ -645,7 +657,7 @@ esp_err_t config_get_handler(httpd_req_t *req) {
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "system_name", nvs_get_system_name());
     cJSON_AddStringToObject(root, "system_location", nvs_get_system_location());
-    cJSON_AddNumberToObject(root, "sample_interval_ms", nvs_get_sample_interval());
+    cJSON_AddNumberToObject(root, "sample_interval", nvs_get_sample_interval());
     cJSON_AddStringToObject(root, "supabase_project_url", nvs_get_supabase_project_url());
     cJSON_AddStringToObject(root, "supabase_bucket_name", nvs_get_supabase_bucket_name());
     cJSON_AddStringToObject(root, "supabase_api_key", nvs_get_supabase_api_key());
@@ -691,7 +703,7 @@ esp_err_t config_post_handler(httpd_req_t *req) {
         API_LOG_D("System location updated to: %s", item->valuestring);
     }
     
-    item = cJSON_GetObjectItem(json, "sample_interval_ms");
+    item = cJSON_GetObjectItem(json, "sample_interval");
     if (item && cJSON_IsNumber(item)) {
         nvs_set_sample_interval(item->valueint);
         API_LOG_D("Sample interval updated to: %d ms", item->valueint);
@@ -1087,7 +1099,8 @@ esp_err_t calibrate_sample_handler(httpd_req_t *req) {
     if (result == 0) {
         cal_session_t *session = cal_get_session();
         int sample_count = cal_get_sample_count();
-        float factor = cal_calculate_factor();
+        float factor, offset;
+        calculate_factor_and_offset(&factor, &offset);
         
         cJSON_AddBoolToObject(root, "success", true);
         cJSON_AddNumberToObject(root, "sample_number", sample_count);
@@ -1098,9 +1111,8 @@ esp_err_t calibrate_sample_handler(httpd_req_t *req) {
             cJSON_AddNumberToObject(root, "voltage", session->samples[sample_count - 1].voltage);
         }
         
-        if (factor > 0) {
-            cJSON_AddNumberToObject(root, "factor", factor);
-        }
+        cJSON_AddNumberToObject(root, "factor", factor);
+        cJSON_AddNumberToObject(root, "offset", offset);
     } else {
         cJSON_AddBoolToObject(root, "success", false);
         cJSON_AddStringToObject(root, "message", "Failed to add sample");
@@ -1156,10 +1168,12 @@ esp_err_t calibrate_apply_handler(httpd_req_t *req) {
     // Apply calibration
     int result = cal_apply();
     if (result == 0) {
-        float factor = cal_calculate_factor();
+        float factor, offset;
+        calculate_factor_and_offset(&factor, &offset);
         cJSON_AddBoolToObject(root, "success", true);
         cJSON_AddNumberToObject(root, "factor", factor);
-        API_LOG_D("Coef: %f", factor);
+        cJSON_AddNumberToObject(root, "offset", offset);
+        API_LOG_D("Coef: %f, offset: %f", factor, offset);
         cJSON_AddStringToObject(root, "message", "Calibration applied successfully");
     } else {
         cJSON_AddBoolToObject(root, "success", false);
@@ -1205,11 +1219,13 @@ esp_err_t calibrate_cancel_handler(httpd_req_t *req) {
 esp_err_t calibrate_factor_handler(httpd_req_t *req) {
     cJSON *root = cJSON_CreateObject();
     
-    float factor = cal_calculate_factor();
+    float factor, offset;
+    calculate_factor_and_offset(&factor, &offset);
     int sample_count = cal_get_sample_count();
     
     cJSON_AddBoolToObject(root, "success", true);
     cJSON_AddNumberToObject(root, "factor", factor);
+    cJSON_AddNumberToObject(root, "offset", offset);
     cJSON_AddNumberToObject(root, "sample_count", sample_count);
     
     if (sample_count < 2) {
@@ -1513,7 +1529,7 @@ esp_err_t logs_get_handler(httpd_req_t *req) {
         char path[128];
         snprintf(path, sizeof(path), LOG_BASE_PATH "/%.100s", name);
         
-        FILE *f = fopen(path, "r");
+        FILE *f = fopen(path, "rb");
         if (!f) {
             API_LOG_E("File not found: %s", path);
             httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File not found");
@@ -2177,7 +2193,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
 {
     // CORS headers
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, OPTIONS");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type");
 
     // Handle preflight OPTIONS
@@ -2193,34 +2209,34 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
     // Get query string
     char query[128] = {0};
     size_t query_len = httpd_req_get_url_query_len(req);
-    API_LOG_D("Query length: %d", query_len);
+//    API_LOG_D("Query length: %d", query_len);
     
     if (query_len > 0) {
         if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
-            API_LOG_D("Full query string: %s", query);
+//            API_LOG_D("Full query string: %s", query);
             
             // Parse parameters with better error checking
             if (httpd_query_key_value(query, "limit", limit_str, sizeof(limit_str)) == ESP_OK) {
-                API_LOG_D("Parsed limit: %s", limit_str);
+//                API_LOG_D("Parsed limit: %s", limit_str);
             } else {
-                API_LOG_D("No limit parameter found, using default: 60");
+//                API_LOG_D("No limit parameter found, using default: 60");
             }
         }
     } else {
-        API_LOG_D("No query string, using defaults");
+//        API_LOG_D("No query string, using defaults");
     }
     
     // Get the newest records by reading backwards from end
     uint32_t total_records = sensor_history_get_record_count();
 
-    API_LOG_D("Record count %d", total_records);
+//    API_LOG_D("Record count %d", total_records);
 
     uint16_t limit = atoi(limit_str);
     if (limit < 1) limit = 1;
     if (limit > 4320) limit = 4320;
     if (limit > total_records) limit = total_records;
 
-    API_LOG_D("Final limit: %d", limit);
+//    API_LOG_D("Final limit: %d", limit);
 
     // Start JSON response
     httpd_resp_set_type(req, "application/json");
@@ -2315,7 +2331,7 @@ esp_err_t api_get_history_handler(httpd_req_t *req)
         API_LOG_E("Failed to send final chunk: %d", err);
     }
     
-    API_LOG_D("Returned %d history records in chunks", total_sent);
+//    API_LOG_D("Returned %d history records in chunks", total_sent);
     return ESP_OK;
 }
 
@@ -2671,33 +2687,24 @@ esp_err_t api_adc_pin_mapping_get_handler(httpd_req_t *req) {
 }
 
 // ============================================================
-// DELETE /api/partition/logs - Delete logs partition
+// DELETE /api/partition - Delete partition
 // ============================================================
-esp_err_t api_partition_logs_delete_handler(httpd_req_t *req) {
-    spiffs_unmount(LOG_BASE_PATH);
-    spiffs_unmount(SENSOR_BASE_PATH);
-    format_spiffs("logs");
+esp_err_t api_partition_delete_handler(httpd_req_t *req) {
+    uri_partition_t *partition = (uri_partition_t *) req->user_ctx;
+    littlefs_unmount(LOG_BASE_PATH);
+    littlefs_unmount(SENSOR_BASE_PATH);
+    if (strcmp(partition->name, LOG_PARTITION_NAME) == 0) {
+        format_littlefs(LOG_PARTITION_NAME);
+    } else {
+        if (strcmp(partition->name, SENSOR_PARTITION_NAME) == 0) {
+            format_littlefs(SENSOR_PARTITION_NAME);
+        }
+    }
     vTaskDelay(pdMS_TO_TICKS(10000));
-    spiffs_init();
+    littlefs_init();
     cJSON *root = cJSON_CreateObject();
     cJSON_AddBoolToObject(root, "success", true);
-    cJSON_AddStringToObject(root, "message", "Logs partition is deleted");
-    send_json_response(req, root);
-    return ESP_OK;
-}
-
-// ============================================================
-// DELETE /api/partition/sensors - Delete sensors partition
-// ============================================================
-esp_err_t api_partition_sensors_delete_handler(httpd_req_t *req) {
-    spiffs_unmount(LOG_BASE_PATH);
-    spiffs_unmount(SENSOR_BASE_PATH);
-    format_spiffs("sensors");
-    vTaskDelay(pdMS_TO_TICKS(10000));
-    spiffs_init();
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddBoolToObject(root, "success", true);
-    cJSON_AddStringToObject(root, "message", "Sensors partition is deleted");
+    cJSON_AddStringToObject(root, "message", "Partition is deleted.");
     send_json_response(req, root);
     return ESP_OK;
 }
@@ -2859,24 +2866,122 @@ esp_err_t certificate_status_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+// ============================================================
+// GET /api/web_assets - List the files in web_assets partition
+// ============================================================
+esp_err_t dir_web_assets_handler(httpd_req_t *req) {
+    cJSON *root = cJSON_CreateObject();
+    cJSON *web_array = cJSON_CreateArray();
+    
+    DIR *dir = opendir(WEB_BASE_PATH);
+    if (dir) {
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            // Skip the special '.' and '..' directories to prevent loops
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                continue;
+            }
+
+            char path[128];
+            snprintf(path, sizeof(path), SENSOR_BASE_PATH "/%.100s", entry->d_name);
+            
+            struct stat st;
+            if (stat(path, &st) == 0) {
+                cJSON *web = cJSON_CreateObject();
+                cJSON_AddStringToObject(web, "name", entry->d_name);
+                cJSON_AddNumberToObject(web, "modified", st.st_mtime);
+
+                // Check if it is a directory or a file
+                if (S_ISDIR(st.st_mode)) {
+                    cJSON_AddNumberToObject(web, "size", 0); // Directories typically don't show a raw file size
+                    cJSON_AddStringToObject(web, "type", "directory");
+                    cJSON_AddItemToArray(web_array, web);
+                } 
+                else if (S_ISREG(st.st_mode)) {
+                    cJSON_AddNumberToObject(web, "size", st.st_size);
+                    cJSON_AddStringToObject(web, "type", "file");
+                    cJSON_AddItemToArray(web_array, web);
+                } 
+                else {
+                    // Clean up object if it's an unsupported type (e.g., links/pipes)
+                    cJSON_Delete(web); 
+                }
+            }
+        }
+        closedir(dir);
+    }
+
+    cJSON_AddItemToObject(root, "web", web_array);
+    send_json_response(req, root);
+    return ESP_OK;
+}
 
 // ============================================================
 // GET /api/nvs - Returns parameter from NVS
 // ============================================================
 esp_err_t nvs_get_handler(httpd_req_t *req) {
-    char query[128] = {0};
-    char name[64] = {0};
-    char buf[32] = {0};
+    char query[256] = {0};
+    char parameter[64] = {0};
+    char buf[128] = {0};
     
     // Check query parameters
     if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
-        if (httpd_query_key_value(query, "name", name, sizeof(name)) == ESP_OK) {
-            wqms_nvs_get_str("datetime", buf, sizeof(buf));
+        if (httpd_query_key_value(query, "parameter", parameter, sizeof(parameter)) == ESP_OK) {
+
+            nvs_type_t data_type;
+            esp_err_t err = wqms_nvs_find_key(parameter, &data_type);
+
+            if (err == ESP_OK) {
+                switch (data_type) {
+                    case NVS_TYPE_U32: {
+                        snprintf(buf, sizeof(buf), "%lu", wqms_nvs_get_u32(parameter, 0));
+                        break;
+                    }
+                    case NVS_TYPE_U8: {
+                        snprintf(buf, sizeof(buf), "%u", wqms_nvs_get_u8(parameter, 0));
+                        break;
+                    }
+                    case NVS_TYPE_STR: {
+                        wqms_nvs_get_str(parameter, buf, sizeof(buf));
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+                return ESP_FAIL;
+            }
+
             cJSON *root = cJSON_CreateObject();
-            cJSON_AddStringToObject(root, "parameter", name);
+            cJSON_AddStringToObject(root, "parameter", parameter);
             cJSON_AddStringToObject(root, "value", buf);
             send_json_response(req, root);
             return ESP_OK;
+        }
+    }
+    return ESP_FAIL;
+}
+
+// ============================================================
+// POST /api/nvs - Save parameter to NVS
+// ============================================================
+esp_err_t nvs_set_handler(httpd_req_t *req) {
+    char query[256] = {0};
+    char parameter[64] = {0};
+    char buf[128] = {0};
+    
+    // Check query parameters
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+        if (httpd_query_key_value(query, "parameter", parameter, sizeof(parameter)) == ESP_OK) {
+            API_LOG_D("parameter : %s", parameter);
+            if (httpd_query_key_value(query, "value", buf, sizeof(buf)) == ESP_OK) {
+                API_LOG_D("Value : %s", buf);
+                cJSON *root = cJSON_CreateObject();
+                cJSON_AddStringToObject(root, "parameter", parameter);
+                cJSON_AddStringToObject(root, "value", buf);
+                send_json_response(req, root);
+                return wqms_nvs_set_str(parameter, buf);
+            }
         }
     }
     return ESP_FAIL;
@@ -3243,19 +3348,23 @@ void register_api_endpoints(httpd_handle_t server) {
     };
     httpd_register_uri_handler(server, &api_adc_pin_mapping_uri);
 
+    uri_partition_t logpartition;
+    logpartition.name = LOG_PARTITION_NAME; //quite risky to use char* in this way.
     httpd_uri_t partition_logs_delete_uri = {
         .uri       = "/api/partition/logs",
         .method    = HTTP_DELETE,
-        .handler   = api_partition_logs_delete_handler,
-        .user_ctx  = NULL
+        .handler   = api_partition_delete_handler,
+        .user_ctx  = &logpartition
     };
     httpd_register_uri_handler(server, &partition_logs_delete_uri);
 
+    uri_partition_t sensorpartition;
+    sensorpartition.name = SENSOR_PARTITION_NAME; //quite risky to use char* in this way.
     httpd_uri_t partition_sensors_delete_uri = {
         .uri       = "/api/partition/sensors",
         .method    = HTTP_DELETE,
-        .handler   = api_partition_sensors_delete_handler,
-        .user_ctx  = NULL
+        .handler   = api_partition_delete_handler,
+        .user_ctx  = &sensorpartition
     };
     httpd_register_uri_handler(server, &partition_sensors_delete_uri);
 
@@ -3315,6 +3424,22 @@ void register_api_endpoints(httpd_handle_t server) {
         .user_ctx = NULL
     };
     httpd_register_uri_handler(server, &nvs_get_handler_uri);
+
+    httpd_uri_t nvs_set_handler_uri = {
+        .uri = "/api/nvs",
+        .method = HTTP_POST,
+        .handler = nvs_set_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &nvs_set_handler_uri);
+
+    httpd_uri_t dir_web_assets_handler_uri = {
+        .uri = "/api/web_assets",
+        .method = HTTP_GET,
+        .handler = dir_web_assets_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &dir_web_assets_handler_uri);
 
     API_LOG_I("All API endpoints registered");
 }

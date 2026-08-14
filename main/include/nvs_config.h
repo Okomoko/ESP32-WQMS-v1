@@ -6,7 +6,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "nvs.h"
 #include "esp_err.h"
+#include "time.h"
 #include "project_defs.h"
 
 // ============================================================
@@ -44,10 +46,13 @@
 // ============================================================
 // Internal NVS Helpers
 // ============================================================
+esp_err_t wqms_nvs_find_key(const char *key, nvs_type_t *out_type);
 esp_err_t wqms_nvs_set_str(const char *key, const char *value);
 esp_err_t wqms_nvs_get_str(const char *key, char *buffer, size_t max_len);
 esp_err_t wqms_nvs_set_u32(const char *key, uint32_t value);
 uint32_t wqms_nvs_get_u32(const char *key, uint32_t default_val);
+esp_err_t wqms_nvs_set_u8(const char *key, uint8_t value);
+uint8_t wqms_nvs_get_u8(const char *key, uint8_t default_val);
 
 // ============================================================
 // Function Prototypes
@@ -68,7 +73,7 @@ const char* nvs_get_timezone(void);
 void nvs_set_timezone(const char *tz);
 
 uint32_t nvs_get_sample_interval(void);
-void nvs_set_sample_interval(uint32_t ms);
+void nvs_set_sample_interval(uint32_t seconds);
 
 uint32_t nvs_get_automation_interval(void);
 void nvs_set_automation_interval(uint32_t sec);
@@ -118,8 +123,8 @@ void nvs_save_relay_config(relay_config_t *config, int count);
 // ============================================================
 // Date & Time Configuration
 // ============================================================
-esp_err_t nvs_save_datetime(void);
-esp_err_t nvs_get_datetime(void);
+esp_err_t nvs_save_datetime(char *keyname, const time_t *timevalue);
+time_t nvs_get_datetime(char *keyname);
 
 // ============================================================
 // Factory Reset

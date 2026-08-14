@@ -71,23 +71,6 @@ uint64_t supabase_get_last_sensor_upload(void);
 uint64_t supabase_get_last_log_upload(void);
 
 /**
- * @brief Get last uploaded sensor timestamp (recovery pointer)
- * @return Timestamp of last uploaded sensor record
- */
-uint64_t supabase_get_last_sensor_ts(void);
-
-/**
- * @brief Get last uploaded log timestamp (recovery pointer)
- * @return Timestamp of last uploaded log entry
- */
-uint64_t supabase_get_last_log_ts(void);
-
-/**
- * @brief Reset recovery pointers (force re-upload of all data)
- */
-void supabase_reset_recovery_pointers(void);
-
-/**
  * @brief Sync current sensor configuration to Supabase
  * This sends the current sensor names/units to the sensor_config table
  * Should be called whenever sensor configuration changes

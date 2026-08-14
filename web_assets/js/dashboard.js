@@ -30,11 +30,9 @@ const CONTROLDEVICE_DEFINITIONS = [
 // SENSOR CARD RENDERER WITH SCADA GAUGE
 // ============================================================
 function renderSCADAGauge(value, unit, safeMin, safeMax, isDisabled, label) {
-    // Gauge range: 240° (8 o'clock) to 120° (16 o'clock) = 240° total sweep
-    // Map value from safeMin-safeMax to angle range
-    const startAngle = 140; // 8 o'clock position in degrees
-    const endAngle = 340;   // 16 o'clock position in degrees
-    const sweepAngle = 200; // Total sweep in degrees
+    const startAngle = 140;
+    const endAngle = 340;
+    const sweepAngle = 200;
     
     let displayValue = isDisabled ? '--' : (value || 0).toFixed(1);
     let gaugeColor = '#4a4a5a';
@@ -46,20 +44,17 @@ function renderSCADAGauge(value, unit, safeMin, safeMax, isDisabled, label) {
         }
         pct = Math.min(100, Math.max(0, pct));
         
-        // Determine color based on value relative to safe range
-        // Red if below safeMin OR above safeMax (both thresholds now work)
         if (value < safeMin || value > safeMax) {
-            gaugeColor = '#ff1744'; // Red - out of range
+            gaugeColor = '#ff1744';
         } else {
-            // Check if approaching limits (within 10% of limits)
             const range = safeMax - safeMin;
             const lowWarning = safeMin + (range * 0.1);
             const highWarning = safeMax - (range * 0.1);
             
             if (value < lowWarning || value > highWarning) {
-                gaugeColor = '#ffd740'; // Yellow - approaching limits
+                gaugeColor = '#ffd740';
             } else {
-                gaugeColor = '#00e676'; // Green - safe zone
+                gaugeColor = '#00e676';
             }
         }
     } else if (isDisabled) {
@@ -68,18 +63,14 @@ function renderSCADAGauge(value, unit, safeMin, safeMax, isDisabled, label) {
         gaugeColor = '#2b7be4';
     }
     
-    // Calculate the angle for the value
     const angleDeg = startAngle - (pct / 100) * sweepAngle;
     const angleRad = (angleDeg * Math.PI) / 180;
-    
-    // Calculate the circumference for the arc (from startAngle to endAngle)
     const radius = 45;
     const circumference = (sweepAngle / 360) * 2 * Math.PI * radius;
     const offset = circumference * (1 - pct/100);
     
-    // Create tick marks for SCADA look (from 8 o'clock to 16 o'clock)
     let ticks = '';
-    const numTicks = 11; // 0 to 10 (0% to 100%)
+    const numTicks = 11;
     for (let i = 0; i <= numTicks; i++) {
         const pctPos = i / numTicks;
         const tickAngleDeg = startAngle - pctPos * sweepAngle;
@@ -94,31 +85,23 @@ function renderSCADAGauge(value, unit, safeMin, safeMax, isDisabled, label) {
         ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${isDisabled ? '#4a4a5a' : '#8899bb'}" stroke-width="${isMajor ? 2 : 1}"/>`;
     }
     
-    // Calculate start and end angles for the arc path
     const startAngleRad = (startAngle * Math.PI) / 180;
     const endAngleRad = (endAngle * Math.PI) / 180;
-    
-    // Calculate arc path
     const startX = 60 + radius * Math.cos(startAngleRad);
     const startY = 60 + radius * Math.sin(startAngleRad);
     const endX = 60 + radius * Math.cos(endAngleRad);
     const endY = 60 + radius * Math.sin(endAngleRad);
     const largeArcFlag = sweepAngle > 180 ? 1 : 0;
-    
     const arcPath = `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
     
     return `
         <div class="gauge-wrapper scada-gauge">
             <svg viewBox="0 0 120 120">
-                <!-- Background arc from 8 to 16 o'clock -->
                 <path d="${arcPath}" fill="none" stroke="#1a1a2e" stroke-width="10" stroke-linecap="round"/>
-                <!-- Active arc -->
                 <path d="${arcPath}" fill="none" stroke="${gaugeColor}" stroke-width="10" 
                       stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"
                       style="transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;"/>
-                <!-- Ticks -->
                 ${ticks}
-                <!-- Value -->
                 <text x="60" y="65" text-anchor="middle" fill="#e0e8f0" font-size="25" font-weight="750">${displayValue}</text>
                 <text x="60" y="84" text-anchor="middle" fill="#8899bb" font-size="16">${unit}</text>
             </svg>
@@ -209,7 +192,6 @@ function renderSensorCards(sensors) {
 // RELAY CARD RENDERER WITH ANIMATED PUMP/VALVE
 // ============================================================
 
-// Animated Pump SVG
 function renderPumpAnimation(isActive) {
     const spinClass = isActive ? 'spin' : '';
     return `
@@ -225,25 +207,20 @@ function renderPumpAnimation(isActive) {
                     }
                 </style>
             </defs>
-            <!-- Pump housing -->
             <circle cx="40" cy="40" r="28" class="pump-body"/>
-            <!-- Inlet/Outlet -->
             <rect x="12" y="35" width="10" height="10" rx="2" class="pump-body"/>
             <rect x="58" y="35" width="10" height="10" rx="2" class="pump-body"/>
             <rect x="35" y="12" width="10" height="10" rx="2" class="pump-body"/>
             <rect x="35" y="58" width="10" height="10" rx="2" class="pump-body"/>
-            <!-- Impeller -->
             <g class="pump-impeller ${isActive ? 'spinning' : ''}">
                 <path d="M40 20 L44 36 L58 28 L48 40 L58 52 L44 44 L40 60 L36 44 L22 52 L32 40 L22 28 L36 36 Z" opacity="0.8"/>
                 <circle cx="40" cy="40" r="6" fill="currentColor"/>
             </g>
-            <!-- Center dot -->
             <circle cx="40" cy="40" r="3" fill="#fff" opacity="0.5"/>
         </svg>
     `;
 }
 
-// Animated Valve SVG (rotating handle)
 function renderValveAnimation(isActive) {
     const turnClass = isActive ? 'turning' : '';
     return `
@@ -259,12 +236,9 @@ function renderValveAnimation(isActive) {
                     }
                 </style>
             </defs>
-            <!-- Valve body -->
             <rect x="10" y="30" width="60" height="20" rx="4" class="valve-body"/>
-            <!-- Pipes -->
             <rect x="0" y="35" width="12" height="10" rx="2" class="valve-body"/>
             <rect x="68" y="35" width="12" height="10" rx="2" class="valve-body"/>
-            <!-- Valve handle -->
             <g class="valve-handle ${isActive ? 'turning' : ''}">
                 <rect x="18" y="10" width="44" height="6" rx="3" fill="currentColor"/>
                 <rect x="18" y="30" width="6" height="20" rx="2" fill="currentColor"/>
@@ -272,7 +246,6 @@ function renderValveAnimation(isActive) {
                 <circle cx="40" cy="40" r="12" fill="none" stroke="currentColor" stroke-width="2"/>
                 <circle cx="40" cy="40" r="4" fill="currentColor"/>
             </g>
-            <!-- Flow indicator -->
             ${isActive ? `<circle cx="30" cy="40" r="3" fill="#4fc3f7" opacity="0.6"><animate attributeName="opacity" values="0.3;1;0.3" dur="1s" repeatCount="indefinite"/></circle>
             <circle cx="50" cy="40" r="3" fill="#4fc3f7" opacity="0.6"><animate attributeName="opacity" values="0.3;1;0.3" dur="1s" repeatCount="indefinite" begin="0.5s"/></circle>` : ''}
         </svg>
@@ -281,10 +254,10 @@ function renderValveAnimation(isActive) {
 
 function renderRelayVisual(relayId, deviceType, isActive) {
     const type = deviceType || 0;
-    let visualHTML = '';
     const isPump = type === 0;
     const isValve = type === 1;
     
+    let visualHTML = '';
     if (isPump) {
         visualHTML = `
             <div class="relay-visual-item pump ${isActive ? 'active' : ''}">
@@ -302,7 +275,6 @@ function renderRelayVisual(relayId, deviceType, isActive) {
             </div>
         `;
     } else {
-        // Default to pump if unknown
         visualHTML = `
             <div class="relay-visual-item pump ${isActive ? 'active' : ''}">
                 ${renderPumpAnimation(isActive)}
@@ -336,17 +308,13 @@ function renderRelayCards(relays) {
     if (!grid) return;
     
     grid.innerHTML = relays.map(r => {
-        // Using constants from core.js
-        // RELAY_STATE_ACTIVE = 0, RELAY_STATE_IDLE = 1, RELAY_STATE_COOLDOWN = 2
         const isActive = r.state === RELAY_STATE_ACTIVE;
-        const isIdle = r.state === RELAY_STATE_IDLE;
         const isCooldown = r.state === RELAY_STATE_COOLDOWN;
         
         const stateLabel = isActive ? '🔴' : isCooldown ? '🟡' : '⚪';
         const stateText = isActive ? 'ACTIVE' : isCooldown ? 'COOLDOWN' : 'IDLE';
         const stateClass = isActive ? 'relay-on' : isCooldown ? 'relay-cooldown' : 'relay-off';
         
-        // Get device type from control_device property
         const deviceType = r.control_device || 0;
         const deviceLabel = CONTROLDEVICE_DEFINITIONS.find(device => device.id === deviceType).label;
         
@@ -480,7 +448,6 @@ class DashboardManager {
                     const name = sensor.name || 'Sensor ' + (id + 1);
                     const color = sensor.color || this.defaultColors[id % this.defaultColors.length];
                     const key = name.replace(/ /g, '_');
-                    const unit = sensor.unit;
                     
                     this.sensorMap[id] = { name, color, key };
                     this.sensorNameMap[id] = name;
@@ -489,7 +456,7 @@ class DashboardManager {
                     this.sensorLabels[key] = name;
                     this.colors[key] = color;
                     this.selectedSensors.add(key);
-                    this.sensorUnit[key] = unit;
+                    this.sensorUnit[key] = sensor.unit;
                 });
             }
         } catch (error) {
@@ -516,7 +483,6 @@ class DashboardManager {
             const name = defaultNames[i];
             const color = this.defaultColors[i % this.defaultColors.length];
             const key = name.replace(/ /g, '_');
-            const unit = 0;
             
             this.sensorMap[id] = { name, color, key };
             this.sensorNameMap[id] = name;
@@ -525,7 +491,7 @@ class DashboardManager {
             this.sensorLabels[key] = name;
             this.colors[key] = color;
             this.selectedSensors.add(key);
-            this.sensorUnit[key] = unit;
+            this.sensorUnit[key] = 0;
         }
     }
 
@@ -571,7 +537,6 @@ class DashboardManager {
             const name = sensor.name;
             const color = sensor.color || this.defaultColors[id % this.defaultColors.length];
             const key = name.replace(/ /g, '_');
-            const unit = sensor.unit;
             
             const label = document.createElement('label');
             label.style.cssText = `
@@ -634,26 +599,61 @@ class DashboardManager {
         }
     }
 
+    // ============================================================
+    // MODIFIED: fetchHistory with loading indicator
+    // ============================================================
     async fetchHistory() {
         if (!this.chartVisible || this.isUpdating || !this.chartInitialized) return;
         this.isUpdating = true;
-
+        
+        const c = this.chart;
+        
+        // Start loading indicator
+        if (c) c.setLoading(true, 'Fetching sensor history...', 0);
+        
         try {
+            // Progress: 10% - Request sent
+            if (c) c.setLoadingProgress(10, 'Requesting data from server...');
+            
             const response = await fetch('/api/history?limit=' + this.maxDataPoints);
             if (!response.ok) throw new Error('HTTP ' + response.status);
             
+            // Progress: 30% - Data received, parsing
+            if (c) c.setLoadingProgress(30, 'Parsing data...');
+            
             const data = await response.json();
             
+            // Progress: 50% - Data parsed, processing
+            if (c) c.setLoadingProgress(50, 'Processing data...');
+            
             if (data && data.entries && data.entries.length > 0) {
-                this.historyData = data.entries.map(entry => {
-                    const mapped = { timestamp: entry.timestamp, sensor_mask: entry.sensor_mask };
-                    Object.keys(entry).forEach(key => {
-                        if (key !== 'timestamp' && key !== 'sensor_mask') {
-                            mapped[key] = entry[key];
-                        }
+                const total = data.entries.length;
+                const batchSize = Math.max(1, Math.floor(total / 15));
+                this.historyData = [];
+                
+                // Process in batches to show progress
+                for (let i = 0; i < total; i += batchSize) {
+                    const batch = data.entries.slice(i, Math.min(i + batchSize, total));
+                    batch.forEach(entry => {
+                        const mapped = { timestamp: entry.timestamp, sensor_mask: entry.sensor_mask };
+                        Object.keys(entry).forEach(key => {
+                            if (key !== 'timestamp' && key !== 'sensor_mask') {
+                                mapped[key] = entry[key];
+                            }
+                        });
+                        this.historyData.push(mapped);
                     });
-                    return mapped;
-                });
+                    
+                    const processed = Math.min(i + batchSize, total);
+                    const progress = 50 + (processed / total) * 40;
+                    if (c) c.setLoadingProgress(progress, 'Processing ' + processed + '/' + total + ' entries...');
+                    
+                    // Allow UI to update
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+                
+                // Progress: 90% - Almost done
+                if (c) c.setLoadingProgress(90, 'Finalizing chart...');
                 
                 const dataKeys = Object.keys(this.historyData[0]).filter(
                     k => k !== 'timestamp' && k !== 'sensor_mask'
@@ -670,12 +670,17 @@ class DashboardManager {
                 
                 this.updateChart();
                 this.updateChartFooter();
+                
+                // Done - hide loading
+                if (c) c.setLoading(false);
             } else {
+                if (c) c.setLoading(false);
                 this.showNoDataMessage('No data available yet');
             }
         } catch (error) {
             console.error('Error fetching history:', error);
-            this.showNoDataMessage('Error loading data');
+            if (c) c.setLoading(false);
+            this.showNoDataMessage('Error loading data: ' + error.message);
         } finally {
             this.isUpdating = false;
         }

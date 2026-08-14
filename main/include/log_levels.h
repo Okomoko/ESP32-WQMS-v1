@@ -28,7 +28,7 @@ extern "C" {
 // Console output level (USB + Web Console) - Show DEBUG and above
 #define WQMS_LOG_LEVEL_CONSOLE  WQMS_LOG_LEVEL_DEBUG
 
-// File output level (SPIFFS) - Show INFO and above (NO DEBUG)
+// File output level (Local FS) - Show INFO and above (NO DEBUG)
 #define WQMS_LOG_LEVEL_FILE     WQMS_LOG_LEVEL_INFO
 
 // Module-specific file log levels

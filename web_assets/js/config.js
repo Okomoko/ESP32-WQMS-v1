@@ -73,7 +73,7 @@ async function loadSensorConfig() {
                     </div>
                     <span style="font-size:0.75rem; color:#7a9bbf;">Value: ${s.current_value !== undefined && s.status !== 3 ? s.current_value.toFixed(2) : '--'} | PIN: ${s.gpio_pin || '--'} | ADC: ${adcDisplay} | MODBUS: 0x0${(s.modbus_register || 0).toString(16).toUpperCase().padStart(1, '0')}</span>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:8px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap:8px;">
                     <div>
                         <label style="font-size:0.7rem; color:#7a9bbf;">Name</label>
                         <input type="text" value="${s.name || ''}" data-id="${s.id}" class="sensor-name-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
@@ -83,8 +83,12 @@ async function loadSensorConfig() {
                         ${createUnitDropdown(s.id, s.unit || 0)}
                     </div>
                     <div>
-                        <label class="calibrate-sensor-btn" data-id="${s.id}" style="font-size:0.7rem; color:#7a9bbf;">Calibration</label>
-                        <input type="number" value="${s.calibration_factor.toFixed(3) || 1}" data-id="${s.id}" class="sensor-cal-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                        <label class="calibrate-sensor-btn" data-id="${s.id}" style="font-size:0.7rem; color:#7a9bbf;">Calibration factor</label>
+                        <input type="number" value="${s.calibration_factor.toFixed(4) || 1}" data-id="${s.id}" class="sensor-cal-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                    </div>
+                    <div>
+                        <label class="calibrate-sensor-btn" style="font-size:0.7rem; color:#7a9bbf;">Calibration offset</label>
+                        <input type="number" value="${s.calibration_offset.toFixed(4) || 1}" data-id="${s.id}" class="sensor-off-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
                     <div>
                         <label style="font-size:0.7rem; color:#7a9bbf;">Safe min.</label>
@@ -118,6 +122,7 @@ async function saveSensorConfig() {
         const enabled = document.querySelector(`.sensor-enabled-check[data-id="${id}"]`)?.checked || false;
         const unit = parseInt(document.querySelector(`.sensor-unit-select[data-id="${id}"]`)?.value) || 0;
         const cal = parseFloat(document.querySelector(`.sensor-cal-input[data-id="${id}"]`)?.value) || 1;
+        const off = parseFloat(document.querySelector(`.sensor-off-input[data-id="${id}"]`)?.value) || 0;
         const safemin = parseFloat(document.querySelector(`.sensor-safemin-input[data-id="${id}"]`)?.value) || 0;
         const safemax = parseFloat(document.querySelector(`.sensor-safemax-input[data-id="${id}"]`)?.value) || 1000;
         configs.push({ id, name, enabled, calibration_factor: cal, unit, safe_min: safemin, safe_max: safemax});
@@ -642,7 +647,7 @@ async function forceNtpSync() {
 }
 
 // ============================================================
-// WiFi Functions (Updated with polished UI)
+// WiFi Functions
 // ============================================================
 
 // Load WiFi Status
@@ -1591,10 +1596,9 @@ async function initConfiguration() {
             'sys-name': config.system_name || 'WQMS-System',
             'sys-location': config.system_location || 'Unknown',
             'sys-timezone': config.timezone || 'EET-3',
-            'sample-interval': config.sample_interval_ms || 1000,
-            'modbus-interval': config.modbus_interval_ms || 1000,
-            'supabase-sensor-url': config.supabase_sensor_url || '',
-            'supabase-log-url': config.supabase_log_url || '',
+            'sample-interval': config.sample_interval || 2,
+            'supabase-project-url': config.supabase_project_url || '',
+            'supabase-bucket-name': config.supabase_bucket_name || '',
             'supabase-api-key': config.supabase_api_key || '',
             'supabase-upload-interval': config.supabase_upload_interval || 10,
             'automation-interval': config.automation_interval_sec || 15,
@@ -1616,9 +1620,9 @@ async function initConfiguration() {
             system_name: document.getElementById('sys-name').value,
             system_location: document.getElementById('sys-location').value,
             timezone: document.getElementById('sys-timezone').value,
-            sample_interval_ms: parseInt(document.getElementById('sample-interval').value) || 1000,
-            supabase_sensor_url: document.getElementById('supabase-sensor-url').value || '',
-            supabase_log_url: document.getElementById('supabase-log-url').value || '',
+            sample_interval: parseInt(document.getElementById('sample-interval').value) || 2,
+            supabase_project_url: document.getElementById('supabase-project-url').value || '',
+            supabase_bucket_name: document.getElementById('supabase-bucket-name').value || '',
             supabase_api_key: document.getElementById('supabase-api-key').value || '',
             supabase_upload_interval: parseInt(document.getElementById('supabase-upload-interval').value) || 10,
             automation_interval_sec: document.getElementById('automation-interval').value || 15,

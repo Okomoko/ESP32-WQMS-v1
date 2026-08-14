@@ -90,20 +90,20 @@
                             <div class="field-group">
                             </div>
                             <div class="field-group">
-                                <label>Sensor Read Cycle (ms)</label>
-                                <input type="number" id="sample-interval" value="1000" min="10" max="10000" style="width:100%;">
+                                <label>Sensor Read Cycle (seconds)</label>
+                                <input type="number" id="sample-interval" value="2" min="2" max="60" style="width:100%;">
                             </div>
                             <div class="field-group">
                                 <label>Automation Interval (seconds)</label>
                                 <input type="number" id="automation-interval" value="15" min="10" max="3600" style="width:100%;">
                             </div>
                             <div class="field-group">
-                                <label>Supabase Integration Sensor Data Endpoint</label>
-                                <input type="url" id="supabase-sensor-url" placeholder="https://your-project.supabase.co/rest/v1/sensor_readings" style="width:100%;">
+                                <label>Supabase Project Endpoint</label>
+                                <input type="url" id="supabase-project-url" placeholder="https://your-project.supabase.co/rest/v1/" style="width:100%;">
                             </div>
                             <div class="field-group">
-                                <label>Supabase Integration Operational Log  Endpoint</label>
-                                <input type="url" id="supabase-log-url" placeholder="https://your-project.supabase.co/rest/v1/system_logs" style="width:100%;">
+                                <label>Supabase Shared Bucket Name</label>
+                                <input type="text" id="supabase-bucket-name" placeholder="yourbucket" style="width:100%;">
                             </div>
                             <div class="field-group">
                                 <label>Supabase API Key</label>

@@ -31,41 +31,41 @@ extern const char* default_sensor_names[];
 Pin NamePin #    GPIO    Type    Primary Capabilities & Notes
 3V3      1         -    Power    3.3V Power Supply Output
 EN       2         -    Input    CHIP_PU / Reset. Pull LOW to reset.
-SVP      3      GPIO36    Input    ADC1_CH0 (Analog/Sensor VP)
-SVN      4      GPIO39    Input    ADC1_CH3 (Analog/Sensor VN)
-IO34     5      GPIO34    Input    ADC1_CH6 (Input-only pin)
-IO35     6      GPIO35    Input    ADC1_CH7 (Input-only pin)
-IO32     7      GPIO32    I/O     ADC1_CH4, TOUCH_9, RTC_32K_P
-IO33     8      GPIO33    I/O     ADC1_CH5, TOUCH_8, RTC_32K_N
-IO25     9      GPIO25    I/O     ADC2_CH8, DAC1
-IO26    10      GPIO26    I/O     ADC2_CH9, DAC2
-IO27    11      GPIO27    I/O     ADC2_CH7, TOUCH_7
-IO14    12      GPIO14    I/O     ADC2_CH6, TOUCH_6, HSPI_CLK
-IO12    13      GPIO12    I/O     ADC2_CH5, TOUCH_5, HSPI_MISO
+SVP      3      GPIO36  Input    ADC1_CH0 (Analog/Sensor VP)
+SVN      4      GPIO39  Input    ADC1_CH3 (Analog/Sensor VN)
+IO34     5      GPIO34  Input    ADC1_CH6 (Input-only pin)
+IO35     6      GPIO35  Input    ADC1_CH7 (Input-only pin)
+IO32     7      GPIO32   I/O     ADC1_CH4, TOUCH_9, RTC_32K_P
+IO33     8      GPIO33   I/O     ADC1_CH5, TOUCH_8, RTC_32K_N
+IO25     9      GPIO25   I/O     ADC2_CH8, DAC1
+IO26    10      GPIO26   I/O     ADC2_CH9, DAC2
+IO27    11      GPIO27   I/O     ADC2_CH7, TOUCH_7
+IO14    12      GPIO14   I/O     ADC2_CH6, TOUCH_6, HSPI_CLK
+IO12    13      GPIO12   I/O     ADC2_CH5, TOUCH_5, HSPI_MISO
 GND     14         -    Power    Ground
-IO13    15      GPIO13    I/O     ADC2_CH4, TOUCH_4, HSPI_MOSI
+IO13    15      GPIO13   I/O     ADC2_CH4, TOUCH_4, HSPI_MOSI
 IO9     16      GPIO9    I/O     Connected to Flash (Avoid using)
-IO10    17      GPIO10    I/O     Connected to Flash (Avoid using)
-IO11    18      GPIO11    I/O     Connected to Flash (Avoid using)
+IO10    17      GPIO10   I/O     Connected to Flash (Avoid using)
+IO11    18      GPIO11   I/O     Connected to Flash (Avoid using)
 VIN     19         -    Power    5V Power Supply Input (via USB)
 GND     20         -    Power    Ground
 IO6     21      GPIO6    I/O     Connected to Flash (Avoid using)
 IO7     22      GPIO7    I/O     Connected to Flash (Avoid using)
 IO8     23      GPIO8    I/O     Connected to Flash (Avoid using)
-IO15    24      GPIO15    I/O     ADC2_CH3, TOUCH_3. Boot Strapping (Needs HIGH)
+IO15    24      GPIO15   I/O     ADC2_CH3, TOUCH_3. Boot Strapping (Needs HIGH)
 IO2     25      GPIO2    I/O     ADC2_CH2, TOUCH_2. Boot Strapping Pin
 IO0     26      GPIO0    I/O     ADC2_CH1, TOUCH_1. Pull LOW for Boot Mode
 IO4     27      GPIO4    I/O     ADC2_CH0, TOUCH_0
-IO16    28      GPIO16    I/O     UART2 RX
-IO17    29      GPIO17    I/O     UART2 TX
+IO16    28      GPIO16   I/O     UART2 RX
+IO17    29      GPIO17   I/O     UART2 TX
 IO5     30      GPIO5    I/O     VSPI_CS0 / Boot Strapping (Needs HIGH)
-IO18    31      GPIO18    I/O     VSPI_CLK
-IO19    32      GPIO19    I/O     VSPI_MISO
-IO21    33      GPIO21    I/O     I2C SDA
+IO18    31      GPIO18   I/O     VSPI_CLK
+IO19    32      GPIO19   I/O     VSPI_MISO
+IO21    33      GPIO21   I/O     I2C SDA
 IO3     34      GPIO3    I/O     U0RXD (Default Serial Input/RX)
 IO1     35      GPIO1    I/O     U0TXD (Default Serial Output/TX)
-IO22    36      GPIO22    I/O     I2C SCL
-IO23    37      GPIO23    I/O     VSPI_MOSI
+IO22    36      GPIO22   I/O     I2C SCL
+IO23    37      GPIO23   I/O     VSPI_MOSI
 GND     38         -    Power    Ground
 
 1.    Input-Only Pins: GPIO34, GPIO35, GPIO36 (VP), and GPIO39 (VN) cannot output voltage or act as digital outputs.
@@ -101,6 +101,20 @@ GND     38         -    Power    Ground
 #define GPIO_RELAY10           27
 
 // ============================================================
+// Partition Configuration
+// ============================================================
+#define WEB_PARTITION_NAME "web_assets"
+#define WEB_BASE_PATH "/web_assets"  // needs to start with forward slash
+#define LOG_PARTITION_NAME "logs"
+#define LOG_BASE_PATH "/logs"  // needs to start with forward slash
+#define SENSOR_PARTITION_NAME "sensors"
+#define SENSOR_BASE_PATH "/sensors" // needs to start with forward slash
+#define IoT_UPDATE_PATH "web_assets.min/" // needs to end with forward slash
+extern int littlefs_logs_mounted;
+extern int littlefs_sensors_mounted;
+extern int littlefs_web_assets_mounted;
+
+// ============================================================
 // Relay Configuration
 // ============================================================
 #define RELAY_MIN_DURATION_MS           50      // Minimum 50ms (safe for mechanical)
@@ -109,16 +123,16 @@ GND     38         -    Power    Ground
 #define RELAY_DEFAULT_OFFDELAY_MS     5000    // Default 5000ms to allow re-trigger the same relay
 
 // ============================================================
-// Sensor History Configuration (32 days fixed)
+// Sensor History Configuration (15 days fixed)
 // ============================================================
-#define HISTORY_DAYS                  32
+#define HISTORY_DAYS                  15
 #define HISTORY_SAMPLES_PER_DAY       1440
 #define HISTORY_MAX_RECORDS           (HISTORY_DAYS * HISTORY_SAMPLES_PER_DAY)
-#define HISTORY_MAX_RECORDS_PER_PAGE  (3* HISTORY_SAMPLES_PER_DAY)
-#define SENSOR_RECORD_SIZE            26
+#define HISTORY_MAX_RECORDS_PER_PAGE  (3 * HISTORY_SAMPLES_PER_DAY)
+#define SENSOR_RECORD_SIZE            46
 #define HISTORY_FILE_SIZE             (HISTORY_MAX_RECORDS * SENSOR_RECORD_SIZE)
-#define HISTORY_FILE                  SENSOR_BASE_PATH "history.dat"
-#define INDEX_FILE                    SENSOR_BASE_PATH "index.dat"
+#define HISTORY_FILE                  SENSOR_BASE_PATH "/history.dat"
+#define INDEX_FILE                    SENSOR_BASE_PATH "/index.dat"
 
 // ============================================================
 // Logging Configuration
@@ -165,6 +179,7 @@ GND     38         -    Power    Ground
 #define WIFI_MAX_RETRIES           5
 #define WIFI_RETRY_DELAY_MS        2000
 #define WIFI_SCAN_MAX_NETWORKS     20
+#define WIFI_TX_POWER_DBM          10 // 10 dBm
 
 // ============================================================
 // NTP Configuration
@@ -181,7 +196,7 @@ GND     38         -    Power    Ground
 // ============================================================
 #define HTTP_TIMEOUT_MS                        10000
 #define MAX_LOG_BATCH_SIZE                         1
-#define MAX_SENSOR_BATCH_SIZE                      5
+#define MAX_SENSOR_BATCH_SIZE                     15
 #define SUPABASE_UPLOAD_INTERVAL                  60
 #define SUPABASE_SENSOR_TABLE      "sensor_readings"
 #define SUPABASE_LOGS_TABLE            "system_logs"
@@ -192,30 +207,16 @@ GND     38         -    Power    Ground
 // Task Stack Sizes
 // ============================================================
 #define STACK_SIZE_MAIN              8192
-#define STACK_SIZE_SENSOR            4096
+#define STACK_SIZE_SENSOR            5120
 #define STACK_SIZE_RELAY             1024
 #define STACK_SIZE_MODBUS            4096 // 8192
 #define STACK_SIZE_WIFI              2048
 #define STACK_SIZE_NTP               4096
 #define STACK_SIZE_WATCHDOG          1024
-#define STACK_SIZE_WEBSERVER         6144 // 8192
+#define STACK_SIZE_WEBSERVER         8192
 #define STACK_SIZE_AUTOMATION        8192 // 16384
-#define STACK_SIZE_LOGGING           1024
-#define STACK_SIZE_SUPABASE_UPLOAD  12288 // 16384
-
-// ============================================================
-// Partition Configuration
-// ============================================================
-#define WEB_PARTITION_NAME "web_assets"
-#define WEB_BASE_PATH ""
-#define LOG_PARTITION_NAME "logs"
-#define LOG_BASE_PATH "/spiffs/logs"
-#define SENSOR_PARTITION_NAME "sensors"
-#define SENSOR_BASE_PATH "/spiffs/sensors"
-#define IoT_UPDATE_PATH "web_assets.min/" // needs to end with forward slash
-extern int spiffs_logs_mounted;
-extern int spiffs_sensors_mounted;
-extern int spiffs_web_assets_mounted;
+#define STACK_SIZE_LOGGING           2048
+#define STACK_SIZE_SUPABASE_UPLOAD   8192 // 16384
 
 // ============================================================
 // Task Priorities

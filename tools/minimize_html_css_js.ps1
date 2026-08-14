@@ -609,3 +609,13 @@ $results | Where-Object { $_.Status -eq "Success" } | Format-Table @{
     Label = "Savings"
     Expression = { if ($_.Savings -gt 0) { "$($_.Savings)%" } else { "0%" } }
 } -AutoSize
+
+$userInput = Read-Host -Prompt "Would you prefer to flash the web content to ESP32 ?"
+
+if ($userInput -eq 'y') {
+#    python $env:IDF_PATH/components/spiffs/spiffsgen.py 0x60000 $OutputDir web_assets.bin
+    c:/esp/v6.0.1/esp-idf/components/mklittlefs/mklittlefs.exe -c $OutputDir -s 0x60000 web_assets.bin
+    
+#    esptool --chip esp32 write-flash 0x130000 web_assets.bin
+    esptool write-flash 0x130000 web_assets.bin
+}

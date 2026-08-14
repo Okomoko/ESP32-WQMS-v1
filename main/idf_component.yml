@@ -3,5 +3,4 @@
 
 dependencies:
   espressif/cjson: "^1.7.15"
-  ## Uncomment for MODBUS support (if using esp-modbus component)
-  # espressif/esp-modbus: "^1.0.13" 
+  joltwallet/littlefs: "^1.11.0" 

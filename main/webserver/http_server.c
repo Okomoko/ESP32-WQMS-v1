@@ -4,7 +4,7 @@
 #include <string.h>
 #include "esp_http_server.h"
 #include "esp_vfs.h"
-#include "esp_spiffs.h"
+#include "esp_littlefs.h"
 #include "esp_err.h"
 #include "esp_http_client.h"
 #include "esp_timer.h"
@@ -446,7 +446,6 @@ static bool download_file_from_supabase(const char *filename, const char *dest_p
     }
 
     WQMS_LOG_I("Successfully saved: %s (%d bytes) in %d chunks", filename, total_read, chunk_count);
-    esp_spiffs_gc(WEB_PARTITION_NAME, 4096);
     return true;
 }
 
@@ -547,51 +546,8 @@ static void sync_web_assets_from_supabase(void) {
         free(supabase_files);
         return;
     }
-    
-    WQMS_LOG_I("Newer assets found on Supabase, updating...");
-    
-    // Step 5: Update or add files from Supabase
-    int updated = 0;
-    int added = 0;
-    int failed = 0;
-    
-    for (int i = 0; i < supabase_count; i++) {
-        char dest_path[256];
-        char rmt_path[256];
-        snprintf(dest_path, sizeof(dest_path), "%s/%s", WEB_BASE_PATH, supabase_files[i].name);
-        snprintf(rmt_path, sizeof(rmt_path), "%s%s", IoT_UPDATE_PATH, supabase_files[i].name);
-        
-        WQMS_LOG_D("%s: ", dest_path);
 
-        uint32_t local_time = get_local_file_time(dest_path);
-        bool exists = file_exists_local(dest_path);
-        WQMS_LOG_I("%s: %s -> %s (remote: %lu, local: %lu)", 
-                  exists ? "Updating" : "Adding",
-                  rmt_path,
-                  dest_path,
-                  supabase_files[i].last_modified, 
-                  local_time);
-
-        // Check if file needs update (newer on Supabase or doesn't exist locally)
-        if (!exists || supabase_files[i].last_modified > local_time) {
-            if (download_file_from_supabase(rmt_path, dest_path)) {
-                // SPIFFS typically doesn't support timestamps reliably,
-                // so we skip setting them and rely on .last_update file
-                if (exists) {
-                    updated++;
-                } else {
-                    added++;
-                }
-            } else {
-                WQMS_LOG_E("Failed to download: %s", supabase_files[i].name);
-                failed++;
-            }
-        } else {
-            WQMS_LOG_D("File up to date: %s", supabase_files[i].name);
-        }
-    }
-    
-    // Step 6: Remove orphaned files (exist locally but not in Supabase)
+    // Step 5: Remove orphaned files (exist locally but not in Supabase)
     int removed = 0;
     DIR *dir = opendir(WEB_BASE_PATH);
     if (dir) {
@@ -614,11 +570,11 @@ static void sync_web_assets_from_supabase(void) {
                     break;
                 }
             }
-            
+
             // If not found in Supabase, delete it
             if (!found) {
-                char file_path[260];
-                snprintf(file_path, sizeof(file_path), "%s/%s", WEB_BASE_PATH, entry->d_name);
+                char file_path[256];
+                snprintf(file_path, sizeof(file_path), "%s/%.240s", WEB_BASE_PATH, entry->d_name);
                 
                 struct stat st;
                 if (stat(file_path, &st) == 0) {
@@ -639,7 +595,49 @@ static void sync_web_assets_from_supabase(void) {
         }
         closedir(dir);
     }
+
+    WQMS_LOG_I("Newer assets found on Supabase, updating...");
+
+    // Step 6: Update or add files from Supabase
+    int updated = 0;
+    int added = 0;
+    int failed = 0;
     
+    for (int i = 0; i < supabase_count; i++) {
+        char dest_path[256];
+        char rmt_path[256];
+        snprintf(dest_path, sizeof(dest_path), "%s/%.240s", WEB_BASE_PATH, supabase_files[i].name);
+        snprintf(rmt_path, sizeof(rmt_path), "%s%.240s", IoT_UPDATE_PATH, supabase_files[i].name);
+        
+        WQMS_LOG_D("%s: ", dest_path);
+
+        uint32_t local_time = get_local_file_time(dest_path);
+        bool exists = file_exists_local(dest_path);
+        WQMS_LOG_I("%s: %s -> %s (remote: %lu, local: %lu)", 
+                  exists ? "Updating" : "Adding",
+                  rmt_path,
+                  dest_path,
+                  supabase_files[i].last_modified, 
+                  local_time);
+
+        // Check if file needs update (newer on Supabase or doesn't exist locally)
+        if (!exists || supabase_files[i].last_modified > local_time) {
+            if (download_file_from_supabase(rmt_path, dest_path)) {
+                // rely on .last_update file for the last updated timestamp
+                if (exists) {
+                    updated++;
+                } else {
+                    added++;
+                }
+            } else {
+                WQMS_LOG_E("Failed to download: %s", supabase_files[i].name);
+                failed++;
+            }
+        } else {
+            WQMS_LOG_D("File up to date: %s", supabase_files[i].name);
+        }
+    }
+
     // Step 7: Update local timestamp if any changes were made
     if (updated > 0 || added > 0 || removed > 0) {
         WQMS_LOG_I("Sync complete: %d added, %d updated, %d removed, %d failed.", 
@@ -672,10 +670,10 @@ static esp_err_t serve_file_from_partition(httpd_req_t *req) {
     if (strcmp(uri, "/") == 0 || strcmp(uri, "/index.html") == 0) {
         snprintf(file_path, sizeof(file_path), "%s/index.html", WEB_BASE_PATH);
     } else {
-        snprintf(file_path, sizeof(file_path), "%s%.250s", WEB_BASE_PATH, uri);
+        snprintf(file_path, sizeof(file_path), "%s/%.240s", WEB_BASE_PATH, uri);
     }
 //    WQMS_LOG_D("File to be served : %s", file_path);
-    // Check if file exists in SPIFFS
+    // Check if file exists in file system
     struct stat file_stat;
     if (stat(file_path, &file_stat) != 0) {
         httpd_resp_send_404(req);
@@ -728,11 +726,13 @@ static esp_err_t serve_file_from_partition(httpd_req_t *req) {
 
 void webserver_init(void) {
     // Step 1: Sync assets from Supabase during boot
-    if (spiffs_web_assets_mounted) {
+    if (littlefs_web_assets_mounted) {
         // Note: WiFi should be connected before calling this function
         sync_web_assets_from_supabase();
+    } else {
+        WQMS_LOG_E("HTTP server partition is not mounted");
     }
-    
+
     // Step 2: Start HTTP server
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.lru_purge_enable = true;

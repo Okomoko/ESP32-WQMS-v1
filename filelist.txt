@@ -27,6 +27,7 @@ https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/aut
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/automation/rule_manager.c
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/drivers/adc_dma.c
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/drivers/dht11.c
+https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/filelist.txt
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/idf_component.yml
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/include/adc_dma.h
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/include/api_config.h
@@ -72,7 +73,6 @@ https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/uti
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/utils/spiffs_manager.c
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/utils/watchdog.c
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/utils/wifi_manager.c
-https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/webserver/api_config.c
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/webserver/api_handler.c
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/webserver/http_server.c
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/main/webserver/web_console.c
@@ -81,6 +81,7 @@ https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/sdkconfi
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/sdkconfig.defaults
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/tools/Find my ESP32.bat
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/tools/WQMS-ESP Discovery - PS5.1.ps1
+https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/tools/github commands.txt
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/tools/minimize.bat
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/tools/minimize_html_css_js.ps1
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/tools/mkspiffs.exe
@@ -101,5 +102,7 @@ https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/web_asse
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/web_assets/js/console.js
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/web_assets/js/core.js
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/web_assets/js/dashboard.js
+https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/web_assets/js/dashboardv1.js
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/web_assets/js/router.js
+https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/web_assets/style - before strip.css
 https://raw.githubusercontent.com/Okomoko/ESP32-WQMS-v1/refs/heads/main/web_assets/style.css

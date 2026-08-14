@@ -19,7 +19,7 @@
 #include "logger.h"
 #include "log_rotate.h"
 #include "watchdog.h"
-#include "spiffs_manager.h"
+#include "littlefs_manager.h"
 #include "nvs_config.h"
 #include "wifi_manager.h"
 #include "email_client.h"
@@ -95,13 +95,13 @@ void app_main(void) {
         WQMS_LOG_E("NVS init failed: %d", ret);
         return;
     }
-    ret = nvs_get_datetime();
+    ret = nvs_get_datetime("datetime");
     WQMS_LOG_I("NVS initialized");
 
     // ============================================================
-    // Step 2: Initialize SPIFFS (webpartition, logs, sensors)
+    // Step 2: Initialize LittleFS (webpartition, logs, sensors)
     // ============================================================
-    spiffs_init();
+    littlefs_init();
 
     // ============================================================
     // Step 3: Initialize Logging System
@@ -147,8 +147,8 @@ void app_main(void) {
     // ============================================================
     ntp_start();
 //    WQMS_LOG_I("NTP client started");
-    vTaskDelay(pdMS_TO_TICKS(5000));
-    ret = nvs_save_datetime();
+    vTaskDelay(pdMS_TO_TICKS(3000));
+    ret = nvs_save_datetime("datetime", NULL);
 
     // ============================================================
     // Step 9: Initialize Supabase upload system
@@ -237,7 +237,8 @@ void app_main(void) {
 //    gpio_set_direction(led_gpio, GPIO_MODE_OUTPUT);
 
     // Send heartbeat to watchdog (main task)
-    int8_t time_update = 0;
+    int8_t minute_update = 0;
+    int8_t hour_update = 0;
     while (1) {
         watchdog_heartbeat(WDT_MODULE_LOGGING);
 //        gpio_set_level(led_gpio, RELAY_STATE_IDLE);
@@ -246,11 +247,15 @@ void app_main(void) {
 //        gpio_set_level(led_gpio, RELAY_STATE_ACTIVE);
 //        WQMS_LOG_I("GPIO%d : %d", led_gpio, gpio_get_level(led_gpio));
         vTaskDelay(pdMS_TO_TICKS(500));
-        time_update ++;
-        if (time_update == 60) {
-            ret = supabase_sync_sensor_config();
-            ret = nvs_save_datetime();
-            time_update = 0;
+        minute_update ++;
+        if (minute_update == 60) {
+            ret = nvs_save_datetime("datetime", NULL);
+            minute_update = 0;
+            hour_update ++;
+            if (hour_update == 60) {
+                supabase_sync_sensor_config();
+                hour_update = 0;
+            };
         }
     }
 }

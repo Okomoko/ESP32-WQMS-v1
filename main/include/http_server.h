@@ -1,5 +1,5 @@
 // http_server.h
-// HTTP server with SPIFFS static file serving
+// HTTP server with LittleFS static file serving
 
 #ifndef HTTP_SERVER_H
 #define HTTP_SERVER_H

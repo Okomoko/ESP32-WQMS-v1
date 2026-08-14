@@ -248,7 +248,7 @@ function downloadPostmanCollection() {
                             ],
                             "body": {
                                 "mode": "raw",
-                                "raw": "{\n    \"system_name\": \"WQMS-Greenhouse\",\n    \"system_location\": \"Lab 2\",\n    \"sample_interval_ms\": 2000,\n    \"modbus_interval_ms\": 500,\n    \"automation_interval_sec\": 30,\n    \"ntp_servers\": \"pool.ntp.org,time.google.com\"\n}"
+                                "raw": "{\n    \"system_name\": \"WQMS-Greenhouse\",\n    \"system_location\": \"Lab 2\",\n    \"sample_interval\": 2,\n    \"modbus_interval_ms\": 500,\n    \"automation_interval_sec\": 30,\n    \"ntp_servers\": \"pool.ntp.org,time.google.com\"\n}"
                             },
                             "url": {
                                 "raw": baseUrl + "/api/config",

@@ -25,9 +25,17 @@ class LightChart {
         this.maxDataPoints = options.maxDataPoints || 60;
         this.visibleDatasets = new Set(options.initialVisible || []);
         
+        // Loading state
+        this.isLoading = false;
+        this.loadingText = '';
+        this.loadingProgress = 0;
+        
         this.setupDPI();
         this.resizeHandler = this.resize.bind(this);
         window.addEventListener('resize', this.resizeHandler);
+        
+        // Initial render
+        this.render();
     }
 
     setupDPI() {
@@ -55,6 +63,20 @@ class LightChart {
         this.render();
     }
 
+    setLoading(loading, text, progress) {
+        this.isLoading = loading;
+        this.loadingText = text || 'Loading...';
+        this.loadingProgress = Math.min(100, Math.max(0, progress || 0));
+        this.render();
+    }
+
+    setLoadingProgress(progress, text) {
+        if (!this.isLoading) return;
+        this.loadingProgress = Math.min(100, Math.max(0, progress));
+        if (text) this.loadingText = text;
+        this.render();
+    }
+
     setData(labels, data) {
         this.labelsArray = labels.slice(-this.maxDataPoints);
         
@@ -62,6 +84,7 @@ class LightChart {
             this.datasets[key] = data[key].slice(-this.maxDataPoints);
         });
         
+        this.isLoading = false;
         this.render();
     }
 
@@ -79,10 +102,67 @@ class LightChart {
         const w = this.width;
         const h = this.height;
         
+        // Clear canvas
         ctx.clearRect(0, 0, w, h);
         ctx.fillStyle = '#0f0f1a';
         ctx.fillRect(0, 0, w, h);
-        
+
+        // ============================================================
+        // LOADING STATE - Draw on canvas
+        // ============================================================
+        if (this.isLoading) {
+            const cx = w / 2;
+            const cy = h / 2;
+            const radius = 30;
+            
+            // Semi-transparent overlay
+            ctx.fillStyle = 'rgba(15, 15, 26, 0.85)';
+            ctx.fillRect(0, 0, w, h);
+            
+            // Background circle
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#2a2a3e';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            
+            // Progress arc
+            const progressRad = (this.loadingProgress / 100) * 2 * Math.PI;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + progressRad);
+            ctx.strokeStyle = '#2b7be4';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            
+            // Percentage text - large
+            ctx.fillStyle = '#c0d0e0';
+            ctx.font = '20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(Math.round(this.loadingProgress) + '%', cx, cy);
+            
+            // Loading text - main message
+            ctx.fillStyle = '#8899bb';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(this.loadingText, cx, cy + radius + 18);
+            
+            // Sub-text hint
+            if (this.loadingProgress > 0 && this.loadingProgress < 100) {
+                ctx.fillStyle = '#4a5a7e';
+                ctx.font = '10px sans-serif';
+                ctx.textBaseline = 'top';
+                ctx.fillText('⏳ Please wait...', cx, cy + radius + 36);
+            }
+            
+            return;
+        }
+
+        // ============================================================
+        // NO DATA STATE
+        // ============================================================
         if (this.labelsArray.length === 0) {
             ctx.fillStyle = '#6a7a9e';
             ctx.font = '14px sans-serif';
@@ -109,6 +189,9 @@ class LightChart {
             return;
         }
         
+        // ============================================================
+        // RENDER CHART
+        // ============================================================
         const minVal = Math.min(0, ...allValues);
         const maxVal = Math.max(...allValues);
         const range = maxVal - minVal || 1;

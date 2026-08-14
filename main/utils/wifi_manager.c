@@ -21,15 +21,6 @@
 #include "nvs_config.h"
 
 // ============================================================
-// Constants
-// ============================================================
-#define WIFI_AP_SSID_PREFIX "WQMS-"
-#define WIFI_AP_PASSWORD "WQMSwqms"
-#define WIFI_MAX_RETRIES 5
-#define WIFI_RETRY_DELAY_MS 2000
-#define WIFI_SCAN_MAX_NETWORKS 20
-
-// ============================================================
 // Event Group Bits
 // ============================================================
 #define WIFI_CONNECTED_BIT BIT0
@@ -274,6 +265,14 @@ void wifi_init(void) {
         WQMS_LOG_I("Switched to AP+STA mode");
     }
     
+    int8_t tx_power_value = WIFI_TX_POWER_DBM * 4;  // Convert to 0.25dBm units → 40
+    esp_err_t err = esp_wifi_set_max_tx_power(tx_power_value);
+    if (err == ESP_OK) {
+        WQMS_LOG_I("TX power set to %d dBm (value: %d)", WIFI_TX_POWER_DBM, tx_power_value);
+    } else {
+        WQMS_LOG_E("Failed to set TX power: %s", esp_err_to_name(err));
+    }
+
     watchdog_register_module(WDT_MODULE_WIFI, 30);
 }
 

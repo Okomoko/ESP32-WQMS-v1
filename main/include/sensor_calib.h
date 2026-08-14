@@ -39,38 +39,39 @@ typedef struct {
 } cal_session_t;
 
 // ============================================================
-// Function Prototypes
+// Function Prototypes - KEEP EXISTING FUNCTION NAMES
 // ============================================================
 
 /**
  * @brief Start a calibration session for a sensor
  * @param sensor_id Sensor ID to calibrate (0 to TOTAL_SENSOR_COUNT-1)
- * @return 0 on success, -1 on error (invalid sensor or already active)
+ * @return 0 on success, -1 on error
  */
 int cal_start(int sensor_id);
 
 /**
  * @brief Add a sample to the current calibration session
  * @param known_value The known value of the calibration standard
- * @return 0 on success, -1 on error (no active session or session full)
+ * @return 0 on success, -1 on error
  */
 int cal_add_sample(float known_value);
 
 /**
  * @brief Calculate the calibration factor from collected samples
  * @return Calibration factor, or 0 if not enough samples
+ * @note Now calculates using full linear regression (includes offset)
  */
-float cal_calculate_factor(void);
+int calculate_factor_and_offset(float *factor, float *offset);
 
 /**
  * @brief Apply the calibration and save to NVS
- * @return 0 on success, -1 on error (not enough samples or save failed)
+ * @return 0 on success, -1 on error
  */
 int cal_apply(void);
 
 /**
  * @brief Cancel the current calibration session
- * @return 0 on success, -1 on error (no active session)
+ * @return 0 on success, -1 on error
  */
 int cal_cancel(void);
 
@@ -85,6 +86,7 @@ cal_session_t* cal_get_session(void);
  * @param sensor_id Sensor ID
  * @param factor Calibration factor to save
  * @return 0 on success, -1 on error
+ * @note This now saves BOTH factor and offset (offset defaults to 0)
  */
 int cal_save_factor(int sensor_id, float factor);
 
@@ -92,7 +94,8 @@ int cal_save_factor(int sensor_id, float factor);
  * @brief Load calibration factor from NVS
  * @param sensor_id Sensor ID
  * @param factor Pointer to store the loaded factor
- * @return 0 on success, -1 on error (not found or read failed)
+ * @return 0 on success, -1 on error
+ * @note This now loads BOTH factor and offset and stores in sensor_config
  */
 int cal_load_factor(int sensor_id, float *factor);
 

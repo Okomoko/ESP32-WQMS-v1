@@ -47,7 +47,8 @@ static void poll_analog_sensors(void) {
     for (int i = 0; i < ANALOGUE_SENSOR_COUNT; i++) {
 //        int sensor_id = adc_to_sensor[i];
         int sensor_id = i;
-        SENSOR_LOG_V("Sensor %d, name %s, channel %d, pin %d", i, sensor_config[sensor_id].name, sensor_config[sensor_id].adc_channel, sensor_config[sensor_id].gpio_pin);
+        SENSOR_LOG_V("Sensor %d, name %s, channel %d, pin %d, status %d", i, sensor_config[sensor_id].name, sensor_config[sensor_id].adc_channel, sensor_config[sensor_id].gpio_pin, sensor_config[sensor_id].enabled);
+        readings[sensor_id].status = sensor_config[sensor_id].enabled ? SENSOR_STATUS_OK : SENSOR_STATUS_DISABLED;
         if (!sensor_config[sensor_id].enabled) continue;
         
         uint16_t raw = wqms_adc_dma_get_raw(sensor_config[i].adc_channel);
@@ -57,7 +58,6 @@ static void poll_analog_sensors(void) {
             readings[sensor_id].timestamp = time(NULL);
             readings[sensor_id].value = value;
             readings[sensor_id].raw_adc = raw;
-            readings[sensor_id].status = SENSOR_STATUS_OK;
             readings[sensor_id].quality = 0;
             xSemaphoreGive(sensor_mutex);
         }
@@ -101,14 +101,14 @@ static void poll_dht11(void) {
     } else {
         // DHT11 read failed - only log if enabled
         if (sensor_config[DHT11_SENSOR_TEMP].enabled) {
-            SENSOR_LOG_W("DHT11 read failed (temp)");
+//            SENSOR_LOG_W("DHT11 read failed (temp)");
             if (sensor_mutex && xSemaphoreTake(sensor_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
                 readings[DHT11_SENSOR_TEMP].status = SENSOR_STATUS_ERROR;
                 xSemaphoreGive(sensor_mutex);
             }
         }
         if (sensor_config[DHT11_SENSOR_HUMID].enabled) {
-            SENSOR_LOG_W("DHT11 read failed (humid)");
+//            SENSOR_LOG_W("DHT11 read failed (humid)");
             if (sensor_mutex && xSemaphoreTake(sensor_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
                 readings[DHT11_SENSOR_HUMID].status = SENSOR_STATUS_ERROR;
                 xSemaphoreGive(sensor_mutex);
@@ -124,23 +124,24 @@ static void sensor_poll_task(void *pvParameters) {
     SENSOR_LOG_D("Sensor polling task started");
     
     while (1) {
-        uint32_t start_time = esp_timer_get_time() / 1000;
+        uint32_t start_time = esp_timer_get_time() / 1000000;
         
+		uint32_t interval = nvs_get_sample_interval();
+
         poll_analog_sensors();
         poll_dht11();
         
         watchdog_heartbeat(WDT_MODULE_SENSOR);
         
         sample_counter++;
-        if (sample_counter >= 60) {
+        if (sample_counter >= (60 / interval)) {
             sample_counter = 0;
             sensor_history_add();
         }
         
-        uint32_t interval = nvs_get_sample_interval();
-        uint32_t elapsed = (esp_timer_get_time() / 1000) - start_time;
+        uint32_t elapsed = (esp_timer_get_time() / 1000000) - start_time;
         if (elapsed < interval) {
-            vTaskDelay(pdMS_TO_TICKS(interval - elapsed));
+            vTaskDelay(pdMS_TO_TICKS((interval - elapsed)*1000));
         } else {
             vTaskDelay(pdMS_TO_TICKS(10));
         }
@@ -180,13 +181,13 @@ void sensor_init(void) {
     dht11_init(GPIO_DHT11);
     dht11_power_up();
     
-    vTaskDelay(pdMS_TO_TICKS(100));
-    
     // Test read
     dht11_data_t data;
     if (dht11_read(&data) == 0) {
         SENSOR_LOG_D("DHT11 ready: Temp=%.1f, Humid=%.1f", data.temperature, data.humidity);
     }
+
+    vTaskDelay(pdMS_TO_TICKS(2000)); // to avoid DHT11 second read error as it would be quicker than 2 seconds.
 
     sensor_history_init();
     
@@ -207,7 +208,7 @@ sensor_reading_t* sensor_get_all_readings(void) {
 
 float sensor_convert_value(uint8_t sensor_id, uint16_t raw_adc) {
     float voltage = (raw_adc / 4095.0f) * 5.0f;
-    float calibrated = voltage * (sensor_config[sensor_id].calibration_factor / 1000.0f);
+    float calibrated = voltage * sensor_config[sensor_id].calibration_factor + sensor_config[sensor_id].calibration_offset;
     
     switch (sensor_id) {
         case 0:  // Sensor 0

@@ -203,7 +203,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
     }
 
     // ============================================================
-    // 5. FILE OUTPUT (SPIFFS) - LINE-BASED with \n separator
+    // 5. FILE OUTPUT (Local FS) - LINE-BASED with \n separator
     //    INFO+ only (no DEBUG)
     //    Colors are stripped for clean file storage
     // ============================================================
@@ -213,6 +213,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
         strip_ansi_colors(full_line, clean_line, sizeof(clean_line));
         
         // Write complete line (without \n - log_rotate_write_line adds it)
+/*
         esp_err_t err = log_rotate_write_line(clean_line);
         if (err != ESP_OK) {
             // If file write fails, log to console
@@ -222,6 +223,7 @@ void wqms_log_write(wqms_log_type_t type, wqms_log_level_t level, const char *fo
             snprintf(err_msg, sizeof(err_msg), "[SYST] [ERROR] File write failed: %d\n", err);
             web_console_write(err_msg);
         }
+*/ //oko
     }
 }
 

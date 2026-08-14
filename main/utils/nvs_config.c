@@ -16,6 +16,7 @@
 #include "log_levels.h"
 #include "logger.h"
 #include "system_config.h"
+#include "supabase_upload.h"
 
 #define CONFIG_VERSION 0
 
@@ -62,6 +63,7 @@ static void load_default_sensor_configs(sensor_config_t *config, int count) {
         }
         config[i].modbus_register = default_sensor_modbus[i];
         config[i].calibration_factor = 1;
+        config[i].calibration_offset = 0;
         config[i].safe_min = 0;
         config[i].safe_max = 100;
     }
@@ -86,6 +88,16 @@ static void load_default_relay_configs(relay_config_t *config, int count) {
 // ============================================================
 // Internal Helper Functions
 // ============================================================
+esp_err_t wqms_nvs_find_key(const char *key, nvs_type_t *out_type)
+{
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &handle);
+    if (err != ESP_OK) return err;
+    return nvs_find_key(handle, key, out_type);
+}
+
+
+
 esp_err_t wqms_nvs_get_str(const char *key, char *buffer, size_t max_len) {
     nvs_handle_t handle;
     esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &handle);
@@ -105,7 +117,6 @@ esp_err_t wqms_nvs_set_str(const char *key, const char *value) {
     nvs_handle_t handle;
     esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
     if (err != ESP_OK) return err;
-    
     err = nvs_set_str(handle, key, value);
     if (err == ESP_OK) {
         err = nvs_commit(handle);
@@ -131,6 +142,30 @@ esp_err_t wqms_nvs_set_u32(const char *key, uint32_t value) {
     if (err != ESP_OK) return err;
     
     err = nvs_set_u32(handle, key, value);
+    if (err == ESP_OK) {
+        err = nvs_commit(handle);
+    }
+    nvs_close(handle);
+    return err;
+}
+
+uint8_t wqms_nvs_get_u8(const char *key, uint8_t default_val) {
+    nvs_handle_t handle;
+    uint8_t value = default_val;
+    
+    if (nvs_open(NVS_NAMESPACE, NVS_READONLY, &handle) == ESP_OK) {
+        nvs_get_u8(handle, key, &value);
+        nvs_close(handle);
+    }
+    return value;
+}
+
+esp_err_t wqms_nvs_set_u8(const char *key, uint8_t value) {
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK) return err;
+    
+    err = nvs_set_u8(handle, key, value);
     if (err == ESP_OK) {
         err = nvs_commit(handle);
     }
@@ -257,7 +292,7 @@ static char system_name_prefix[12] = "WQMS-System";
 static char system_name[32] = "WQMS-System";
 static char system_location[32] = "Unknown";
 static char timezone[16] = "EET-3";
-static uint32_t sample_interval_ms = 1000;
+static uint32_t sample_interval = 2;
 static uint32_t automation_interval_sec = DEFAULT_AUTOMATION_INTERVAL_SEC;
 
 // ============================================================
@@ -286,7 +321,8 @@ void nvs_config_load(void) {
         load_default_relay_configs(default_relays, RELAY_COUNT);
         nvs_save_sensor_config(default_sensors, TOTAL_SENSOR_COUNT);
         nvs_save_relay_config(default_relays, RELAY_COUNT);
-        
+        supabase_sync_sensor_config();
+
         if (nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle) == ESP_OK) {
             nvs_set_u8(handle, NVS_KEY_CONFIG_VERSION, CONFIG_VERSION);
             nvs_commit(handle);
@@ -310,7 +346,7 @@ void nvs_config_load(void) {
     wqms_nvs_get_str(NVS_KEY_SYSTEM_LOCATION, system_location, sizeof(system_location));
     wqms_nvs_get_str(NVS_KEY_TIMEZONE, timezone, sizeof(timezone));
     
-    sample_interval_ms = wqms_nvs_get_u32(NVS_KEY_SAMPLE_INTERVAL, 1000);
+    sample_interval = wqms_nvs_get_u32(NVS_KEY_SAMPLE_INTERVAL, 2);
     automation_interval_sec = wqms_nvs_get_u32(NVS_KEY_AUTOMATION_INT, DEFAULT_AUTOMATION_INTERVAL_SEC);
 
     wqms_nvs_get_str(NVS_KEY_SUPABASE_PROJECT_URL, supabase_project_url, sizeof(supabase_project_url));
@@ -327,15 +363,14 @@ void nvs_config_load(void) {
     if (supabase_upload_interval < 10) supabase_upload_interval = 10;
     if (supabase_upload_interval > 60) supabase_upload_interval = 60;
     
-    WQMS_LOG_I("Config loaded: system='%s', location='%s', interval=%lu ms", 
-               system_name, system_location, sample_interval_ms);
+    WQMS_LOG_I("Config loaded: system='%s', location='%s', interval=%lu ms", system_name, system_location, sample_interval);
 }
 
 void nvs_config_save(void) {
     wqms_nvs_set_str(NVS_KEY_SYSTEM_NAME, system_name);
     wqms_nvs_set_str(NVS_KEY_SYSTEM_LOCATION, system_location);
     wqms_nvs_set_str(NVS_KEY_TIMEZONE, timezone);
-    wqms_nvs_set_u32(NVS_KEY_SAMPLE_INTERVAL, sample_interval_ms);
+    wqms_nvs_set_u32(NVS_KEY_SAMPLE_INTERVAL, sample_interval);
     wqms_nvs_set_u32(NVS_KEY_AUTOMATION_INT, automation_interval_sec);
     // Save Supabase config
     wqms_nvs_set_str(NVS_KEY_SUPABASE_PROJECT_URL, supabase_project_url);
@@ -348,7 +383,7 @@ void nvs_config_save(void) {
 const char* nvs_get_system_name(void) { return system_name; }
 const char* nvs_get_system_location(void) { return system_location; }
 const char* nvs_get_timezone(void) { return timezone; }
-uint32_t nvs_get_sample_interval(void) { return sample_interval_ms; }
+uint32_t nvs_get_sample_interval(void) { return sample_interval; }
 uint32_t nvs_get_automation_interval(void) { return automation_interval_sec; }
 
 void nvs_set_system_name(const char *name) {
@@ -371,17 +406,21 @@ void nvs_set_system_location(const char *loc) {
 
 void nvs_set_timezone(const char *tz) {
     if (tz) {
-        strncpy(timezone, tz, sizeof(timezone) - 1);
-        timezone[sizeof(timezone) - 1] = '\0';
-        wqms_nvs_set_str(NVS_KEY_TIMEZONE, timezone);
-        WQMS_LOG_I("Timezone updated to: %s", timezone);
+        if (strcmp(tz, nvs_get_timezone()) != 0) {
+            strncpy(timezone, tz, sizeof(timezone) - 1);
+            timezone[sizeof(timezone) - 1] = '\0';
+            wqms_nvs_set_str(NVS_KEY_TIMEZONE, timezone);
+            WQMS_LOG_I("Timezone updated to: %s", timezone);
+        } else {
+            WQMS_LOG_D("Timezone remains the same : %s", timezone);
+        }
     }
 }
 
-void nvs_set_sample_interval(uint32_t ms) {
-    sample_interval_ms = ms;
-    wqms_nvs_set_u32(NVS_KEY_SAMPLE_INTERVAL, sample_interval_ms);
-    WQMS_LOG_I("Sample interval updated to: %lu ms", sample_interval_ms);
+void nvs_set_sample_interval(uint32_t seconds) {
+    sample_interval = seconds;
+    wqms_nvs_set_u32(NVS_KEY_SAMPLE_INTERVAL, sample_interval);
+    WQMS_LOG_I("Sample interval updated to: %lu ms", sample_interval);
 }
 
 void nvs_set_automation_interval(uint32_t sec) {
@@ -483,6 +522,14 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
             config[i].calibration_factor = cal;
         }
 
+        snprintf(key, sizeof(key), "%s%d_off", NVS_KEY_SENSOR_PREFIX, i);
+
+        float offset = 1000.0f;
+        if (nvs_get_u32(handle, key, &raw_bits) == ESP_OK) {
+            memcpy(&cal, &raw_bits, sizeof(raw_bits)); 
+            config[i].calibration_offset = offset;
+        }
+
         snprintf(key, sizeof(key), "%s%d_mb", NVS_KEY_SENSOR_PREFIX, i);
         uint16_t mb = default_sensor_modbus[i];
         if (nvs_get_u16(handle, key, &mb) == ESP_OK) {
@@ -532,6 +579,10 @@ void nvs_save_sensor_config(sensor_config_t *config, int count) {
         uint32_t raw_bits;
         memcpy(&raw_bits, &config[i].calibration_factor, sizeof(config[i].calibration_factor));
         snprintf(key, sizeof(key), "%s%d_cal", NVS_KEY_SENSOR_PREFIX, i);
+        nvs_set_u32(handle, key, raw_bits);
+
+        memcpy(&raw_bits, &config[i].calibration_offset, sizeof(config[i].calibration_offset));
+        snprintf(key, sizeof(key), "%s%d_off", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u32(handle, key, raw_bits);
 
         snprintf(key, sizeof(key), "%s%d_mb", NVS_KEY_SENSOR_PREFIX, i);
@@ -643,13 +694,16 @@ void nvs_save_relay_config(relay_config_t *config, int count) {
 // Public Functions - Date & Time
 // ============================================================
 
-esp_err_t nvs_save_datetime(void) {
+esp_err_t nvs_save_datetime(char *keyname, const time_t *timevalue) {
     time_t now;
     struct tm timeinfo;
     char datetime_str[64];
     char timezone_str[16];
-    
-    time(&now);
+    if (timevalue != NULL) {
+        now = *timevalue;
+    } else {
+        time(&now);
+    }
     localtime_r(&now, &timeinfo);
     
     // Get current timezone
@@ -666,40 +720,54 @@ esp_err_t nvs_save_datetime(void) {
     char full_datetime[80];
     snprintf(full_datetime, sizeof(full_datetime), "%s %s", datetime_str, timezone_str);
     
-    return wqms_nvs_set_str("datetime", full_datetime);
+    return wqms_nvs_set_str(keyname, full_datetime);
 }
 
-esp_err_t nvs_get_datetime(void) {
+time_t nvs_get_datetime(char *keyname) {
     char full_datetime[80];
     char datetime_str[32];
     char timezone_str[16];
     esp_err_t err;
     struct tm timeinfo;
     
-    err = wqms_nvs_get_str("datetime", full_datetime, sizeof(full_datetime));
+    err = wqms_nvs_get_str(keyname, full_datetime, sizeof(full_datetime));
     if (err != ESP_OK) {
-        return err;
+        WQMS_LOG_D("%s keyname ts read error at step 1, setting it to zero.", keyname);
+//        return ESP_FAIL;
+        return 0;
     }
-    
+
+//    WQMS_LOG_D("%s : %s", keyname, full_datetime);
     // Parse datetime and timezone: "2026-07-30 14:30:00 EET-3"
-    int parsed = sscanf(full_datetime, "%31[^'] %15s", datetime_str, timezone_str);
+    int parsed = sscanf(full_datetime, "%19[^\n] %15s", datetime_str, timezone_str);
     if (parsed != 2) {
-        return ESP_FAIL;
+        WQMS_LOG_D("%s keyname ts read error at step 2, setting it to zero.", keyname);
+//        return ESP_FAIL;
+        return 0;
     }
     
     if (strptime(datetime_str, "%Y-%m-%d %H:%M:%S", &timeinfo) == NULL) {
-        return ESP_FAIL;
+        WQMS_LOG_D("%s keyname ts read error at step 3, setting it to zero.", keyname);
+//        return ESP_FAIL;
+        return 0;
     }
-    
-    // Set timezone
-    nvs_set_timezone(timezone_str);
     
     // Set system time from NVS
     time_t t = mktime(&timeinfo);
-    struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
-    err = settimeofday(&tv, NULL);
-    
-    return err;
+    WQMS_LOG_D("%s : %d", keyname, t);
+    if ((t < 1765432100) || (t > 3000000000)) {
+        WQMS_LOG_D("%s keyname ts read error at step 4, setting it to zero.", keyname);
+//        return ESP_FAIL;
+        return 0;
+    }
+    if (strcmp("datetime", keyname) == 0) {
+        nvs_set_timezone(timezone_str);
+        struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
+        err = settimeofday(&tv, NULL);
+    }
+    WQMS_LOG_D("%s : %d", keyname, t);
+
+    return t;
 }
 
 void nvs_factory_reset(void) {
@@ -708,4 +776,3 @@ void nvs_factory_reset(void) {
     WQMS_LOG_I("NVS erased, system will restart");
     esp_restart();
 }
-

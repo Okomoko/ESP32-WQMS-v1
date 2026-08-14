@@ -94,6 +94,7 @@ typedef struct __attribute__((packed)) {
     uint8_t adc_channel;
     uint16_t modbus_register;
     float calibration_factor;
+    float calibration_offset;
     sensor_unit_t unit;
     float safe_min;
     float safe_max;

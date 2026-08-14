@@ -8,7 +8,7 @@ idf_component_register(SRCS
     # Utils
     utils/nvs_config.c
     utils/watchdog.c
-    utils/spiffs_manager.c
+    utils/littlefs_manager.c
     utils/wifi_manager.c
     
     # Logging
@@ -76,11 +76,6 @@ idf_component_register(SRCS
 #    ${CMAKE_CURRENT_SOURCE_DIR}/../web_assets.min/prod-ca-2021.crt
 )
 
-# ============================================================
-# SPIFFS Image Generation (for logs and sensors)
-# ============================================================
-# Note: web_assets is NOT a SPIFFS partition anymore - it's embedded in firmware
-
 # Required components
 set(COMPONENT_REQUIRES
     freertos
@@ -98,7 +93,7 @@ set(COMPONENT_REQUIRES
     esp_driver_tsens
     nvs_flash
     spi_flash
-    spiffs
+    littlefs
     mbedtls
     lwip
     http_server

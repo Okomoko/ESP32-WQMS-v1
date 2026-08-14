@@ -67,14 +67,14 @@ static int dht11_read_byte(uint8_t *value) {
     
     for (int i = 0; i < 8; i++) {
         // Wait for start of bit (high)
-        if (!dht11_wait_for_level(1, 100)) {
+        if (!dht11_wait_for_level(1, 150)) {
             return DHT11_BYTE_TIMEOUT;
         }
         
         uint32_t start = esp_timer_get_time();
         
         // Wait for end of bit (low)
-        if (!dht11_wait_for_level(0, 100)) {
+        if (!dht11_wait_for_level(0, 150)) {
             return DHT11_BYTE_TIMEOUT;
         }
         
@@ -100,20 +100,20 @@ static int dht11_read_raw(dht11_data_t *data) {
     // Ensure pin is high before starting (reset condition)
     dht11_set_output();
     dht11_write(1);
-    dht11_delay_us(500);  // Increased wait time
+    dht11_delay_us(1000);  // Increased wait time
     
     // Start signal
     dht11_write(0);
     dht11_delay_us(20000);  // Minimum 18ms, DHT11 needs at least 18ms, 20ms would be safer
     dht11_write(1);
-    dht11_delay_us(40);    // 20-40us
+    dht11_delay_us(50);    // 20-40us
     dht11_set_input();
     
     // Wait for sensor response
-    if (!dht11_wait_for_level(0, 100)) {
+    if (!dht11_wait_for_level(0, 200)) {
         return -1;  // No response low
     }
-    if (!dht11_wait_for_level(1, 100)) {
+    if (!dht11_wait_for_level(1, 200)) {
         return -2;  // No response high
     }
     

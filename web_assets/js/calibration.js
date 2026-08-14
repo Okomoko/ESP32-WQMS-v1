@@ -72,6 +72,7 @@ async function initCalibration() {
                 document.getElementById('cal-sample-body').innerHTML = '';
                 document.getElementById('cal-result').style.display = 'none';
                 document.getElementById('cal-factor').textContent = '--';
+                document.getElementById('cal-offset').textContent = '--';
                 
                 // Switch steps
                 document.getElementById('cal-step-1').classList.remove('active');
@@ -123,6 +124,7 @@ async function initCalibration() {
                 const factorResult = await api.get('/api/calibrate/factor');
                 if (factorResult && factorResult.factor) {
                     document.getElementById('cal-factor').textContent = factorResult.factor.toFixed(4);
+                    document.getElementById('cal-offset').textContent = factorResult.offset.toFixed(4);
                     document.getElementById('cal-result').style.display = 'block';
                 }
                 
@@ -167,6 +169,7 @@ async function initCalibration() {
                 document.getElementById('cal-step-1').classList.add('active');
                 document.getElementById('cal-result').style.display = 'none';
                 document.getElementById('cal-factor').textContent = '--';
+                document.getElementById('cal-offset').textContent = '--';
                 document.getElementById('cal-apply').disabled = true;
                 document.getElementById('cal-known-value').disabled = true;
                 document.getElementById('cal-add-sample').disabled = true;
@@ -193,6 +196,7 @@ async function initCalibration() {
             document.getElementById('cal-step-1').classList.add('active');
             document.getElementById('cal-result').style.display = 'none';
             document.getElementById('cal-factor').textContent = '--';
+            document.getElementById('cal-offset').textContent = '--';
             document.getElementById('cal-sample-body').innerHTML = '';
             document.getElementById('cal-apply').disabled = true;
             document.getElementById('cal-known-value').disabled = true;

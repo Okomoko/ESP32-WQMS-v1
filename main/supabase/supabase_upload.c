@@ -23,8 +23,8 @@
 // ============================================================
 // Static Variables - Last Uploaded Timestamps (Recovery Pointers)
 // ============================================================
-static uint64_t last_sensor_upload_ts = 0;    // Track last uploaded sensor timestamp
-static uint64_t last_log_upload_ts = 0;       // Track last uploaded log timestamp
+static time_t last_sensor_ts = 0;    // Track last uploaded sensor timestamp
+static time_t last_log_ts = 0;       // Track last uploaded log timestamp
 
 static TaskHandle_t upload_task_handle = NULL;
 static SemaphoreHandle_t upload_mutex = NULL;
@@ -34,8 +34,6 @@ static bool is_running = false;
 // Upload status
 static bool last_sensor_upload_ok = false;
 static bool last_log_upload_ok = false;
-static uint64_t last_sensor_upload_time = 0;
-static uint64_t last_log_upload_time = 0;
 
 static char supabase_cert_buffer[SSL_CERTIFICATE_MAX_SIZE];
 
@@ -51,7 +49,7 @@ static esp_err_t http_post_json(const char *url, const char *api_key, const char
     if (!wifi_is_connected()) {
         return ESP_ERR_INVALID_STATE;
     }
-    API_LOG_D("HTTP Post URL : %s", url);
+//    API_LOG_D("HTTP Post URL : %s", url);
     esp_http_client_config_t config = {
         .url = url,
         .method = HTTP_METHOD_POST,
@@ -74,7 +72,7 @@ static esp_err_t http_post_json(const char *url, const char *api_key, const char
             config.cert_pem = supabase_cert_buffer; 
             config.cert_len = cert_len + 1;
         } else {
-			WQMS_LOG_E("Error in certificate load (%d), aborting...", err);
+            WQMS_LOG_E("Error in certificate load (%d), aborting...", err);
             return ESP_ERR_INVALID_STATE;
         }
     } else {
@@ -96,13 +94,13 @@ static esp_err_t http_post_json(const char *url, const char *api_key, const char
     
     esp_http_client_set_post_field(client, json_data, strlen(json_data));
 
-    WQMS_LOG_D("HTTP client is initialized.");
+//    WQMS_LOG_D("HTTP client is initialized.");
     esp_err_t err = esp_http_client_perform(client);
-    WQMS_LOG_D("HTTP POST is performed.");
+//    WQMS_LOG_D("HTTP POST is performed.");
     if (err == ESP_OK) {
         int status_code = esp_http_client_get_status_code(client);
         if (status_code >= 200 && status_code < 300) {
-            WQMS_LOG_V("HTTP POST success: %d", status_code);
+//            WQMS_LOG_V("HTTP POST success: %d", status_code);
         } else {
             WQMS_LOG_W("HTTP POST returned status: %d", status_code);
             err = ESP_ERR_INVALID_RESPONSE;
@@ -119,57 +117,59 @@ static esp_err_t http_post_json(const char *url, const char *api_key, const char
 // Sensor Recovery - Uses sensor_history.c
 // ============================================================
 static int upload_pending_sensors(void) {
-    if (!nvs_supabase_is_configured()) {
-        return 0;
-    }
+
+UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+ESP_LOGI("STACK", "1-Task stack free (min): %u bytes", uxHighWaterMark);
+
+    if (!nvs_supabase_is_configured()) return 0;
+
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "2-Task stack free (min): %u bytes", uxHighWaterMark);
 
     char url[256];
     nvs_get_supabase_sensor_url(url, sizeof(url));
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "3-Task stack free (min): %u bytes", uxHighWaterMark);
     const char *api_key = nvs_get_supabase_api_key();
-    if (!api_key || strlen(api_key) == 0) {
-        return 0;
-    }
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "4-Task stack free (min): %u bytes", uxHighWaterMark);
+    if (!api_key || strlen(api_key) == 0) return 0;
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "5-Task stack free (min): %u bytes", uxHighWaterMark);
 
-    // Get total record count from sensor_history
     uint32_t total_records = sensor_history_get_record_count();
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "6-Task stack free (min): %u bytes", uxHighWaterMark);
     if (total_records == 0) {
         WQMS_LOG_V("No sensor records in history");
         return 0;
     }
-    
-    // Get the most recent record's timestamp
-    uint32_t newest_ts = sensor_history_get_newest_ts();
-    if (newest_ts == 0) {
-        return 0;
-    }
 
-    // If this is the first upload, upload only the most recent
-    if (last_sensor_upload_ts == 0) {
-        last_sensor_upload_ts = newest_ts;
-    }
-    
-    // Check if we have new data
-    if (newest_ts <= last_sensor_upload_ts) {
-        WQMS_LOG_V("No new sensor data (last: %llu, newest: %lu)", 
-                   last_sensor_upload_ts, newest_ts);
+    uint32_t newest_ts = sensor_history_get_newest_ts();
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "7-Task stack free (min): %u bytes", uxHighWaterMark);
+    if (newest_ts == 0) return 0;
+
+    if (newest_ts <= last_sensor_ts) {
+        WQMS_LOG_V("No new sensor data (last: %llu, newest: %lu)", last_sensor_ts, newest_ts);
         return 0;
     }
     
-    // Get records after last upload timestamp
-    uint32_t start_ts = last_sensor_upload_ts + 1;
+    uint32_t start_ts = last_sensor_ts + 1;
     uint32_t end_ts = newest_ts;
     
-    // Limit how many we fetch at once
-    uint32_t count = end_ts - start_ts;
-    if (count > MAX_SENSOR_BATCH_SIZE) count = MAX_SENSOR_BATCH_SIZE;
-    
-    sensor_record_t *records = malloc(count * sizeof(sensor_record_t));
+    // Fetch up to MAX_SENSOR_BATCH_SIZE records
+    sensor_record_t *records = malloc(MAX_SENSOR_BATCH_SIZE * sizeof(sensor_record_t));
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "8-Task stack free (min): %u bytes", uxHighWaterMark);
     if (!records) {
         WQMS_LOG_E("Failed to allocate memory for sensor records");
         return 0;
     }
     
-    int fetched = sensor_history_get_range(start_ts, end_ts, records, count);
+    int fetched = sensor_history_get_range(start_ts, end_ts, records, MAX_SENSOR_BATCH_SIZE);
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "9-Task stack free (min): %u bytes", uxHighWaterMark);
     if (fetched <= 0) {
         free(records);
         return 0;
@@ -177,58 +177,78 @@ static int upload_pending_sensors(void) {
     
     WQMS_LOG_I("Found %d pending sensor records to upload", fetched);
     
-    // Upload each record
-    int uploaded = 0;
-    const char *sys_name = nvs_get_system_name();
-    
-    for (int i = 0; i < fetched; i++) {
-        // Build JSON payload for this record
-        cJSON *root = cJSON_CreateObject();
-        if (!root) continue;
-        
-        cJSON_AddStringToObject(root, "system", sys_name ? sys_name : "WQMS-System");
-        
-        char timestamp_str[32];
-        time_t ts = records[i].timestamp;
-        struct tm *tm_info = localtime(&ts);
-        strftime(timestamp_str, sizeof(timestamp_str), "%Y-%m-%dT%H:%M:%SZ", tm_info);
-        cJSON_AddStringToObject(root, "timestamp", timestamp_str);
-        
-        // Add all sensor values
-        for (int j = 0; j < TOTAL_SENSOR_COUNT; j++) {
-            char key[16];
-            snprintf(key, sizeof(key), "sensor%d", j);
-            cJSON_AddNumberToObject(root, key, round(records[i].values[j]*1000.0)/1000.0);
-        }
-        
-        char *json_str = cJSON_PrintUnformatted(root);
-        cJSON_Delete(root);
-        
-        if (json_str) {
-            esp_err_t err = http_post_json(url, api_key, json_str);
-            free(json_str);
-            
-            if (err == ESP_OK) {
-                uploaded++;
-                last_sensor_upload_ts = records[i].timestamp;
-                last_sensor_upload_ok = true;
-                last_sensor_upload_time = esp_timer_get_time() / 1000000ULL;
-                WQMS_LOG_V("Uploaded sensor record timestamp: %lu", records[i].timestamp);
-            } else {
-                WQMS_LOG_W("Failed to upload sensor record, will retry later");
-                break;  // Stop on failure, retry later
-            }
-        }
+    // Build single JSON array for all records
+    cJSON *root = cJSON_CreateArray();
+    if (!root) {
+        free(records);
+        return 0;
     }
     
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "a-Task stack free (min): %u bytes", uxHighWaterMark);
+    const char *sys_name = nvs_get_system_name();
+    char ts_str[32];
+    char key[16];
+    
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "b-Task stack free (min): %u bytes", uxHighWaterMark);
+    for (int i = 0; i < fetched; i++) {
+        cJSON *obj = cJSON_CreateObject();
+        if (!obj) continue;
+        
+        cJSON_AddStringToObject(obj, "system", sys_name ? sys_name : "WQMS-System");
+        
+        time_t ts = records[i].timestamp;
+        struct tm *tm_info = localtime(&ts);
+        strftime(ts_str, sizeof(ts_str), "%Y-%m-%dT%H:%M:%SZ", tm_info);
+        cJSON_AddStringToObject(obj, "timestamp", ts_str);
+        cJSON_AddNumberToObject(obj, "sensormask", records[i].sensor_mask);
+        
+        for (int j = 0; j < TOTAL_SENSOR_COUNT; j++) {
+            snprintf(key, sizeof(key), "sensor%d", j);
+            cJSON_AddNumberToObject(obj, key, round(records[i].values[j]*1000.0)/1000.0);
+        }
+        
+        cJSON_AddItemToArray(root, obj);
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "c-Task stack free (min): %u bytes", uxHighWaterMark);
+    }
+    
+    char *json_str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "d-Task stack free (min): %u bytes", uxHighWaterMark);
+    int uploaded = 0;
+    if (json_str) {
+        esp_err_t err = http_post_json(url, api_key, json_str);
+        free(json_str);
+        
+        if (err == ESP_OK) {
+            uploaded = fetched;
+            last_sensor_ts = records[fetched-1].timestamp;
+            last_sensor_upload_ok = true;
+            nvs_save_datetime("last_sensor_ts", &last_sensor_ts);
+            WQMS_LOG_I("Uploaded %d sensor records in batch", fetched);
+        } else {
+            WQMS_LOG_W("Failed to upload sensor batch, will retry later");
+        }
+    }
+
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "e-Task stack free (min): %u bytes", uxHighWaterMark);
     free(records);
+uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+ESP_LOGI("STACK", "f-Task stack free (min): %u bytes", uxHighWaterMark);
     return uploaded;
 }
 
 // ============================================================
-// Log Recovery - LINE-BASED reading from log_rotate (SPIFFS)
+// Log Recovery - LINE-BASED reading from log_rotate (LittleFS)
 // ============================================================
 static int upload_pending_logs(void) {
+    //UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+    //ESP_LOGI("STACK", "01-Task stack free (min): %u bytes", uxHighWaterMark);
     typedef struct {
         uint64_t log_ts;
         char timestamp_str[32];
@@ -237,8 +257,12 @@ static int upload_pending_logs(void) {
         char message[280];
     } op_log_t;
     
+    //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+    //ESP_LOGI("STACK", "02-Task stack free (min): %u bytes", uxHighWaterMark);
     op_log_t op_log[MAX_LOG_BATCH_SIZE];
     
+    //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+    //ESP_LOGI("STACK", "03-Task stack free (min): %u bytes", uxHighWaterMark);
     if (!nvs_supabase_is_configured()) {
         return 0;
     }
@@ -246,15 +270,21 @@ static int upload_pending_logs(void) {
     char url[256];
     nvs_get_supabase_log_url(url, sizeof(url));
 
+    //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+    //ESP_LOGI("STACK", "03-Task stack free (min): %u bytes", uxHighWaterMark);
     const char *api_key = nvs_get_supabase_api_key();
     if (!api_key || strlen(api_key) == 0) {
         return 0;
     }
     
+    //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+    //ESP_LOGI("STACK", "04-Task stack free (min): %u bytes", uxHighWaterMark);
     int uploaded = 0;
     uint32_t total_read_bytes = 0;
     const char *sys_name = nvs_get_system_name();
     
+    //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+    //ESP_LOGI("STACK", "05-Task stack free (min): %u bytes", uxHighWaterMark);
     // Get total line count from log system
     uint32_t total_lines = log_rotate_get_line_count();
     if (total_lines == 0) {
@@ -262,6 +292,8 @@ static int upload_pending_logs(void) {
         return 0;
     }
     
+    //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+    //ESP_LOGI("STACK", "06-Task stack free (min): %u bytes", uxHighWaterMark);
     WQMS_LOG_D("Total lines in log: %lu", total_lines);
     
     while (uploaded < total_lines) {
@@ -271,6 +303,8 @@ static int upload_pending_logs(void) {
         char line_buffer[LOG_MAX_LINE_LENGTH + 1];
         size_t bytes_read;
         int collected = 0;
+        //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+        //ESP_LOGI("STACK", "07-Task stack free (min): %u bytes", uxHighWaterMark);
         while (collected < MAX_LOG_BATCH_SIZE) {
             bytes_read = log_rotate_read_line(line_buffer, sizeof(line_buffer) - 1, &read_offset);
             total_read_bytes += bytes_read;
@@ -287,6 +321,8 @@ static int upload_pending_logs(void) {
             
             char *p = line_buffer;
             
+            //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+            //ESP_LOGI("STACK", "08-Task stack free (min): %u bytes", uxHighWaterMark);
             // Parse timestamp: [YYYY-MM-DD HH:MM:SS]
             if (*p == '[') {
                 p++;
@@ -308,10 +344,13 @@ static int upload_pending_logs(void) {
             }
             
             // Skip if this log is older than last upload
-            if (log_ts > 0 && log_ts <= last_log_upload_ts) {
+            if (log_ts > 0 && log_ts <= last_log_ts) {
+                uploaded++;
                 continue;
             }
             
+            //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+            //ESP_LOGI("STACK", "09-Task stack free (min): %u bytes", uxHighWaterMark);
             // Parse module and level: [MOD-LVL]
             while (*p == ' ') p++;
             if (*p == '[') {
@@ -336,31 +375,35 @@ static int upload_pending_logs(void) {
                 }
             }
             
+            //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+            //ESP_LOGI("STACK", "0a-Task stack free (min): %u bytes", uxHighWaterMark);
             // Get message
             while (*p == ' ') p++;
             strncpy(message, p, sizeof(message) - 1);
             message[sizeof(message) - 1] = '\0';
-            
-            if (strlen(message) > 0) {
-                op_log[collected].log_ts = log_ts;
-                strncpy(op_log[collected].timestamp_str, timestamp_str, sizeof(op_log[collected].timestamp_str) - 1);
-                op_log[collected].timestamp_str[sizeof(op_log[collected].timestamp_str) - 1] = '\0';
-                
-                strncpy(op_log[collected].module, module, sizeof(op_log[collected].module) - 1);
-                op_log[collected].module[sizeof(op_log[collected].module) - 1] = '\0';
-                
-                strncpy(op_log[collected].level, level, sizeof(op_log[collected].level) - 1);
-                op_log[collected].level[sizeof(op_log[collected].level) - 1] = '\0';
-                
-                strncpy(op_log[collected].message, message, sizeof(op_log[collected].message) - 1);
-                op_log[collected].message[sizeof(op_log[collected].message) - 1] = '\0';
-                
-                collected++;
-            } else {
-                WQMS_LOG_D("Message is corrupt -%s-", message);
+
+            if ((strlen(timestamp_str) == 0) || (strlen(module) == 0) || (strlen(level) == 0)) {
+                WQMS_LOG_D("Message is corrupt, ignoring.");
+                uploaded++;
+                continue;
             }
+            op_log[collected].log_ts = log_ts;
+            strncpy(op_log[collected].timestamp_str, timestamp_str, sizeof(op_log[collected].timestamp_str) - 1);
+            op_log[collected].timestamp_str[sizeof(op_log[collected].timestamp_str) - 1] = '\0';
+
+            strncpy(op_log[collected].module, module, sizeof(op_log[collected].module) - 1);
+            op_log[collected].module[sizeof(op_log[collected].module) - 1] = '\0';
+
+            strncpy(op_log[collected].level, level, sizeof(op_log[collected].level) - 1);
+            op_log[collected].level[sizeof(op_log[collected].level) - 1] = '\0';
+
+            strncpy(op_log[collected].message, message, sizeof(op_log[collected].message) - 1);
+            op_log[collected].message[sizeof(op_log[collected].message) - 1] = '\0';
+            collected++;
         }
         
+        //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+        //ESP_LOGI("STACK", "0b-Task stack free (min): %u bytes", uxHighWaterMark);
         // Upload collected logs
         if (collected > 0) {
             WQMS_LOG_D("Collected count: %d", collected);
@@ -385,14 +428,19 @@ static int upload_pending_logs(void) {
             char *json_str = cJSON_PrintUnformatted(root);
             cJSON_Delete(root);
             
+            //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+            //ESP_LOGI("STACK", "0c-Task stack free (min): %u bytes", uxHighWaterMark);
             if (json_str) {
+                WQMS_LOG_D("URL : %s", url);
+                WQMS_LOG_D("API_KEY : %s", api_key);
+                WQMS_LOG_D("JSON : %.250s", json_str);
                 esp_err_t err = http_post_json(url, api_key, json_str);
                 
                 if (err == ESP_OK) {
                     // Update last upload timestamp to the newest log we uploaded
                     for (int i = 0; i < collected; i++) {
-                        if (op_log[i].log_ts > last_log_upload_ts) {
-                            last_log_upload_ts = op_log[i].log_ts;
+                        if (op_log[i].log_ts > last_log_ts) {
+                            last_log_ts = op_log[i].log_ts;
                         }
                     }
                     uploaded += collected;
@@ -400,7 +448,7 @@ static int upload_pending_logs(void) {
                 } else {
                     WQMS_LOG_W("Failed to upload logs, will retry later");
                     // Log the first part of the JSON for debugging
-                    WQMS_LOG_D("%.250s...", json_str);
+//                    WQMS_LOG_D("%.250s...", json_str);
 /*                    if (strlen(json_str) > 250) {
                         int j = 250;
                         WQMS_LOG_D("==0==");
@@ -415,7 +463,9 @@ static int upload_pending_logs(void) {
             }
         }
     }
-    last_log_upload_time = esp_timer_get_time() / 1000000ULL;
+    //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+    //ESP_LOGI("STACK", "0d-Task stack free (min): %u bytes", uxHighWaterMark);
+    nvs_save_datetime("last_log_ts", &last_log_ts);
     last_log_upload_ok = true;
     return uploaded;
 }
@@ -438,7 +488,7 @@ static void upload_task(void *pvParameters) {
             int sensor_uploaded = upload_pending_sensors();
             // Upload pending logs
             int log_uploaded = 0;
-//            log_uploaded = upload_pending_logs(); //oko
+            //log_uploaded = upload_pending_logs();
             if (sensor_uploaded > 0 || log_uploaded > 0) {
                 WQMS_LOG_I("Uploaded %d sensors, %d logs", sensor_uploaded, log_uploaded);
             }
@@ -465,9 +515,9 @@ esp_err_t supabase_upload_init(void) {
     }
 
     // Initialize timestamps from NVS (optional - could store last upload times)
-    last_sensor_upload_ts = 0;
-    last_log_upload_ts = 0;
-    
+    last_log_ts = nvs_get_datetime("last_log_ts");
+    last_sensor_ts = nvs_get_datetime("last_sensor_ts");
+
     // Log certificate status
     if (!cert_manager_has(CERT_TYPE_SUPABASE)) {
         WQMS_LOG_E("No Supabase TLS certificate in NVS, aborting Supabase upload.");
@@ -491,14 +541,7 @@ esp_err_t supabase_upload_start(void) {
     
     is_running = true;
     
-    BaseType_t result = xTaskCreate(
-        upload_task,
-        "supabase_up",
-        STACK_SIZE_SUPABASE_UPLOAD,
-        NULL,
-        PRIORITY_UPLOAD_TASK,
-        &upload_task_handle
-    );
+    BaseType_t result = xTaskCreate(upload_task, "supabase_up", STACK_SIZE_SUPABASE_UPLOAD, NULL, PRIORITY_UPLOAD_TASK, &upload_task_handle);
     
     if (result != pdPASS) {
         is_running = false;
@@ -533,11 +576,11 @@ void supabase_get_status(bool *sensor_ok, bool *log_ok) {
 }
 
 uint64_t supabase_get_last_sensor_upload(void) {
-    return last_sensor_upload_time;
+    return last_sensor_ts;
 }
 
 uint64_t supabase_get_last_log_upload(void) {
-    return last_log_upload_time;
+    return last_log_ts;
 }
 
 // ============================================================
