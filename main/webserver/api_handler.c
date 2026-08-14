@@ -1154,7 +1154,7 @@ esp_err_t calibrate_apply_handler(httpd_req_t *req) {
         if (json) cJSON_Delete(json);
         return ESP_OK;
     }
-    
+
     // Check if we have enough samples
     int sample_count = cal_get_sample_count();
     if (sample_count < 2) {

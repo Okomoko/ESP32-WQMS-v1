@@ -132,15 +132,15 @@ async function initCalibration() {
                 // Enable apply button if we have at least 2 samples
                 if (sampleNum >= 2) {
                     document.getElementById('cal-apply').disabled = false;
-					document.getElementById('cal-sample-empty').innerText = ""
+                    document.getElementById('cal-sample-empty').innerText = ""
                 } else {
-					if (sampleNum == 0) {
-						document.getElementById('cal-sample-empty').innerText = "No samples added yet. Add at least 2 samples to calculate calibration."
-					} else {
-						document.getElementById('cal-sample-empty').innerText = "Add one more sample to calculate calibration."
-					}
-				}
-				
+                    if (sampleNum == 0) {
+                        document.getElementById('cal-sample-empty').innerText = "No samples added yet. Add at least 2 samples to calculate calibration."
+                    } else {
+                        document.getElementById('cal-sample-empty').innerText = "Add one more sample to calculate calibration."
+                    }
+                }
+                
             } else {
                 alert('Failed to add sample: ' + (result.message || 'Unknown error'));
             }
@@ -160,7 +160,10 @@ async function initCalibration() {
         }
         
         try {
-            const result = await api.post('/api/calibrate/apply');
+            const result = await api.post('/api/calibrate/apply', { }, {
+                forceLoading: true,
+                message: 'Applying calibration...'
+            });
             if (result.success) {
                 alert('Calibration applied!\nFactor: ' + (result.factor || 'N/A'));
                 

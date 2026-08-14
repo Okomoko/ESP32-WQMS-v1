@@ -665,22 +665,66 @@ static esp_err_t serve_file_from_partition(httpd_req_t *req) {
     // Get the requested URI path
     const char *uri = req->uri;
     
-    // Skip leading slash and construct full path
-    char file_path[256];
-    if (strcmp(uri, "/") == 0 || strcmp(uri, "/index.html") == 0) {
+    // ============================================================
+    // PARSE URI - Extract path without query parameters
+    // ============================================================
+    char uri_path[256];
+    const char *query_start = strchr(uri, '?');
+    
+    if (query_start) {
+        // Copy only the path part (before '?')
+        size_t path_len = query_start - uri;
+        if (path_len >= sizeof(uri_path)) {
+            path_len = sizeof(uri_path) - 1;
+        }
+        strncpy(uri_path, uri, path_len);
+        uri_path[path_len] = '\0';
+    } else {
+        // No query parameters, use the full URI
+        strncpy(uri_path, uri, sizeof(uri_path) - 1);
+        uri_path[sizeof(uri_path) - 1] = '\0';
+    }
+    
+    // Remove trailing slash if present (except for root)
+    size_t len = strlen(uri_path);
+    if (len > 1 && uri_path[len - 1] == '/') {
+        uri_path[len - 1] = '\0';
+    }
+    
+    // ============================================================
+    // BUILD FILE PATH
+    // ============================================================
+    char file_path[280];
+    
+    // Handle root requests
+    if (strcmp(uri_path, "/") == 0 || strcmp(uri_path, "") == 0) {
         snprintf(file_path, sizeof(file_path), "%s/index.html", WEB_BASE_PATH);
     } else {
-        snprintf(file_path, sizeof(file_path), "%s/%.240s", WEB_BASE_PATH, uri);
+        // Remove leading slash for file path construction
+        const char *path = uri_path;
+        if (path[0] == '/') path++;
+        
+        // If path is empty after removing slash, serve index.html
+        if (strlen(path) == 0) {
+            snprintf(file_path, sizeof(file_path), "%s/index.html", WEB_BASE_PATH);
+        } else {
+            snprintf(file_path, sizeof(file_path), "%s/%s", WEB_BASE_PATH, path);
+        }
     }
-//    WQMS_LOG_D("File to be served : %s", file_path);
-    // Check if file exists in file system
+    
+    // ============================================================
+    // CHECK IF FILE EXISTS
+    // ============================================================
     struct stat file_stat;
     if (stat(file_path, &file_stat) != 0) {
+        // File not found - send 404
         httpd_resp_send_404(req);
         return ESP_FAIL;
     }
     
-    // Determine MIME type based on file extension
+    // ============================================================
+    // DETERMINE MIME TYPE
+    // ============================================================
     const char *ext = strrchr(file_path, '.');
     const char *mime_type = "application/octet-stream";
     
@@ -693,9 +737,12 @@ static esp_err_t serve_file_from_partition(httpd_req_t *req) {
         else if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) mime_type = "image/jpeg";
         else if (strcmp(ext, ".svg") == 0) mime_type = "image/svg+xml";
         else if (strcmp(ext, ".json") == 0) mime_type = "application/json";
+        else if (strcmp(ext, ".txt") == 0) mime_type = "text/plain";
     }
-
-    // Open and send the file
+    
+    // ============================================================
+    // SEND FILE
+    // ============================================================
     FILE *file = fopen(file_path, "rb");
     if (!file) {
         httpd_resp_send_404(req);

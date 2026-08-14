@@ -23,6 +23,12 @@ body {
     max-width: 1400px;
     margin: 0 auto;
     padding: 10px 15px;
+    transition: filter 0.3s ease, pointer-events 0.3s ease;
+}
+
+#app.loading {
+    filter: blur(4px);
+    pointer-events: none;
 }
 
 /* ============================================================
@@ -137,9 +143,7 @@ body {
     transition: all 0.2s;
 }
 
-/* Combined nav hover and rule hover (same background) */
-#nav a:hover,
-.rule-item:hover {
+#nav a:hover {
     background: #e6edf6;
 }
 
@@ -181,10 +185,7 @@ h3 {
 .card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .relay-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 
-/* Combined card styles 
-
-    align-items: center;
-*/
+/* Combined card styles */
 .card,
 .sensor-card {
     background: #ffffff;
@@ -229,19 +230,21 @@ h3 {
     border-color: #c8d8e8;
 }
 
-.sensor-card input[type="number"] {
+/* Combined number input styles */
+.sensor-card input[type="number"],
+.sensor-card-body .field-group input[type="number"] {
     padding: 6px 10px;
     border-radius: 8px;
     font-size: 0.85rem;
     background: #fafcff;
     width: 100%;
-    
-    /* Hide up/down arrows */
-    -moz-appearance: textfield; /* Firefox */
+    -moz-appearance: textfield;
 }
 
 .sensor-card input[type="number"]::-webkit-outer-spin-button,
-.sensor-card input[type="number"]::-webkit-inner-spin-button {
+.sensor-card input[type="number"]::-webkit-inner-spin-button,
+.sensor-card-body .field-group input[type="number"]::-webkit-outer-spin-button,
+.sensor-card-body .field-group input[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
@@ -981,6 +984,10 @@ tr:hover,
     font-size: 0.8rem;
 }
 
+.rule-item:hover {
+    background: #e6edf6;
+}
+
 .rule-item.active {
     background: #e3f2fd;
     border-left-color: #0d47a1;
@@ -1517,6 +1524,82 @@ tr:hover,
 .modal-actions {
     display: flex;
     gap: 8px;
+}
+
+/* ============================================================
+   LOADING OVERLAY
+   ============================================================ */
+#page-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 20, 30, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 9998;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    transition: opacity 0.3s ease;
+}
+
+#page-loading-overlay .spinner-container {
+    background: rgba(20, 35, 55, 0.9);
+    padding: 40px 50px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    min-width: 200px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+#page-loading-overlay .loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #2b7be4;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+#page-loading-overlay .loading-text {
+    color: #c0d0e0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+#page-loading-overlay .progress-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+#page-loading-overlay .progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #2b7be4, #4fc3f7);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* ============================================================

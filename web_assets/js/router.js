@@ -1,184 +1,118 @@
 // js/router.js
-// Dynamic page loader - loads only the JavaScript needed for each page
+// Dynamic page loader
 
 // ============================================================
-// Get the base path of the current script
+// HELPERS
 // ============================================================
 function getScriptBasePath() {
-    // Get the current script element
-    const currentScript = document.currentScript;
-    if (!currentScript) {
-        // Fallback: use the first script with src containing 'router.js'
-        const scripts = document.querySelectorAll('script[src]');
-        for (let s of scripts) {
-            if (s.src && s.src.includes('router.js')) {
-                return s.src.substring(0, s.src.lastIndexOf('/') + 1);
-            }
+    const scripts = document.querySelectorAll('script[src]');
+    for (let s of scripts) {
+        if (s.src && s.src.includes('router.js')) {
+            return s.src.substring(0, s.src.lastIndexOf('/') + 1);
         }
-        return '/';  // Fallback to root
     }
-    
-    // Get the full URL of the current script
-    const scriptUrl = currentScript.src;
-    // Extract the directory path (everything up to the last '/')
-    return scriptUrl.substring(0, scriptUrl.lastIndexOf('/') + 1);
+    return '/';
 }
 
 // ============================================================
-// Page Loader
+// PAGE CONFIG
 // ============================================================
-function loadPageScript(page) {
-    const scripts = {
-        'dashboard': 'dashboard.js',
-        'automation': 'automation.js',
-        'config': 'config.js',
-        'calibration': 'calibration.js',
-        'api_docs': 'api_docs.js'
-    };
-    
-    const scriptName = scripts[page];
-    if (!scriptName) {
-        console.warn('No script found for page:', page);
-        return;
-    }
+const PAGES = {
+    dashboard: { script: 'dashboard.js', init: 'initDashboard', label: 'Dashboard' },
+    automation: { script: 'automation.js', init: 'initAutomation', label: 'Automation' },
+    config: { script: 'config.js', init: 'initConfiguration', label: 'Configuration' },
+    calibration: { script: 'calibration.js', init: 'initCalibration', label: 'Calibration' },
+    api_docs: { script: 'api_docs.js', init: 'initApiDocs', label: 'API Docs' }
+};
 
-    // ✅ Get the base path dynamically
-    const basePath = getScriptBasePath();
-    const scriptPath = basePath + scriptName;
-
-    // Check if already loaded
-    if (document.querySelector(`script[src="${scriptPath}"]`)) {
-        console.log('Script already loaded:', scriptPath);
-        return;
-    }
-    
-    const script = document.createElement('script');
-    script.src = scriptPath;
-    script.async = true;
-    document.head.appendChild(script);
-    console.log('Loading script:', scriptPath);
-    return script;
+function detectPage() {
+    const path = window.location.pathname;
+    if (path.includes('automation')) return 'automation';
+    if (path.includes('config')) return 'config';
+    if (path.includes('calibration')) return 'calibration';
+    if (path.includes('api_doc')) return 'api_docs';
+    return 'dashboard';
 }
 
 // ============================================================
-// Script Loaded Handler - returns a Promise
+// LOAD SCRIPT
 // ============================================================
-function loadScriptAndWait(page) {
-    const scriptMap = {
-        'dashboard': 'dashboard.js',
-        'automation': 'automation.js',
-        'config': 'config.js',
-        'calibration': 'calibration.js',
-        'api_docs': 'api_docs.js'
-    };
-    
-    const scriptName = scriptMap[page];
-    if (!scriptName) {
-        return Promise.resolve();
-    }
-    
-    // ✅ Get the base path dynamically
-    const basePath = getScriptBasePath();
-    const scriptPath = basePath + scriptName;
-    
-    // Check if already loaded
-    const existingScript = document.querySelector(`script[src="${scriptPath}"]`);
-    if (existingScript) {
-        return Promise.resolve();
-    }
-    
-    // Load the script and wait for it
+function loadScript(src) {
     return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) return resolve();
+
         const script = document.createElement('script');
-        script.src = scriptPath;
+        script.src = src;
         script.async = true;
-        script.onload = function() {
-            console.log('Script loaded:', scriptPath);
-            resolve();
-        };
-        script.onerror = function() {
-            console.error('Failed to load script:', scriptPath);
-            reject(new Error('Failed to load script: ' + scriptPath));
-        };
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Failed to load: ${src}`));
         document.head.appendChild(script);
     });
 }
 
 // ============================================================
-// Router
+// ROUTER
 // ============================================================
 async function initRouter() {
-    const path = window.location.pathname;
-    let page = 'dashboard';
-    
-    if (path.includes('automation')) {
-        page = 'automation';
-    } else if (path.includes('config')) {
-        page = 'config';
-    } else if (path.includes('calibration')) {
-        page = 'calibration';
-    } else if (path.includes('api_doc')) {
-        page = 'api_docs';
-    } else {
-        page = 'dashboard';
-    }
-    
-    console.log('Page detected:', page);
-    console.log('Script base path:', getScriptBasePath());
-    
-    // Load page-specific script and wait for it
+    const page = detectPage();
+    const config = PAGES[page];
+    if (!config) return;
+
+    console.log(`📄 Page: ${page}`);
+
     try {
-        await loadScriptAndWait(page);
-        
-        // Now call the initialization function
-        switch (page) {
-            case 'dashboard':
-                if (typeof initDashboard === 'function') {
-                    initDashboard();
-                } else {
-                    console.error('initDashboard not found after loading dashboard.js');
-                }
-                break;
-            case 'automation':
-                if (typeof initAutomation === 'function') {
-                    initAutomation();
-                } else {
-                    console.error('initAutomation not found after loading automation.js');
-                }
-                break;
-            case 'config':
-                if (typeof initConfiguration === 'function') {
-                    initConfiguration();
-                } else {
-                    console.error('initConfiguration not found after loading config.js');
-                }
-                break;
-            case 'calibration':
-                if (typeof initCalibration === 'function') {
-                    initCalibration();
-                } else {
-                    console.error('initCalibration not found after loading calibration.js');
-                }
-                break;
-            case 'api_docs':
-                if (typeof initApiDocs === 'function') {
-                    initApiDocs();
-                } else {
-                    console.error('initApiDocs not found after loading api_docs.js');
-                }
-                break;
-            default:
-                console.warn('Unknown page:', page);
+        // Show loading only for initial page load
+        if (window.loadingManager && !window.loadingManager.initialLoadComplete) {
+            window.loadingManager.show(`Loading ${config.label}...`, 10);
         }
-    } catch (e) {
-        console.error('Failed to load page script:', e);
+
+        // Load script
+        const basePath = getScriptBasePath();
+        await loadScript(basePath + config.script);
+
+        // Update progress
+        if (window.loadingManager && !window.loadingManager.initialLoadComplete) {
+            window.loadingManager.updateMessage(`Initializing ${config.label}...`, 60);
+        }
+
+        // Call init function (it may contain API calls)
+        const initFn = window[config.init];
+        if (typeof initFn === 'function') {
+            const result = initFn();
+            // If it returns a promise, wait for it
+            if (result && typeof result.then === 'function') {
+                await result;
+            }
+        }
+
+        // Small delay for UI updates
+        await new Promise(r => setTimeout(r, 300));
+
+    } catch (error) {
+        console.error('Router error:', error);
+    } finally {
+        // Complete initial load - this unlocks all subsequent API calls
+        if (window.loadingManager) {
+            window.loadingManager.completeInitialLoad();
+            console.log('✅ Initial load complete - UI unlocked');
+        }
     }
 }
 
 // ============================================================
-// DOM Ready - Main Entry
+// START
 // ============================================================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initRouter();
 });
+
+// Handle if DOM already loaded
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    if (!window._routerStarted) {
+        window._routerStarted = true;
+        initNavigation();
+        initRouter();
+    }
+}

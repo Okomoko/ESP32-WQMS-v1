@@ -87,7 +87,7 @@ async function loadSensorConfig() {
                         <input type="number" step="any" value="${s.cal_factor.toFixed(4) || 1}" data-id="${s.id}" class="sensor-cal-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
                     <div>
-                        <label class="calibrate-sensor-btn" style="font-size:0.7rem; color:#7a9bbf;">Calibration offset</label>
+                        <label class="calibrate-sensor-btn" data-id="${s.id}" style="font-size:0.7rem; color:#7a9bbf;">Calibration offset</label>
                         <input type="number" step="any" value="${s.cal_offset.toFixed(4) || 0}" data-id="${s.id}" class="sensor-off-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
                     <div>
@@ -128,7 +128,10 @@ async function saveSensorConfig() {
         configs.push({ id, name, enabled, cal_factor: cal, cal_offset: off, unit, safe_min: safemin, safe_max: safemax});
     });
     try {
-        const result = await api.post('/api/sensors/config', { sensors: configs });
+    const result = await api.post('/api/sensors/config', { sensors: configs }, {
+        forceLoading: true,  // 👈 This overrides the auto-detection
+        message: 'Saving configuration...'
+    });
         alert(result.message || '✅ Sensor configuration saved');
         await loadSensorConfig();
     } catch (e) {
@@ -206,7 +209,10 @@ async function saveRelayConfig() {
         configs.push({ id, name, enabled, duration_ms: duration, off_delay_ms: offDelay, control_device: cd});
     });
     try {
-        const result = await api.post('/api/relays/config', { relays: configs });
+        const result = await api.post('/api/relays/config', { relays: configs }, {
+            forceLoading: true,  // 👈 This overrides the auto-detection
+            message: 'Saving configuration...'
+        });
         alert(result.message || '✅ Relay configuration saved');
         await loadRelayConfig();
     } catch (e) {
