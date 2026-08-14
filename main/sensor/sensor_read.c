@@ -208,7 +208,7 @@ sensor_reading_t* sensor_get_all_readings(void) {
 
 float sensor_convert_value(uint8_t sensor_id, uint16_t raw_adc) {
     float voltage = (raw_adc / 4095.0f) * 5.0f;
-    float calibrated = voltage * sensor_config[sensor_id].calibration_factor + sensor_config[sensor_id].calibration_offset;
+    float calibrated = (voltage * sensor_config[sensor_id].calibration_factor) + sensor_config[sensor_id].calibration_offset;
     
     switch (sensor_id) {
         case 0:  // Sensor 0

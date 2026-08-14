@@ -84,19 +84,19 @@ async function loadSensorConfig() {
                     </div>
                     <div>
                         <label class="calibrate-sensor-btn" data-id="${s.id}" style="font-size:0.7rem; color:#7a9bbf;">Calibration factor</label>
-                        <input type="number" value="${s.calibration_factor.toFixed(4) || 1}" data-id="${s.id}" class="sensor-cal-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                        <input type="number" step="any" value="${s.cal_factor.toFixed(4) || 1}" data-id="${s.id}" class="sensor-cal-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
                     <div>
                         <label class="calibrate-sensor-btn" style="font-size:0.7rem; color:#7a9bbf;">Calibration offset</label>
-                        <input type="number" value="${s.calibration_offset.toFixed(4) || 1}" data-id="${s.id}" class="sensor-off-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                        <input type="number" step="any" value="${s.cal_offset.toFixed(4) || 0}" data-id="${s.id}" class="sensor-off-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
                     <div>
                         <label style="font-size:0.7rem; color:#7a9bbf;">Safe min.</label>
-                        <input type="number" value="${s.safe_min.toFixed(3) || 0}" data-id="${s.id}" class="sensor-safemin-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                        <input type="number" step="any" value="${s.safe_min.toFixed(3) || 0}" data-id="${s.id}" class="sensor-safemin-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
                     <div>
                         <label style="font-size:0.7rem; color:#7a9bbf;">Safe max.</label>
-                        <input type="number" value="${s.safe_max.toFixed(3) || 1000}" data-id="${s.id}" class="sensor-safemax-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
+                        <input type="number" step="any" value="${s.safe_max.toFixed(3) || 100}" data-id="${s.id}" class="sensor-safemax-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
                     </div>
                 </div>
             </div>
@@ -124,8 +124,8 @@ async function saveSensorConfig() {
         const cal = parseFloat(document.querySelector(`.sensor-cal-input[data-id="${id}"]`)?.value) || 1;
         const off = parseFloat(document.querySelector(`.sensor-off-input[data-id="${id}"]`)?.value) || 0;
         const safemin = parseFloat(document.querySelector(`.sensor-safemin-input[data-id="${id}"]`)?.value) || 0;
-        const safemax = parseFloat(document.querySelector(`.sensor-safemax-input[data-id="${id}"]`)?.value) || 1000;
-        configs.push({ id, name, enabled, calibration_factor: cal, unit, safe_min: safemin, safe_max: safemax});
+        const safemax = parseFloat(document.querySelector(`.sensor-safemax-input[data-id="${id}"]`)?.value) || 100;
+        configs.push({ id, name, enabled, cal_factor: cal, cal_offset: off, unit, safe_min: safemin, safe_max: safemax});
     });
     try {
         const result = await api.post('/api/sensors/config', { sensors: configs });

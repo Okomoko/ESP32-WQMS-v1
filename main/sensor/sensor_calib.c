@@ -32,8 +32,8 @@ static bool cal_active = false;
 // Helper: Convert ADC to Voltage
 // ============================================================
 static float adc_to_voltage(float raw_adc) {
-    // Assuming 12-bit ADC (0-4095) with 3.3V reference
-    return (raw_adc / 4095.0f) * 3.3f;
+    // Assuming 12-bit ADC (0-4095) with 5.0V reference
+    return (raw_adc / 4095.0f) * 5.0f;
 }
 
 // ============================================================
@@ -239,8 +239,7 @@ int cal_apply(void) {
     // to load the calibration_offset field
     sensor_reload_config();
 
-    SENSOR_LOG_I("Calibration applied: sensor %d, factor %.4f, offset %.4f",
-             cal_session.sensor_id, factor, offset);
+    SENSOR_LOG_I("Calibration applied: sensor %d, factor %.4f, offset %.4f", cal_session.sensor_id, factor, offset);
     
     // Clear session
     cal_active = false;

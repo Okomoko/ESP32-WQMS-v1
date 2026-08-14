@@ -17,7 +17,7 @@
 // Configuration
 static email_config_t g_config = {
     .smtp_server = "smtp.gmail.com",
-    .smtp_port = 587,
+    .smtp_port = 465,
     .username = "",
     .password = "",
     .from_email = "",
@@ -516,7 +516,7 @@ esp_err_t email_load_config(email_config_t *config) {
     // First, set ALL defaults
     memset(config, 0, sizeof(email_config_t));
     strcpy(config->smtp_server, "smtp.gmail.com");
-    config->smtp_port = 587;
+    config->smtp_port = 465;
     strcpy(config->username, "");
     strcpy(config->password, "");
     strcpy(config->from_email, "");

@@ -229,6 +229,23 @@ h3 {
     border-color: #c8d8e8;
 }
 
+.sensor-card input[type="number"] {
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    background: #fafcff;
+    width: 100%;
+    
+    /* Hide up/down arrows */
+    -moz-appearance: textfield; /* Firefox */
+}
+
+.sensor-card input[type="number"]::-webkit-outer-spin-button,
+.sensor-card input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 /* ============================================================
    SENSOR GAUGES
    ============================================================ */

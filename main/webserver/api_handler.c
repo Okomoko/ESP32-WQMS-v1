@@ -302,8 +302,8 @@ esp_err_t sensors_config_get_handler(httpd_req_t *req) {
         cJSON_AddStringToObject(sensor, "name", configs[i].name);
         cJSON_AddBoolToObject(sensor, "enabled", configs[i].enabled);
         cJSON_AddNumberToObject(sensor, "unit", configs[i].unit);
-        cJSON_AddNumberToObject(sensor, "calibration_factor", configs[i].calibration_factor);
-        cJSON_AddNumberToObject(sensor, "calibration_offset", configs[i].calibration_offset);
+        cJSON_AddNumberToObject(sensor, "cal_factor", configs[i].calibration_factor);
+        cJSON_AddNumberToObject(sensor, "cal_offset", configs[i].calibration_offset);
         cJSON_AddNumberToObject(sensor, "gpio_pin", configs[i].gpio_pin);
         cJSON_AddNumberToObject(sensor, "adc_channel", configs[i].adc_channel);
         cJSON_AddNumberToObject(sensor, "modbus_register", configs[i].modbus_register);
@@ -357,8 +357,8 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         cJSON *id = cJSON_GetObjectItem(item, "id");
         cJSON *name = cJSON_GetObjectItem(item, "name");
         cJSON *enabled = cJSON_GetObjectItem(item, "enabled");
-        cJSON *cal = cJSON_GetObjectItem(item, "calibration_factor");
-        cJSON *offset = cJSON_GetObjectItem(item, "calibration_offset");
+        cJSON *cal = cJSON_GetObjectItem(item, "cal_factor");
+        cJSON *offset = cJSON_GetObjectItem(item, "cal_offset");
         cJSON *unit = cJSON_GetObjectItem(item, "unit");
         cJSON *safe_min = cJSON_GetObjectItem(item, "safe_min");
         cJSON *safe_max = cJSON_GetObjectItem(item, "safe_max");

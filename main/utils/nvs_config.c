@@ -515,7 +515,7 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
 
         snprintf(key, sizeof(key), "%s%d_cal", NVS_KEY_SENSOR_PREFIX, i);
 
-        float cal = 1000.0f;
+        float cal = 1.0f;
         uint32_t raw_bits;
         if (nvs_get_u32(handle, key, &raw_bits) == ESP_OK) {
             memcpy(&cal, &raw_bits, sizeof(raw_bits)); 
@@ -524,9 +524,9 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
 
         snprintf(key, sizeof(key), "%s%d_off", NVS_KEY_SENSOR_PREFIX, i);
 
-        float offset = 1000.0f;
+        float offset = 0.0f;
         if (nvs_get_u32(handle, key, &raw_bits) == ESP_OK) {
-            memcpy(&cal, &raw_bits, sizeof(raw_bits)); 
+            memcpy(&offset, &raw_bits, sizeof(raw_bits)); 
             config[i].calibration_offset = offset;
         }
 

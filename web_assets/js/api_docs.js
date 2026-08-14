@@ -605,7 +605,7 @@ function downloadPostmanCollection() {
                             ],
                             "body": {
                                 "mode": "raw",
-                                "raw": "{\n    \"enabled\": true,\n    \"smtp_server\": \"smtp.gmail.com\",\n    \"smtp_port\": 587,\n    \"username\": \"user@gmail.com\",\n    \"password\": \"your_password\",\n    \"from_email\": \"user@gmail.com\",\n    \"to_emails\": \"admin@example.com\",\n    \"use_tls\": true\n}"
+                                "raw": "{\n    \"enabled\": true,\n    \"smtp_server\": \"smtp.gmail.com\",\n    \"smtp_port\": 465,\n    \"username\": \"user@gmail.com\",\n    \"password\": \"your_password\",\n    \"from_email\": \"user@gmail.com\",\n    \"to_emails\": \"admin@example.com\",\n    \"use_tls\": true\n}"
                             },
                             "url": {
                                 "raw": baseUrl + "/api/email/config",

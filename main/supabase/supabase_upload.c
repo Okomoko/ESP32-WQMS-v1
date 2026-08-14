@@ -118,8 +118,8 @@ static esp_err_t http_post_json(const char *url, const char *api_key, const char
 // ============================================================
 static int upload_pending_sensors(void) {
 
-UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
-ESP_LOGI("STACK", "1-Task stack free (min): %u bytes", uxHighWaterMark);
+//UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "1-Task stack free (min): %u bytes", uxHighWaterMark);
 
     if (!nvs_supabase_is_configured()) return 0;
 
@@ -238,8 +238,8 @@ ESP_LOGI("STACK", "1-Task stack free (min): %u bytes", uxHighWaterMark);
 //uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
 //ESP_LOGI("STACK", "e-Task stack free (min): %u bytes", uxHighWaterMark);
     free(records);
-uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
-ESP_LOGI("STACK", "f-Task stack free (min): %u bytes", uxHighWaterMark);
+//uxHighWaterMark = uxTaskGetStackHighWaterMark(upload_task_handle);
+//ESP_LOGI("STACK", "f-Task stack free (min): %u bytes", uxHighWaterMark);
     return uploaded;
 }
 

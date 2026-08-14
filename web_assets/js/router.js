@@ -41,11 +41,11 @@ function loadPageScript(page) {
         console.warn('No script found for page:', page);
         return;
     }
-    
+
     // ✅ Get the base path dynamically
     const basePath = getScriptBasePath();
     const scriptPath = basePath + scriptName;
-    
+
     // Check if already loaded
     if (document.querySelector(`script[src="${scriptPath}"]`)) {
         console.log('Script already loaded:', scriptPath);
