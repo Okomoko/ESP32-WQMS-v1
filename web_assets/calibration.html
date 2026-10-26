@@ -56,22 +56,25 @@
                                 <span id="cal-current1" style="font-weight:500; color:#2b7be4;">--</span>
                             </div>
                         </div>
-                        
-                        <div class="sensor-card-body" style="grid-template-columns: 1fr;">
+                        <div class="sensor-card-body" style="grid-template-columns: 1fr 1fr;">
                             <div class="field-group" style="grid-column: 1 / -1;">
                                 <label>Select Sensor</label>
                                 <select id="cal-sensor-select" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid #dde6ef; background:#fff; font-size:0.9rem;">
                                 </select>
                             </div>
-                            
-                            <div class="field-group" style="grid-column: 1 / -1; background:#f8fafd; border-radius:10px; padding:12px 16px; border:1px solid #e6edf6;">
+                            <div class="field-group" style="grid-column: span 1; background:#f8fafd; border-radius:10px; padding:12px 16px; border:1px solid #e6edf6;">
                                 <label style="color:#1f4a7a; font-weight:500;">Current Value</label>
                                 <div style="font-size:1.2rem; font-weight:500; color:#0a2744; padding:4px 0;">
                                     <span id="cal-current1-value">--</span>
                                 </div>
                             </div>
+                            <div class="field-group" style="grid-column: span 1; background:#f8fafd; border-radius:10px; padding:12px 16px; border:1px solid #e6edf6;">
+                                <label style="color:#1f4a7a; font-weight:500;">Current Raw Value</label>
+                                <div style="font-size:1.2rem; font-weight:500; color:#0a2744; padding:4px 0;">
+                                    <span id="cal-current1-raw">--</span>
+                                </div>
+                            </div>
                         </div>
-                        
                         <div class="sensor-card-footer">
                             <button id="cal-start" class="btn btn-primary">▶️ Start Calibration</button>
                         </div>
@@ -91,15 +94,22 @@
                             </div>
                         </div>
                         
-                        <div class="sensor-card-body">
+                        <div class="sensor-card-body" style="grid-template-columns: 1fr 1fr;">
                             <div class="field-group" style="grid-column: 1 / -1;">
                                 <label style="color:#1f4a7a; font-weight:500;">Sensor: <span id="sensor-name" style="color:#0a2744;"></span></label>
                             </div>
                             
-                            <div class="field-group" style="grid-column: 1 / -1; background:#f8fafd; border-radius:10px; padding:12px 16px; border:1px solid #e6edf6;">
+                            <div class="field-group" style="grid-column: span 1; background:#f8fafd; border-radius:10px; padding:12px 16px; border:1px solid #e6edf6;">
                                 <label style="color:#1f4a7a; font-weight:500;">Current Reading</label>
                                 <div style="font-size:1.2rem; font-weight:500; color:#0a2744; padding:4px 0;">
                                     <span id="cal-current2-value">--</span>
+                                </div>
+                            </div>
+                            
+                            <div class="field-group" style="grid-column: span 1; background:#f8fafd; border-radius:10px; padding:12px 16px; border:1px solid #e6edf6;">
+                                <label style="color:#1f4a7a; font-weight:500;">Current Raw Reading</label>
+                                <div style="font-size:1.2rem; font-weight:500; color:#0a2744; padding:4px 0;">
+                                    <span id="cal-current2-raw">--</span>
                                 </div>
                             </div>
                             

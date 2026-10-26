@@ -1,0 +1,28 @@
+
+https://oocwcpnremdltcpishjn.supabase.co
+
+OVA
+
+https://oocwcpnremdltcpishjn.supabase.co/rest/v1/sensor_readings
+
+https://oocwcpnremdltcpishjn.supabase.co/storage/v1/object/list/OVA
+https://oocwcpnremdltcpishjn.supabase.co/storage/v1/object/public/OVA/api_doc.html
+
+
+31ed8477553d753836cf5042987a8311
+87cfe54a1281452996a2c69b5285480379e41439272017cb187c6fe91a3fe0bf
+
+sb_secret_qzkcPw29hLogix1qNU-swQ_RA6g7qTm
+
+
+In your Supabase dashboard:
+
+Go to Database → Webhooks
+Add webhook
+Set:
+Table: storage.objects
+Events: INSERT (and optionally UPDATE)
+Function URL: https://<project-ref>.supabase.co/functions/v1/update-iot-manifest
+Optionally, filter so it only runs for your bucket:
+
+bucket_id = IoT

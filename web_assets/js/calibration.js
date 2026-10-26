@@ -32,7 +32,9 @@ async function updateCurrentSensorValue() {
         const sensorId = parseInt(select.value);
         if (isNaN(sensorId)) {
             document.getElementById('cal-current1-value').textContent = '--';
+            document.getElementById('cal-current1-raw').textContent = '--';
             document.getElementById('cal-current2-value').textContent = '--';
+            document.getElementById('cal-current2-raw').textContent = '--';
             return;
         }
         
@@ -40,7 +42,9 @@ async function updateCurrentSensorValue() {
         const sensor = (data.sensors || []).find(s => s.id === sensorId);
         if (sensor) {
             document.getElementById('cal-current1-value').textContent = sensor.value !== undefined ? sensor.value.toFixed(2) : '--';
+            document.getElementById('cal-current1-raw').textContent = sensor.value !== undefined ? sensor.raw_adc : '--';
             document.getElementById('cal-current2-value').textContent = sensor.value !== undefined ? sensor.value.toFixed(2) : '--';
+            document.getElementById('cal-current2-raw').textContent = sensor.value !== undefined ? sensor.raw_adc : '--';
         }
     } catch (e) {
         console.warn('Failed to update sensor value:', e);

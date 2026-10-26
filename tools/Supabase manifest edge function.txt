@@ -1,0 +1,84 @@
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+
+import { createClient } from 'npm:@supabase/supabase-js@2'
+
+type Row = { name: string | null }
+
+const BUCKET_ID = 'IoT'
+const TARGET_KEY = 'manifest.json'
+
+Deno.serve(async (req) => {
+  try {
+    if (req.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 })
+    }
+
+    let payload: any = null
+    try {
+      payload = await req.json()
+    } catch {
+      // ignore manual invocations
+    }
+
+    if (payload?.record?.bucket_id !== BUCKET_ID) {
+      return new Response('Ignored manifest trigger due to incorrect Bucket', { status: 200 })
+    }
+    // Prevent infinite loops if manifest itself triggers the webhook
+    if (payload?.record?.bucket_id === BUCKET_ID && payload?.record?.name === TARGET_KEY) {
+      return new Response('Ignored manifest trigger', { status: 200 })
+    }
+
+    const rawSecretKeys = Deno.env.get('SUPABASE_SECRET_KEYS')
+    if (!rawSecretKeys) throw new Error('SUPABASE_SECRET_KEYS is required')
+
+    const secretKeys = JSON.parse(rawSecretKeys) as Record<string, string>
+    const serviceKey = secretKeys['default']
+    if (!serviceKey) throw new Error('Missing SUPABASE_SECRET_KEYS[default]')
+
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey)
+
+    const { data, error } = await supabase
+      .from('storage_objects_with_size')
+      .select('name')
+      .eq('bucket_id', BUCKET_ID)
+      .neq('name', TARGET_KEY)
+      .neq('name', '.emptyFolderPlaceholder')
+      .order('size_bytes', { ascending: false })
+
+    if (error) throw error
+
+    const objects = (data ?? [])
+      .filter((r: Row) => typeof r.name === 'string')
+      .map((r: Row) => r.name as string)
+
+    const manifest = {
+      bucket: BUCKET_ID,
+      generated_at: new Date().toISOString(),
+      objects,
+    }
+
+    const manifestBytes = new TextEncoder().encode(JSON.stringify(manifest, null, 2))
+
+    const uploadRes = await supabase.storage
+      .from(BUCKET_ID)
+      .upload(TARGET_KEY, manifestBytes, {
+        contentType: 'application/json; charset=utf-8',
+        upsert: true,
+      })
+
+    if ((uploadRes as any).error) throw (uploadRes as any).error
+
+    return new Response(JSON.stringify({ ok: true, path: TARGET_KEY }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (err) {
+    console.error('manifest generation failed:', err)
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+})

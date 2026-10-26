@@ -11,6 +11,7 @@
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "esp_mac.h"
+#include "esp_timer.h"        // FIX: needed for idle-wait timing
 #include "nvs.h"
 
 #include "wifi_manager.h"
@@ -40,9 +41,28 @@ static char wifi_ap_ssid[33] = {0};
 static wifi_ap_record_t *scan_results = NULL;
 static int scan_result_count = 0;
 
+// FIX: set while a user-initiated wifi_connect_sta() owns the STA flow.
+// The WIFI_EVENT_STA_DISCONNECTED handler must not auto-reconnect while this
+// is true, otherwise it races wifi_connect_sta() and puts the driver back
+// into "sta is connecting" state, which makes set_config fail with 0x3006.
+static volatile bool sta_manual_connect_in_progress = false;
+
 // ============================================================
 // Internal Functions
 // ============================================================
+
+// FIX: explicit save - does not read back from the driver (safer while
+// credentials are being changed), writes exactly what the caller supplies.
+static void wqms_save_wifi_creds_explicit(const char *ssid, const char *password) {
+    nvs_handle_t handle;
+    if (nvs_open("wifi", NVS_READWRITE, &handle) == ESP_OK) {
+        nvs_set_str(handle, "ssid", ssid ? ssid : "");
+        nvs_set_str(handle, "password", password ? password : "");
+        nvs_commit(handle);
+        nvs_close(handle);
+        WQMS_LOG_I("WiFi credentials saved to NVS");
+    }
+}
 
 static void wqms_save_wifi_creds(void) {
     wifi_config_t sta_config;
@@ -59,6 +79,10 @@ static void wqms_save_wifi_creds(void) {
 }
 
 static void wqms_load_wifi_creds(char *ssid, char *password, size_t max_len) {
+    // FIX: guarantee a sane default even if nvs_open fails
+    if (ssid && max_len > 0) ssid[0] = '\0';
+    if (password && max_len > 0) password[0] = '\0';
+
     nvs_handle_t handle;
     if (nvs_open("wifi", NVS_READONLY, &handle) == ESP_OK) {
         size_t len = max_len;
@@ -71,6 +95,35 @@ static void wqms_load_wifi_creds(char *ssid, char *password, size_t max_len) {
         }
         nvs_close(handle);
     }
+}
+
+// FIX: bounded wait that returns once the STA is NOT in "connecting" state.
+// Uses esp_wifi_get_config(WIFI_IF_STA) as a proxy: it returns
+// ESP_ERR_WIFI_STATE while connecting and ESP_OK when idle.
+static bool wifi_wait_sta_idle(uint32_t timeout_ms) {
+    wifi_mode_t mode = WIFI_MODE_NULL;
+    if (esp_wifi_get_mode(&mode) != ESP_OK) return true;
+    if (mode != WIFI_MODE_STA && mode != WIFI_MODE_APSTA) return true;
+
+    int64_t start = esp_timer_get_time() / 1000;
+    while ((esp_timer_get_time() / 1000) - start < (int64_t)timeout_ms) {
+        wifi_config_t probe;
+        if (esp_wifi_get_config(WIFI_IF_STA, &probe) == ESP_OK) return true;
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+    WQMS_LOG_W("STA did not become idle within %ums", (unsigned)timeout_ms);
+    return false;
+}
+
+// FIX: stop any in-flight STA attempt and wait until the driver is ready
+// to accept a new configuration.
+static void wifi_stop_sta_connection(void) {
+    esp_err_t err = esp_wifi_disconnect();
+    if (err != ESP_OK && err != ESP_ERR_WIFI_NOT_CONNECT &&
+        err != ESP_ERR_WIFI_NOT_STARTED) {
+        WQMS_LOG_W("esp_wifi_disconnect: %s", esp_err_to_name(err));
+    }
+    wifi_wait_sta_idle(500);
 }
 
 static void wqms_start_ap_mode(void) {
@@ -128,7 +181,12 @@ static void wqms_start_ap_sta_mode(void) {
     char ssid[33] = {0};
     char password[64] = {0};
     wqms_load_wifi_creds(ssid, password, sizeof(ssid));
-    
+
+    // FIX: stop any in-flight STA attempt BEFORE touching the mode/config.
+    // Otherwise set_config(WIFI_IF_STA) can fail with ESP_ERR_WIFI_STATE.
+    sta_manual_connect_in_progress = false;
+    wifi_stop_sta_connection();
+
     // Configure STA
     wifi_config_t sta_config = {0};
     if (strlen(ssid) > 0) {
@@ -141,12 +199,16 @@ static void wqms_start_ap_sta_mode(void) {
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
     if (strlen(ssid) > 0) {
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
+        // FIX: runtime call - don't abort on failure, log and continue
+        esp_err_t err = esp_wifi_set_config(WIFI_IF_STA, &sta_config);
+        if (err != ESP_OK) {
+            WQMS_LOG_W("set_config(STA) in AP+STA: %s", esp_err_to_name(err));
+        }
     }
     ESP_ERROR_CHECK(esp_wifi_start());
     
     wifi_mode = 2;
-//    snprintf(wifi_ssid, sizeof(wifi_ssid), "%s", wifi_ap_ssid);
+    wifi_retry_count = 0;   // FIX: fresh retry budget
     WQMS_LOG_I("AP+STA mode started: AP SSID=%s", wifi_ap_ssid);
     
     // If STA credentials exist, attempt connection
@@ -164,7 +226,9 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         switch (event_id) {
             case WIFI_EVENT_STA_START:
                 WQMS_LOG_I("WiFi STA started");
-                if (wifi_mode == 2) {
+                // FIX: don't auto-connect if a manual connect owns the flow
+                if (!sta_manual_connect_in_progress &&
+                    (wifi_mode == 1 || wifi_mode == 2)) {
                     esp_wifi_connect();
                 }
                 break;
@@ -174,8 +238,20 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                 wifi_retry_count = 0;
                 break;
                 
-            case WIFI_EVENT_STA_DISCONNECTED:
-                WQMS_LOG_I("WiFi STA disconnected");
+            case WIFI_EVENT_STA_DISCONNECTED: {
+                // FIX: keep reason for debugging
+                wifi_event_sta_disconnected_t *disc =
+                    (wifi_event_sta_disconnected_t *)event_data;
+                WQMS_LOG_I("WiFi STA disconnected (reason=%d)",
+                           disc ? disc->reason : -1);
+                wifi_connected = 0;
+
+                // FIX: hand control back to wifi_connect_sta(); do NOT
+                // call esp_wifi_connect() with the old config here.
+                if (sta_manual_connect_in_progress) {
+                    break;
+                }
+
                 if (wifi_retry_count < WIFI_MAX_RETRIES) {
                     wifi_retry_count++;
                     WQMS_LOG_W("WiFi retry %d/%d", wifi_retry_count, WIFI_MAX_RETRIES);
@@ -188,6 +264,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                     xEventGroupSetBits(wifi_event_group, WIFI_FAIL_BIT);
                 }
                 break;
+            }
                 
             default:
                 break;
@@ -197,8 +274,11 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         snprintf(wifi_ip, sizeof(wifi_ip), IPSTR, IP2STR(&event->ip_info.ip));
         WQMS_LOG_I("Got IP: %s", wifi_ip);
         wifi_connected = 1;
+        wifi_retry_count = 0;
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
-        wqms_save_wifi_creds();
+        // NOTE: credentials are now saved explicitly by wifi_connect_sta()
+        // with exactly what the user submitted. Reading back from the
+        // driver here can race the next manual connect.
     }
 }
 
@@ -244,6 +324,10 @@ void wifi_init(void) {
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
         ESP_ERROR_CHECK(esp_wifi_start());
+
+        // FIX: clear stale bits before waiting (first boot usually ok, but
+        // this is correct after a soft reset / panic reboot).
+        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
         ESP_ERROR_CHECK(esp_wifi_connect());
         
         EventBits_t bits = xEventGroupWaitBits(wifi_event_group,
@@ -256,11 +340,15 @@ void wifi_init(void) {
             wifi_mode = 1;
         } else {
             WQMS_LOG_W("STA connection failed, starting to AP+STA mode");
+            // FIX: tell the handler we're heading into AP+STA before we call
+            // wqms_start_ap_sta_mode(), so STA_START behaves consistently.
+            wifi_mode = 2;
             wqms_start_ap_sta_mode();
             WQMS_LOG_I("Switched to AP+STA mode");
         }
     } else {
         WQMS_LOG_I("No STA credentials found, starting AP+STA mode");
+        wifi_mode = 2;
         wqms_start_ap_sta_mode();
         WQMS_LOG_I("Switched to AP+STA mode");
     }
@@ -308,6 +396,9 @@ int wifi_set_mode(int mode) {
     
     if (mode == 0) {
         // AP only
+        // FIX: don't auto-reconnect from the handler during the switch
+        sta_manual_connect_in_progress = false;
+        wifi_stop_sta_connection();
         wqms_start_ap_mode();
         wifi_mode = 0;
     } else if (mode == 1) {
@@ -319,14 +410,26 @@ int wifi_set_mode(int mode) {
             WQMS_LOG_E("No STA credentials configured");
             return -2;
         }
+
+        // FIX: stop in-flight attempt before set_config
+        sta_manual_connect_in_progress = false;
+        wifi_stop_sta_connection();
+
         wifi_config_t sta_config = {0};
         memcpy(sta_config.sta.ssid, ssid, strlen(ssid));
         memcpy(sta_config.sta.password, password, strlen(password));
         sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
+
+        // FIX: runtime call - no ESP_ERROR_CHECK
+        esp_err_t err = esp_wifi_set_config(WIFI_IF_STA, &sta_config);
+        if (err != ESP_OK) {
+            WQMS_LOG_E("set_config failed: %s", esp_err_to_name(err));
+            return -3;
+        }
         ESP_ERROR_CHECK(esp_wifi_start());
-        ESP_ERROR_CHECK(esp_wifi_connect());
+        esp_wifi_connect();   // FIX: no ESP_ERROR_CHECK here either
         snprintf(wifi_ssid, sizeof(wifi_ssid), "%s", ssid);
         wifi_mode = 1;
         WQMS_LOG_I("Switched to STA mode: %s", ssid);
@@ -346,37 +449,119 @@ const char* wifi_get_mode_string(void) {
 }
 
 int wifi_connect_sta(const char *ssid, const char *password) {
-    if (!ssid || !password) return -1;
-    
+    if (!ssid) return -1;
+    if (!password) password = "";   // FIX: allow open networks
+    if (strlen(ssid) == 0) return -1;
+
     WQMS_LOG_I("Connecting to STA: %s", ssid);
-    
-    // Set to AP+STA mode to maintain connectivity
-    wifi_set_mode(2);
-    
+
+    // FIX: sanity check
+    wifi_mode_t cur_mode;
+    if (esp_wifi_get_mode(&cur_mode) == ESP_ERR_WIFI_NOT_INIT) {
+        WQMS_LOG_E("WiFi not initialized");
+        return -2;
+    }
+
+    // ------------------------------------------------------------------
+    // FIX (the crash):
+    //   Do NOT call wifi_set_mode(2) here. It calls wqms_start_ap_sta_mode(),
+    //   which calls esp_wifi_connect() with the OLD credentials - leaving the
+    //   driver in "sta is connecting". The subsequent
+    //   esp_wifi_set_config() with the NEW credentials then fails with
+    //   ESP_ERR_WIFI_STATE (0x3006) and ESP_ERROR_CHECK aborts.
+    //
+    //   Instead: switch mode ourselves (without starting any connect), then
+    //   stop the STA, wait for it to become idle, and only then write config.
+    // ------------------------------------------------------------------
+    if (cur_mode != WIFI_MODE_APSTA) {
+        esp_err_t err = esp_wifi_set_mode(WIFI_MODE_APSTA);
+        if (err != ESP_OK) {
+            WQMS_LOG_E("set_mode(APSTA) failed: %s", esp_err_to_name(err));
+            return -3;
+        }
+
+        // Re-apply AP config so the dashboard stays reachable.
+        uint8_t mac[6];
+        esp_read_mac(mac, ESP_MAC_WIFI_STA);
+        snprintf(wifi_ap_ssid, sizeof(wifi_ap_ssid),
+                 "%s%02X%02X%02X%02X%02X%02X",
+                 WIFI_AP_SSID_PREFIX,
+                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+        wifi_config_t ap_config = {0};
+        ap_config.ap.ssid_len = strlen(wifi_ap_ssid);
+        ap_config.ap.channel = 1;
+        ap_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+        ap_config.ap.max_connection = 4;
+        memcpy(ap_config.ap.ssid, wifi_ap_ssid, strlen(wifi_ap_ssid));
+        memcpy(ap_config.ap.password, WIFI_AP_PASSWORD, strlen(WIFI_AP_PASSWORD));
+
+        err = esp_wifi_set_config(WIFI_IF_AP, &ap_config);
+        if (err != ESP_OK) {
+            WQMS_LOG_W("set_config(AP) failed: %s", esp_err_to_name(err));
+        }
+    }
+    wifi_mode = 2;
+
+    // Take ownership of the STA connection flow.
+    sta_manual_connect_in_progress = true;
+    wifi_retry_count = 0;
+    wifi_connected = 0;
+
+    // FIX: disconnect FIRST, then wait for the driver to leave "connecting".
+    wifi_stop_sta_connection();
+
+    // FIX: clear stale event bits from any previous attempt.
+    xEventGroupClearBits(wifi_event_group,
+                         WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
+
+    // FIX: now it is safe to write the new credentials.
     wifi_config_t sta_config = {0};
-    memcpy(sta_config.sta.ssid, ssid, strlen(ssid));
-    memcpy(sta_config.sta.password, password, strlen(password));
+    size_t ssid_len = strlen(ssid);
+    size_t pass_len = strlen(password);
+    if (ssid_len > sizeof(sta_config.sta.ssid))     ssid_len = sizeof(sta_config.sta.ssid);
+    if (pass_len > sizeof(sta_config.sta.password)) pass_len = sizeof(sta_config.sta.password);
+    memcpy(sta_config.sta.ssid, ssid, ssid_len);
+    memcpy(sta_config.sta.password, password, pass_len);
     sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-    
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
-    ESP_ERROR_CHECK(esp_wifi_disconnect());
-    ESP_ERROR_CHECK(esp_wifi_connect());
-    
+
+    esp_err_t err = esp_wifi_set_config(WIFI_IF_STA, &sta_config);
+    if (err != ESP_OK) {
+        WQMS_LOG_E("set_config(STA) failed: %s", esp_err_to_name(err));
+        sta_manual_connect_in_progress = false;
+        return -4;
+    }
+
+    // FIX: now connect (no ESP_ERROR_CHECK; on failure we cleanly release).
+    err = esp_wifi_connect();
+    if (err != ESP_OK) {
+        WQMS_LOG_E("esp_wifi_connect failed: %s", esp_err_to_name(err));
+        sta_manual_connect_in_progress = false;
+        return -5;
+    }
+
+    // Wait for result.
     EventBits_t bits = xEventGroupWaitBits(wifi_event_group,
                                            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
                                            pdFALSE, pdFALSE,
                                            pdMS_TO_TICKS(30000));
+
+    sta_manual_connect_in_progress = false;
+
     if (bits & WIFI_CONNECTED_BIT) {
         WQMS_LOG_I("STA connected: %s", ssid);
         snprintf(wifi_ssid, sizeof(wifi_ssid), "%s", ssid);
-        wifi_mode = 1;
-        wqms_save_wifi_creds();
-        WQMS_LOG_I("WiFi credentials saved, network will restart");
+        // Actively switch to STA-only mode and turn off the AP
+        esp_wifi_set_mode(WIFI_MODE_STA);
+        wifi_mode = 1;  // update state
+        wqms_save_wifi_creds_explicit(ssid, password);
         return 0;
-    } else {
-        WQMS_LOG_E("STA connection failed: %s", ssid);
-        return -1;
     }
+
+    WQMS_LOG_E("STA connection failed: %s", ssid);
+    wifi_mode = 2;                                  // keep dashboard reachable
+    wifi_retry_count = WIFI_MAX_RETRIES;            // stop the auto-retry storm
+    return -1;
 }
 
 void wifi_disconnect_sta(void) {
@@ -394,13 +579,18 @@ void wifi_forget_network(void) {
         nvs_close(handle);
         WQMS_LOG_I("WiFi credentials erased.");
     }
+
+    // FIX: release manual-connect ownership before switching mode
+    sta_manual_connect_in_progress = false;
     wifi_disconnect_sta();
+
     wifi_mode_t current_mode;
     esp_wifi_get_mode(&current_mode);
     if (current_mode != WIFI_MODE_APSTA) {
         esp_wifi_set_mode(WIFI_MODE_APSTA);
         vTaskDelay(pdMS_TO_TICKS(100));
     }
+    wifi_mode = 2;   // FIX: keep state variable in sync
     WQMS_LOG_I("Switched to AP+STA mode");
 }
 

@@ -1,0 +1,11 @@
+ESP32 WATER QUALITY HELPER REV A — CONNECTION DEFINITION
+
+J1: +5V_IN, GND
+JESP_L pin mapping: 1 EN, 2 GPIO36, 3 GPIO39, 4 GPIO34, 5 GPIO35, 6 GPIO32, 7 GPIO33, 8 GPIO25, 9 GPIO26, 10 GPIO27, 11 GPIO14, 12 GPIO12, 13 GPIO13, 14 GND, 15 +5V_IN
+JESP_R pin mapping: 1 GPIO23, 2 GPIO22, 3 GPIO1, 4 GPIO3, 5 GPIO21, 6 GPIO19, 7 GPIO18, 8 GPIO5, 9 GPIO17, 10 GPIO16, 11 GPIO4, 12 GPIO2, 13 GPIO15, 14 GND, 15 +3V3
+
+ADC front-end per channel: sensor SIG -> 1k resistor -> ESP32 ADC pin; 100nF from ESP32 ADC pin to GND. Sensor connector also has +5V_SENSOR and GND. Analog SIG must remain 0–3.3V.
+GPIO13: DATA connector -> GPIO13; 10k pull-up to +3V3.
+Relay connectors: IN from GPIO, +5V_RELAY, GND. These are for relay modules/drivers, not bare coils.
+Power: +5V_IN -> 100uF bulk -> +5V_SENSOR and +5V_RELAY branches. Sensor branch should use ferrite bead or small inductor in the final routed design.
+Calibration: VREF_CAL test connector to ADC calibration fixture; recommended nominal 2.5V precision reference.

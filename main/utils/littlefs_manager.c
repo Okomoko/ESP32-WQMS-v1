@@ -68,24 +68,36 @@ void littlefs_init(void) {
     WQMS_LOG_D("%s, mounted : %d", LOG_PARTITION_NAME, ret);
     vTaskDelay(pdMS_TO_TICKS(2000));
     if (littlefs_logs_mounted) {
-        ret = mkdir(LOG_BASE_PATH, 0777);
-        WQMS_LOG_D("%s, created : %d", LOG_BASE_PATH, ret);
+        if (opendir(LOG_BASE_PATH)) {
+            WQMS_LOG_D("%s already exists", LOG_BASE_PATH);
+        } else {
+            ret = mkdir(LOG_BASE_PATH, 0777);
+            WQMS_LOG_D("%s, created : %d", LOG_BASE_PATH, ret);
+        }
     }
     // Mount sensors partition
     ret = mount_littlefs(SENSOR_PARTITION_NAME, SENSOR_BASE_PATH, &littlefs_sensors_mounted);
     vTaskDelay(pdMS_TO_TICKS(2000));
     WQMS_LOG_D("%s, mounted : %d", SENSOR_PARTITION_NAME, ret);
     if (littlefs_sensors_mounted) {
-        ret = mkdir(SENSOR_BASE_PATH, 0777);
-        WQMS_LOG_D("%s, created : %d", SENSOR_BASE_PATH, ret);
+        if (opendir(SENSOR_BASE_PATH)) {
+            WQMS_LOG_D("%s already exists", SENSOR_BASE_PATH);
+        } else {
+            ret = mkdir(SENSOR_BASE_PATH, 0777);
+            WQMS_LOG_D("%s, created : %d", SENSOR_BASE_PATH, ret);
+        }
     }
     // Mount web assets partition
     ret = mount_littlefs(WEB_PARTITION_NAME, WEB_BASE_PATH, &littlefs_web_assets_mounted);
     vTaskDelay(pdMS_TO_TICKS(2000));
     WQMS_LOG_D("%s, mounted : %d", WEB_PARTITION_NAME, ret);
     if (littlefs_web_assets_mounted) {
-        ret = mkdir(WEB_BASE_PATH, 0777);
-        WQMS_LOG_D("%s, created : %d", WEB_BASE_PATH, ret);
+        if (opendir(WEB_BASE_PATH)) {
+            WQMS_LOG_D("%s already exists", WEB_BASE_PATH);
+        } else {
+            ret = mkdir(WEB_BASE_PATH, 0777);
+            WQMS_LOG_D("%s, created : %d", WEB_BASE_PATH, ret);
+        }
     }
 
     WQMS_LOG_I("LittleFS initialized.");

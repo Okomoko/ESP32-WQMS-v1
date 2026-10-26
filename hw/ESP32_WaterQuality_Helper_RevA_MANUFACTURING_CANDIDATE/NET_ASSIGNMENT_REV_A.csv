@@ -1,0 +1,18 @@
+Function,ESP32 GPIO,Interface,Notes
+ADC1_CH0,36,J4,0-3.3V; 1k + 100nF
+ADC1_CH3,39,J5,0-3.3V; 1k + 100nF
+ADC1_CH6,34,J6,0-3.3V; 1k + 100nF; input only
+ADC1_CH7,35,J7,0-3.3V; 1k + 100nF; input only
+ADC1_CH4,32,J8,0-3.3V; 1k + 100nF
+ADC1_CH5,33,J9,0-3.3V; 1k + 100nF
+Digital input,13,J3,10k pull-up to 3V3
+Relay 1,4,J10,Logic-level relay module input
+Relay 2,5,J11,Strapping pin; verify module does not disturb boot
+Relay 3,18,J12,Logic-level relay module input
+Relay 4,19,J13,Logic-level relay module input
+Relay 5,21,J14,Logic-level relay module input
+Relay 6,22,J15,Logic-level relay module input
+Relay 7,23,J16,Logic-level relay module input
+Relay 8,25,J17,Logic-level relay module input
+Relay 9,26,J18,Logic-level relay module input
+Relay 10,27,J19,Logic-level relay module input

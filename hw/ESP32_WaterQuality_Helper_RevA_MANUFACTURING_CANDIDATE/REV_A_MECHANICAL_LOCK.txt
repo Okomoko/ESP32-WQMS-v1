@@ -1,0 +1,17 @@
+ESP32 Water Quality Helper PCB - Rev A
+MECHANICAL DEFINITION
+
+Board outline: 63.0 x 77.0 mm rectangular
+Mounting holes: 4 x M3 plated/non-plated through holes, drill 3.2 mm
+Hole centers: 3.5 mm from each board edge
+Centers: (3.5,3.5), (59.5,3.5), (3.5,73.5), (59.5,73.5) mm
+Remaining edge material outside drill: 1.9 mm nominal
+
+ESP32 interface: two 15-pin, 2.54 mm pitch header rows; intended for common 30-pin ESP32 DevKit/WROOM-32 style boards.
+Nominal row spacing: 25.4 mm.
+
+Important: generic 30-pin ESP32 boards vary mechanically. The electrical pinout is fixed by the supplied 30-pin reference, but the exact DevKit PCB width/USB/antenna geometry should be checked against the user's physical board before fabrication.
+
+Antenna: reserve a copper/component keepout around the ESP32 antenna end; no copper under/near antenna.
+
+Rev A status: mechanical envelope locked; final manufacturing release still requires confirmation of the exact ESP32 DevKit mechanical variant and terminal block dimensions.
