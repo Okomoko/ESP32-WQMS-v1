@@ -26,7 +26,7 @@
 // Static Variables
 // ============================================================
 static adc_oneshot_unit_handle_t adc_handle = NULL;
-static adc_cali_handle_t adc_cali_handle = NULL;
+static adc_cali_handle_t adc_cali_handle[ADC_CHANNEL_COUNT] = {NULL};
 static int latest_mv[ADC_CHANNEL_COUNT] = {0};
 static uint16_t latest_raw[ADC_CHANNEL_COUNT] = {0};
 static SemaphoreHandle_t adc_mutex = NULL;
@@ -68,7 +68,7 @@ static int read_adc_channel(int channel) {
 // Public Functions
 // ============================================================
 
-int wqms_adc_dma_init(void) {
+int wqms_adc_dma_init(sensor_config_t sensor_config[]) {
     if (adc_initialized) {
         SENSOR_LOG_W("ADC already initialized");
         return 0;
@@ -100,30 +100,30 @@ int wqms_adc_dma_init(void) {
         .atten = ADC_ATTEN_DB_12,
         .bitwidth = ADC_BITWIDTH_DEFAULT,
     };
-    
+
     for (int i = 0; i < ADC_CHANNEL_COUNT; i++) {
+        config.atten = sensor_config[i].adc_channel_atten;
         err = adc_oneshot_config_channel(adc_handle, i, &config);
         if (err != ESP_OK) {
             SENSOR_LOG_W("Failed to config ADC channel %d: %s", i, esp_err_to_name(err));
-        }
+        } else {
+			// Set up calibration
+			adc_cali_curve_fitting_config_t cali_config = {
+				.unit_id = ADC_UNIT_1,
+				.atten = config.atten,
+				.bitwidth = ADC_BITWIDTH_DEFAULT,
+			};
+			err = adc_cali_create_scheme_curve_fitting(&cali_config, &adc_cali_handle[i]);
+			if (err != ESP_OK) {
+				SENSOR_LOG_W("ADC calibration not for channel %d available, using raw values", i);
+				adc_cali_handle[i] = NULL;
+			} else {
+				SENSOR_LOG_I("ADC calibration initialized for channel %d", 0);
+			}
+		}
     }
-    
-    // Set up calibration
-    adc_cali_line_fitting_config_t cali_config = {
-        .unit_id = ADC_UNIT_1,
-        .atten = ADC_ATTEN_DB_12,
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
-    };
-    err = adc_cali_create_scheme_line_fitting(&cali_config, &adc_cali_handle);
-    if (err != ESP_OK) {
-        SENSOR_LOG_W("ADC calibration not available, using raw values");
-        adc_cali_handle = NULL;
-    } else {
-        SENSOR_LOG_I("ADC calibration initialized");
-    }
-    
     adc_initialized = 1;
-    SENSOR_LOG_I("ADC initialized (single-shot mode, 8 channels)");
+    SENSOR_LOG_I("ADC initialized (single-shot mode, %d channels)", ADC_CHANNEL_COUNT);
     return 0;
 }
 
@@ -172,8 +172,8 @@ int wqms_adc_dma_get_voltage_mv(int channel) {
     if (adc_mutex && xSemaphoreTake(adc_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         int raw = read_adc_channel(channel);
         if (raw >= 0) {
-            if (adc_cali_handle) {
-                adc_cali_raw_to_voltage(adc_cali_handle, raw, &value);
+		if (adc_cali_handle[channel]) {
+                adc_cali_raw_to_voltage(adc_cali_handle[channel], raw, &value);
             } else {
                 // Approximate voltage from raw value (0-4095 → 0-3.3V)
                 value = (raw * 3300) / 4095;

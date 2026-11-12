@@ -202,6 +202,7 @@ void bucket_url_builder(char* bucketprefix, char* buffer, size_t max_len){
         strcpy(last_slash + 1 + strlen(bucketprefix), nvs_get_supabase_bucket_name());
     } else {
         WQMS_LOG_E("Invalid Supabase project URL format");
+        buffer[0] = '\0';
     }
 };
 
@@ -513,6 +514,12 @@ void nvs_load_sensor_config(sensor_config_t *config, int count) {
             config[i].enabled = val;
         }
 
+        snprintf(key, sizeof(key), "%s%d_atten", NVS_KEY_SENSOR_PREFIX, i);
+        val = 0;
+        if (nvs_get_u8(handle, key, &val) == ESP_OK) {
+            config[i].adc_channel_atten = val;
+        }
+
         snprintf(key, sizeof(key), "%s%d_cal", NVS_KEY_SENSOR_PREFIX, i);
 
         float cal = 1.0f;
@@ -575,6 +582,9 @@ void nvs_save_sensor_config(sensor_config_t *config, int count) {
         
         snprintf(key, sizeof(key), "%s%d_en", NVS_KEY_SENSOR_PREFIX, i);
         nvs_set_u8(handle, key, config[i].enabled);
+
+        snprintf(key, sizeof(key), "%s%d_atten", NVS_KEY_SENSOR_PREFIX, i);
+        nvs_set_u8(handle, key, config[i].adc_channel_atten);
 
         uint32_t raw_bits;
         memcpy(&raw_bits, &config[i].calibration_factor, sizeof(config[i].calibration_factor));

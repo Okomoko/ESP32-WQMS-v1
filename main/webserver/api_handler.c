@@ -306,6 +306,7 @@ esp_err_t sensors_config_get_handler(httpd_req_t *req) {
         cJSON_AddNumberToObject(sensor, "cal_offset", configs[i].calibration_offset);
         cJSON_AddNumberToObject(sensor, "gpio_pin", configs[i].gpio_pin);
         cJSON_AddNumberToObject(sensor, "adc_channel", configs[i].adc_channel);
+        cJSON_AddNumberToObject(sensor, "adc_channel_atten", configs[i].adc_channel_atten);
         cJSON_AddNumberToObject(sensor, "modbus_register", configs[i].modbus_register);
         cJSON_AddNumberToObject(sensor, "safe_min", configs[i].safe_min);
         cJSON_AddNumberToObject(sensor, "safe_max", configs[i].safe_max);
@@ -360,6 +361,7 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
         cJSON *cal = cJSON_GetObjectItem(item, "cal_factor");
         cJSON *offset = cJSON_GetObjectItem(item, "cal_offset");
         cJSON *unit = cJSON_GetObjectItem(item, "unit");
+        cJSON *atten = cJSON_GetObjectItem(item, "adc_channel_atten");
         cJSON *safe_min = cJSON_GetObjectItem(item, "safe_min");
         cJSON *safe_max = cJSON_GetObjectItem(item, "safe_max");
         if (id && cJSON_IsNumber(id)) {
@@ -372,6 +374,9 @@ esp_err_t sensors_config_post_handler(httpd_req_t *req) {
                 if (enabled && cJSON_IsBool(enabled)) {
                     configs[idx].enabled = enabled->valueint;
                     sensor_set_enabled(idx, enabled->valueint);
+                }
+                if (atten && cJSON_IsNumber(atten)) {
+                    configs[idx].adc_channel_atten = atten->valueint;
                 }
                 if (cal && cJSON_IsNumber(cal)) {
 //                    API_LOG_D("Sensor: %d, cal: %f", idx, (float) cal->valuedouble);

@@ -10,6 +10,7 @@ idf_component_register(SRCS
     utils/watchdog.c
     utils/littlefs_manager.c
     utils/wifi_manager.c
+    utils/internal_led.c
     
     # Logging
     logging/logger.c
@@ -99,4 +100,7 @@ set(COMPONENT_REQUIRES
     http_server
     vfs
     json
+    app_update
+    esp_http_client
+    esp_https_ota
 )

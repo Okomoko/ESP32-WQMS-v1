@@ -1,7 +1,9 @@
-#Name,      Type, SubType,    Offset,     Size, Flags
-nvs,        data, nvs,      0x009000, 0x010000,
-phy_init,   data, phy,      0x019000, 0x001000,
-factory,    app,  factory,  0x020000, 0x110000,
-web_assets, data, littlefs, 0x130000, 0x060000,
-logs,       data, littlefs, 0x190000, 0x130000,
-sensors,    data, littlefs, 0x2C0000, 0x140000,
+# Name,      Type, SubType,    Offset,     Size,     Flags
+nvs,        data, nvs,        0x010000,   0x010000,
+otadata,    data, ota,        ,           0x002000,
+phy_init,   data, phy,        ,           0x002000,
+ota_0,      app,  ota_0,      ,           0x300000,
+ota_1,      app,  ota_1,      ,           0x300000,
+web_assets, data, littlefs,   ,           0x100000,
+logs,       data, littlefs,   ,           0x300000,
+sensors,    data, littlefs,   ,           0x5D0000,

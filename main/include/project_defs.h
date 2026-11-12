@@ -92,6 +92,7 @@ typedef struct __attribute__((packed)) {
     uint8_t enabled;
     uint8_t gpio_pin;
     uint8_t adc_channel;
+    uint8_t adc_channel_atten;
     uint16_t modbus_register;
     float calibration_factor;
     float calibration_offset;

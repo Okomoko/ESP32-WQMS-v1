@@ -18,15 +18,38 @@ const UNIT_DEFINITIONS = [
     { id: 9, label: 'µg/L', symbol: 'µg/L' }
 ];
 
+const ATTEN_DEFINITIONS = [
+    { id: 0, label: '0' },
+    { id: 1, label: '2.5' },
+    { id: 2, label: '6' },
+    { id: 3, label: '11' }
+];
+
 const CONTROLDEVICE_DEFINITIONS = [
     { id: 0, label: 'Pump'},
     { id: 1, label: 'Valve'}
 ];
 
-// Get unit symbol by ID
-function getUnitSymbol(unitId) {
-    const unit = UNIT_DEFINITIONS.find(u => u.id === unitId);
-    return unit ? unit.symbol : '';
+// //  Get unit symbol by ID
+// function getUnitSymbol(unitId) {
+//     const unit = UNIT_DEFINITIONS.find(u => u.id === unitId);
+//     return unit ? unit.symbol : '';
+//}
+
+// // Get attenuation value by ID
+// function getAttenSymbol(unitId) {
+//     const atten = ATTEN_DEFINITIONS.find(u => u.id === unitId);
+//     return atten ? atten.label : '0';
+// }
+
+function createAttenDropdown(sensorId, selectedId) {
+    let html = `<select class="sensor-atten-select" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;" data-id="${sensorId}">`;
+    ATTEN_DEFINITIONS.forEach(atten => {
+        const selected = (atten.id === selectedId) ? 'selected' : '';
+        html += `<option value="${atten.id}" ${selected}>${atten.label} dB</option>`;
+    });
+    html += `</select>`;
+    return html;
 }
 
 function createUnitDropdown(sensorId, selectedId) {
@@ -73,7 +96,7 @@ async function loadSensorConfig() {
                     </div>
                     <span style="font-size:0.75rem; color:#7a9bbf;">Value: ${s.current_value !== undefined && s.status !== 3 ? s.current_value.toFixed(2) : '--'} | PIN: ${s.gpio_pin || '--'} | ADC: ${adcDisplay} | MODBUS: 0x0${(s.modbus_register || 0).toString(16).toUpperCase().padStart(1, '0')}</span>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap:8px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap:6px;">
                     <div>
                         <label style="font-size:0.7rem; color:#7a9bbf;">Name</label>
                         <input type="text" value="${s.name || ''}" data-id="${s.id}" class="sensor-name-input" style="width:100%; padding:4px 8px; border-radius:6px; border:1px solid #dde6ef;">
@@ -81,6 +104,10 @@ async function loadSensorConfig() {
                     <div class="unit-container">
                         <label style="font-size:0.7rem; color:#7a9bbf;">Unit</label>
                         ${createUnitDropdown(s.id, s.unit || 0)}
+                    </div>
+                    <div class="atten-container">
+                        <label style="font-size:0.7rem; color:#7a9bbf;">ADC attenuation</label>
+                        ${createAttenDropdown(s.id, s.attenuation || 0)}
                     </div>
                     <div>
                         <label class="calibrate-sensor-btn" data-id="${s.id}" style="font-size:0.7rem; color:#7a9bbf;">Calibration factor</label>

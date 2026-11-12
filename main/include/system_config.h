@@ -4,6 +4,11 @@
 #ifndef SYSTEM_CONFIG_H
 #define SYSTEM_CONFIG_H
 
+#define MCU_ESP32      1
+#define MCU_ESP32_S3   2
+
+#define MICROCONTROLLER  MCU_ESP32_S3
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -75,30 +80,59 @@ GND     38         -    Power    Ground
 
 */
 
-// ============================================================
-// Sensor GPIO Configuration
-// ============================================================
-#define GPIO_SENSOR1           36 // Analogue sensors input pins
-#define GPIO_SENSOR2           39
-#define GPIO_SENSOR3           34
-#define GPIO_SENSOR4           35
-#define GPIO_SENSOR5           32
-#define GPIO_SENSOR6           33
-#define GPIO_DHT11             13 //Digital temperature and humidity sensor connection I/O pin
+#if MICROCONTROLLER == MCU_ESP32
+    // ============================================================
+    // Sensor GPIO Configuration
+    // ============================================================
+    #define GPIO_SENSOR1           36 // Analogue sensors input pins
+    #define GPIO_SENSOR2           39
+    #define GPIO_SENSOR3           34
+    #define GPIO_SENSOR4           35
+    #define GPIO_SENSOR5           32
+    #define GPIO_SENSOR6           33
+    #define GPIO_DHT11             13 //Digital temperature and humidity sensor connection I/O pin
 
-// ============================================================
-// Relay GPIO Configuration
-// ============================================================
-#define GPIO_RELAY1             4 // Relay output pins
-#define GPIO_RELAY2             5
-#define GPIO_RELAY3            18
-#define GPIO_RELAY4            19
-#define GPIO_RELAY5            21
-#define GPIO_RELAY6            22
-#define GPIO_RELAY7            23
-#define GPIO_RELAY8            25
-#define GPIO_RELAY9            26
-#define GPIO_RELAY10           27
+    // ============================================================
+    // Relay GPIO Configuration
+    // ============================================================
+    #define GPIO_RELAY1             4 // Relay output pins
+    #define GPIO_RELAY2             5
+    #define GPIO_RELAY3            18
+    #define GPIO_RELAY4            19
+    #define GPIO_RELAY5            21
+    #define GPIO_RELAY6            22
+    #define GPIO_RELAY7            23
+    #define GPIO_RELAY8            25
+    #define GPIO_RELAY9            26
+    #define GPIO_RELAY10           27
+
+#elif MICROCONTROLLER == MCU_ESP32_S3
+    // ============================================================
+    // Sensor GPIO Configuration
+    // ============================================================
+    #define GPIO_SENSOR1           1 // Analogue sensors input pins
+    #define GPIO_SENSOR2           2
+    #define GPIO_SENSOR3           4
+    #define GPIO_SENSOR4           5
+    #define GPIO_SENSOR5           6
+    #define GPIO_SENSOR6           7
+    #define GPIO_DHT11             13 //Digital temperature and humidity sensor connection I/O pin
+
+    // ============================================================
+    // Relay GPIO Configuration
+    // ============================================================
+    #define GPIO_RELAY1            11 // Relay output pins
+    #define GPIO_RELAY2            12
+    #define GPIO_RELAY3            14
+    #define GPIO_RELAY4            15
+    #define GPIO_RELAY5            16
+    #define GPIO_RELAY6            17
+    #define GPIO_RELAY7            18
+    #define GPIO_RELAY8            21
+    #define GPIO_RELAY9            38
+    #define GPIO_RELAY10           41
+
+#endif
 
 // ============================================================
 // Partition Configuration
@@ -110,6 +144,7 @@ GND     38         -    Power    Ground
 #define SENSOR_PARTITION_NAME "sensors"
 #define SENSOR_BASE_PATH "/sensors" // needs to start with forward slash
 #define IoT_UPDATE_PATH "web_assets.min/" // needs to end with forward slash
+#define OTA_FIRMWARE_URL "firmware/" // needs to end with forward slash
 extern int littlefs_logs_mounted;
 extern int littlefs_sensors_mounted;
 extern int littlefs_web_assets_mounted;
@@ -217,10 +252,12 @@ extern int littlefs_web_assets_mounted;
 #define STACK_SIZE_AUTOMATION        8192 // 16384
 #define STACK_SIZE_LOGGING           2048
 #define STACK_SIZE_SUPABASE_UPLOAD   8192 // 16384
+#define STACK_SIZE_OTA              16384
 
 // ============================================================
 // Task Priorities
 // ============================================================
+#define PRIORITY_OTA            6
 #define PRIORITY_SENSOR         5
 #define PRIORITY_RELAY          4
 #define PRIORITY_MODBUS         3
@@ -232,7 +269,7 @@ extern int littlefs_web_assets_mounted;
 #define PRIORITY_UPLOAD_TASK    2
 #define PRIORITY_LOGGING        1
 
-#define DEFAULT_RECIPIENTS "okan.sengun@gmail.com"
+#define DEFAULT_RECIPIENTS "otomasyon@pronova.com.tr"
 #define DEFAULT_SUBJECT "WQMS System Alert - {{system_name}}"
 
 #define WEB_CONSOLE_BUFFER_SIZE  32768

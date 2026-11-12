@@ -1,0 +1,6 @@
+idf.py build flash
+python $env:IDF_PATH/components/partition_table/gen_esp32part.py build/partition_table/partition-table.bin  ---- get web_assets partition offset and size
+.\tools\mklittlefs -c ./web_assets.min -b 4096 -p 256 -s 0x100000 web_assets.bin  ---- 0x100000 is web_assets partition size
+python -m esptool --chip esp32s3 write_flash 0x630000 .\web_assets.bin ---- 0x630000 is web_assets partition offset
+
+

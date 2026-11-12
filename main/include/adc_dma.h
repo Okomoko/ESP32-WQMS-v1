@@ -6,13 +6,14 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "project_defs.h"
 
 // ============================================================
 // Function Prototypes
 // ============================================================
 
-// Initialize ADC for 8 channels
-int wqms_adc_dma_init(void);
+// Initialize ADC for all channels
+int wqms_adc_dma_init(sensor_config_t sensor_config[]);
 
 // Start ADC (single-shot mode - ready to read)
 int wqms_adc_dma_start(void);

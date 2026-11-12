@@ -31,9 +31,6 @@ static int sensor_initialized = 0;
 static int sensor_init_called = 0;
 static uint32_t sample_counter = 0;
 
-// ADC channel to sensor mapping
-//static const uint8_t adc_to_sensor[] = {0, 1, 2, 3, 4, 5, 6, 7};
-
 // ============================================================
 // Internal Functions
 // ============================================================
@@ -170,7 +167,7 @@ void sensor_init(void) {
     // Load sensor configuration from NVS
     nvs_load_sensor_config(sensor_config, TOTAL_SENSOR_COUNT);
     
-    if (wqms_adc_dma_init() != 0) {
+    if (wqms_adc_dma_init(sensor_config) != 0) {
         SENSOR_LOG_E("ADC DMA init failed - sensors will not work");
     } else {
         SENSOR_LOG_D("ADC DMA is initialized, reading is about to be started...");
